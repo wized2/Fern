@@ -36,6 +36,9 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
     private val _historyNet = MutableStateFlow<List<Float>>(emptyList())
     val historyNet: StateFlow<List<Float>> = _historyNet.asStateFlow()
 
+    private val _historyStorage = MutableStateFlow<List<Float>>(emptyList())
+    val historyStorage: StateFlow<List<Float>> = _historyStorage.asStateFlow()
+
     private val _themeMode = MutableStateFlow(prefs.themeMode)
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
 
@@ -99,6 +102,7 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
                 (_historyBattery.value + snap.batteryPercent.toFloat()).takeLast(48)
         }
         _historyNet.value = (_historyNet.value + snap.networkKBps).takeLast(48)
+        _historyStorage.value = (_historyStorage.value + snap.storagePercent).takeLast(48)
     }
 
     private fun restartLoop() {

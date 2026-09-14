@@ -45,6 +45,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,6 +63,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import com.endroid.fern.BuildConfig
 import com.endroid.fern.data.ThemeMode
 import com.endroid.fern.monitor.SystemSnapshot
@@ -75,6 +77,7 @@ fun FernApp(
     ramHistory: List<Float>,
     batteryHistory: List<Float>,
     netHistory: List<Float>,
+    storageHistory: List<Float>,
     themeMode: ThemeMode,
     refreshMs: Int,
     keepScreenOn: Boolean,
@@ -113,7 +116,7 @@ fun FernApp(
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             when (tab) {
-                Tab.Home -> HomeContent(snapshot, cpuHistory, ramHistory, batteryHistory, netHistory, lastUpdatedMs, onRefreshNow)
+                Tab.Home -> HomeContent(snapshot, cpuHistory, ramHistory, batteryHistory, netHistory, storageHistory, lastUpdatedMs, onRefreshNow)
                 Tab.Details -> DetailsContent(snapshot)
                 Tab.Settings -> SettingsContent(
                     themeMode, refreshMs, keepScreenOn,
@@ -131,9 +134,17 @@ private fun HomeContent(
     ramH: List<Float>,
     batH: List<Float>,
     netH: List<Float>,
+    storageH: List<Float>,
     lastUpdatedMs: Long,
     onRefreshNow: () -> Unit
 ) {
+    var nowTick by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1000)
+            nowTick = System.currentTimeMillis()
+        }
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -155,7 +166,7 @@ private fun HomeContent(
                     color = MaterialTheme.colorScheme.primary
                 )
                 val age = if (lastUpdatedMs > 0L) {
-                    val sec = ((System.currentTimeMillis() - lastUpdatedMs) / 1000L).coerceAtLeast(0)
+                    val sec = ((nowTick - lastUpdatedMs) / 1000L).coerceAtLeast(0)
                     if (sec < 5) "just now" else "${sec}s ago"
                 } else {
                     "live"
@@ -244,6 +255,12 @@ private fun HomeContent(
                     if (batH.size >= 2) batH else listOf(0f, 0f),
                     MaterialTheme.colorScheme.tertiary,
                     "Battery",
+                    fixedMax = 100f
+                )
+                Spark(
+                    if (storageH.size >= 2) storageH else listOf(0f, 0f),
+                    MaterialTheme.colorScheme.secondary,
+                    "Storage",
                     fixedMax = 100f
                 )
                 val netLabel = s?.let {

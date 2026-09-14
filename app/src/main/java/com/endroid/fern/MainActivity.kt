@@ -34,6 +34,7 @@ class MainActivity : ComponentActivity() {
                 val ram by viewModel.historyRam.collectAsState()
                 val bat by viewModel.historyBattery.collectAsState()
                 val net by viewModel.historyNet.collectAsState()
+                val storage by viewModel.historyStorage.collectAsState()
                 val refresh by viewModel.refreshMs.collectAsState()
                 val lastUpdated by viewModel.lastUpdatedMs.collectAsState()
                 FernApp(
@@ -42,6 +43,7 @@ class MainActivity : ComponentActivity() {
                     ramHistory = ram,
                     batteryHistory = bat,
                     netHistory = net,
+                    storageHistory = storage,
                     themeMode = theme,
                     refreshMs = refresh,
                     keepScreenOn = keepOn,
