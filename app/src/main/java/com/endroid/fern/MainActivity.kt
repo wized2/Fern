@@ -49,4 +49,14 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onStart() {
+        super.onStart()
+        viewModel.startSampling()
+    }
+
+    override fun onStop() {
+        viewModel.stopSampling()
+        super.onStop()
+    }
 }

@@ -43,10 +43,7 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
     val keepScreenOn: StateFlow<Boolean> = _keepScreenOn.asStateFlow()
 
     private var loop: Job? = null
-
-    init {
-        restartLoop()
-    }
+    private var running = false
 
     fun setThemeMode(mode: ThemeMode) {
         prefs.themeMode = mode
@@ -56,7 +53,7 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
     fun setRefreshMs(ms: Int) {
         prefs.refreshMs = ms
         _refreshMs.value = prefs.refreshMs
-        restartLoop()
+        if (running) restartLoop()
     }
 
     fun setKeepScreenOn(on: Boolean) {
@@ -64,15 +61,26 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
         _keepScreenOn.value = on
     }
 
+    fun startSampling() {
+        running = true
+        if (loop?.isActive == true) return
+        restartLoop()
+    }
+
+    fun stopSampling() {
+        running = false
+        loop?.cancel()
+        loop = null
+    }
+
     private fun restartLoop() {
         loop?.cancel()
         loop = viewModelScope.launch {
-            // Seed CPU baseline quickly so first real % arrives soon
             withContext(Dispatchers.IO) {
                 SystemMetrics.capture(getApplication())
             }
             delay(180)
-            while (isActive) {
+            while (isActive && running) {
                 val snap = withContext(Dispatchers.IO) {
                     SystemMetrics.capture(getApplication())
                 }
@@ -80,7 +88,8 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
                 _historyCpu.value = (_historyCpu.value + snap.cpuPercent).takeLast(40)
                 _historyRam.value = (_historyRam.value + snap.ramPercent).takeLast(40)
                 if (snap.batteryPercent >= 0) {
-                    _historyBattery.value = (_historyBattery.value + snap.batteryPercent.toFloat()).takeLast(40)
+                    _historyBattery.value =
+                        (_historyBattery.value + snap.batteryPercent.toFloat()).takeLast(40)
                 }
                 delay(_refreshMs.value.toLong())
             }
