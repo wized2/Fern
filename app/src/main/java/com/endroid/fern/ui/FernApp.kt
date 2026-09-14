@@ -132,7 +132,7 @@ private fun HomeTab(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             LeafIcon(Modifier = Modifier.size(36.dp))
-            Spacer(Modifier.size(10.dp))
+            Spacer(Modifier = Modifier.size(10.dp))
             Column {
                 Text(
                     "Fern",
@@ -379,7 +379,7 @@ private fun SettingsTab(
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     LeafIcon(Modifier = Modifier.size(40.dp))
-                    Spacer(Modifier.size(12.dp))
+                    Spacer(Modifier = Modifier.size(12.dp))
                     Column {
                         Text("Fern", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
                         Text("v1.1.0", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -414,6 +414,7 @@ private fun DetailCard(title: String, content: @Composable () -> Unit) {
     }
 }
 
+@Composable
 @Composable
 private fun LeafIcon(modifier: Modifier = Modifier) {
     val leaf = MaterialTheme.colorScheme.primary
@@ -499,7 +500,7 @@ private fun MetricBarCard(icon: ImageVector, title: String, percent: Float, deta
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(icon, null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.size(8.dp))
+                Spacer(Modifier = Modifier.size(8.dp))
                 Text(title, style = MaterialTheme.typography.titleMedium)
             }
             LinearProgressIndicator(
@@ -547,7 +548,7 @@ private fun InfoRow(icon: ImageVector, label: String, value: String) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
             Icon(icon, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.size(8.dp))
+            Spacer(Modifier = Modifier.size(8.dp))
             Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
