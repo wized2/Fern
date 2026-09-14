@@ -74,6 +74,7 @@ fun FernApp(
     cpuHistory: List<Float>,
     ramHistory: List<Float>,
     batteryHistory: List<Float>,
+    netHistory: List<Float>,
     themeMode: ThemeMode,
     refreshMs: Int,
     keepScreenOn: Boolean,
@@ -112,7 +113,7 @@ fun FernApp(
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             when (tab) {
-                Tab.Home -> HomeContent(snapshot, cpuHistory, ramHistory, batteryHistory, lastUpdatedMs, onRefreshNow)
+                Tab.Home -> HomeContent(snapshot, cpuHistory, ramHistory, batteryHistory, netHistory, lastUpdatedMs, onRefreshNow)
                 Tab.Details -> DetailsContent(snapshot)
                 Tab.Settings -> SettingsContent(
                     themeMode, refreshMs, keepScreenOn,
@@ -129,6 +130,7 @@ private fun HomeContent(
     cpuH: List<Float>,
     ramH: List<Float>,
     batH: List<Float>,
+    netH: List<Float>,
     lastUpdatedMs: Long,
     onRefreshNow: () -> Unit
 ) {
@@ -229,17 +231,30 @@ private fun HomeContent(
                 Spark(
                     if (cpuH.size >= 2) cpuH else listOf(0f, 0f),
                     MaterialTheme.colorScheme.primary,
-                    "CPU"
+                    "CPU",
+                    fixedMax = 100f
                 )
                 Spark(
                     if (ramH.size >= 2) ramH else listOf(0f, 0f),
                     MaterialTheme.colorScheme.secondary,
-                    "RAM"
+                    "RAM",
+                    fixedMax = 100f
                 )
                 Spark(
                     if (batH.size >= 2) batH else listOf(0f, 0f),
                     MaterialTheme.colorScheme.tertiary,
-                    "Battery"
+                    "Battery",
+                    fixedMax = 100f
+                )
+                val netLabel = s?.let {
+                    if (it.networkKBps >= 1024f) String.format("Net · %.1f MB/s", it.networkKBps / 1024f)
+                    else String.format("Net · %.0f KB/s · %s", it.networkKBps, it.networkLabel)
+                } ?: "Net"
+                Spark(
+                    if (netH.size >= 2) netH else listOf(0f, 0f),
+                    MaterialTheme.colorScheme.primary,
+                    netLabel,
+                    fixedMax = null
                 )
             }
         }
@@ -296,6 +311,7 @@ private fun DetailsContent(s: SystemSnapshot?) {
             Line("Model", s.deviceModel)
             Line("Android", "${s.androidVersion} (API ${s.sdkInt})")
             Line("Network", s.networkLabel)
+            Line("Throughput", if (s.networkKBps >= 1024f) String.format("%.2f MB/s", s.networkKBps / 1024f) else String.format("%.1f KB/s", s.networkKBps))
             Line("Uptime", String.format("%.1f h", s.uptimeHours))
         }
     }
@@ -658,7 +674,12 @@ private fun Bar(icon: ImageVector, title: String, percent: Float, detail: String
 }
 
 @Composable
-private fun Spark(values: List<Float>, color: Color, label: String) {
+private fun Spark(
+    values: List<Float>,
+    color: Color,
+    label: String,
+    fixedMax: Float? = 100f
+) {
     Column {
         Text(
             label,
@@ -668,19 +689,44 @@ private fun Spark(values: List<Float>, color: Color, label: String) {
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp)
+                .height(56.dp)
                 .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.medium)
-                .padding(4.dp)
+                .padding(6.dp)
         ) {
             if (values.size < 2) return@Canvas
-            val max = values.maxOrNull()?.coerceAtLeast(1f) ?: 1f
+            val vmin = values.minOrNull() ?: 0f
+            val vmaxRaw = values.maxOrNull() ?: 1f
+            // Fixed 0..100 for % metrics so small changes are visible against full range.
+            // For network, auto-scale with a floor so idle is not a flat top line.
+            val lo: Float
+            val hi: Float
+            if (fixedMax != null) {
+                lo = 0f
+                hi = fixedMax.coerceAtLeast(1f)
+            } else {
+                lo = 0f
+                hi = maxOf(vmaxRaw * 1.15f, 1f)
+            }
+            val range = (hi - lo).coerceAtLeast(0.001f)
             val step = size.width / (values.size - 1).coerceAtLeast(1)
             val pts = values.mapIndexed { i, v ->
-                Offset(i * step, size.height - (v / max) * size.height * 0.9f)
+                val y = size.height - ((v - lo) / range).coerceIn(0f, 1f) * size.height * 0.92f
+                Offset(i * step, y)
             }
+            // soft fill under the line
+            val fill = Path().apply {
+                moveTo(pts.first().x, size.height)
+                pts.forEach { lineTo(it.x, it.y) }
+                lineTo(pts.last().x, size.height)
+                close()
+            }
+            drawPath(fill, color = color.copy(alpha = 0.18f))
             for (i in 0 until pts.lastIndex) {
-                drawLine(color, pts[i], pts[i + 1], strokeWidth = 3f, cap = StrokeCap.Round)
+                drawLine(color, pts[i], pts[i + 1], strokeWidth = 3.5f, cap = StrokeCap.Round)
             }
+            // endpoint dots so movement is obvious
+            drawCircle(color, radius = 3.5f, center = pts.last())
+            drawCircle(color.copy(alpha = 0.5f), radius = 2.5f, center = pts.first())
         }
     }
 }

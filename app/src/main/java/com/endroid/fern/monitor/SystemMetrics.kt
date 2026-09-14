@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.net.TrafficStats
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Environment
@@ -34,6 +35,8 @@ data class SystemSnapshot(
     val cpuCores: Int,
     val cpuMaxMhz: Int?,
     val networkLabel: String,
+    /** Instantaneous total interface throughput in KB/s (rx+tx). */
+    val networkKBps: Float,
     val deviceModel: String,
     val androidVersion: String,
     val sdkInt: Int,
@@ -47,6 +50,8 @@ object SystemMetrics {
 
     @Volatile private var prevIdle: Long = -1
     @Volatile private var prevTotal: Long = -1
+    @Volatile private var prevNetBytes: Long = -1
+    @Volatile private var prevNetAt: Long = 0
 
     fun capture(context: Context): SystemSnapshot {
         val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
@@ -64,32 +69,17 @@ object SystemMetrics {
         val storePct = if (totalStore > 0) usedStore.toFloat() / totalStore * 100f else 0f
 
         val battery = readBattery(context)
-        val (cpuPct, cpuOk) = readCpuPercent()
         val load = readLoadAvg()
         val cores = Runtime.getRuntime().availableProcessors()
+        val (cpuPct, cpuOk) = readCpuPercentAccurate(cores, load)
         val maxMhz = readMaxCpuMhz()
         val net = readNetwork(context)
+        val netKBps = readNetworkKBps()
         val uptime = SystemClock.elapsedRealtime() / 3_600_000f
         val runtime = Runtime.getRuntime()
         val heapUsed = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)
         val heapMax = runtime.maxMemory() / (1024 * 1024)
         val thermal = readThermal(context)
-
-        val finalCpu: Float
-        val finalOk: Boolean
-        if (cpuOk && cpuPct >= 0f) {
-            finalCpu = cpuPct
-            finalOk = true
-        } else {
-            val load1 = load?.getOrNull(0)
-            if (load1 != null && cores > 0) {
-                finalCpu = (load1 / cores * 100f).coerceIn(0f, 100f)
-                finalOk = false
-            } else {
-                finalCpu = 0f
-                finalOk = false
-            }
-        }
 
         return SystemSnapshot(
             ramUsedMb = usedRam / (1024 * 1024),
@@ -102,14 +92,15 @@ object SystemMetrics {
             batteryCharging = battery.charging,
             batteryTempC = battery.tempC,
             batteryHealth = battery.health,
-            cpuPercent = finalCpu,
-            cpuAvailable = finalOk,
+            cpuPercent = cpuPct,
+            cpuAvailable = cpuOk,
             loadAvg1 = load?.getOrNull(0),
             loadAvg5 = load?.getOrNull(1),
             loadAvg15 = load?.getOrNull(2),
             cpuCores = cores,
             cpuMaxMhz = maxMhz,
             networkLabel = net,
+            networkKBps = netKBps,
             deviceModel = "${Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${Build.MODEL}".trim(),
             androidVersion = Build.VERSION.RELEASE ?: "?",
             sdkInt = Build.VERSION.SDK_INT,
@@ -173,18 +164,48 @@ object SystemMetrics {
         }
     }
 
-    private fun readCpuPercent(): Pair<Float, Boolean> {
-        val sample = readProcStat() ?: return 0f to false
-        val (idle, total) = sample
-        val pIdle = prevIdle
-        val pTotal = prevTotal
-        prevIdle = idle
-        prevTotal = total
-        if (pIdle < 0 || pTotal < 0) return 0f to true
-        if (total <= pTotal) return 0f to true
-        val dIdle = idle - pIdle
-        val dTotal = total - pTotal
-        if (dTotal <= 0L) return 0f to true
+    /**
+     * Always dual-sample /proc/stat with a short gap so each snapshot has a real delta.
+     * Falls back to loadavg when /proc/stat is restricted.
+     */
+    private fun readCpuPercentAccurate(cores: Int, load: FloatArray?): Pair<Float, Boolean> {
+        val first = readProcStat()
+        if (first == null) {
+            val load1 = load?.getOrNull(0)
+            return if (load1 != null && cores > 0) {
+                (load1 / cores * 100f).coerceIn(0f, 100f) to false
+            } else {
+                0f to false
+            }
+        }
+        try {
+            Thread.sleep(220)
+        } catch (_: InterruptedException) {
+            // ignore
+        }
+        val second = readProcStat()
+        if (second == null) {
+            val load1 = load?.getOrNull(0)
+            return if (load1 != null && cores > 0) {
+                (load1 / cores * 100f).coerceIn(0f, 100f) to false
+            } else {
+                0f to false
+            }
+        }
+        val (idle1, total1) = first
+        val (idle2, total2) = second
+        prevIdle = idle2
+        prevTotal = total2
+        val dTotal = total2 - total1
+        val dIdle = idle2 - idle1
+        if (dTotal <= 0L) {
+            val load1 = load?.getOrNull(0)
+            return if (load1 != null && cores > 0) {
+                (load1 / cores * 100f).coerceIn(0f, 100f) to false
+            } else {
+                0f to true
+            }
+        }
         val busy = ((dTotal - dIdle).toFloat() / dTotal * 100f).coerceIn(0f, 100f)
         return busy to true
     }
@@ -221,6 +242,27 @@ object SystemMetrics {
             caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> "Ethernet"
             else -> "Connected"
         }
+    }
+
+    private fun readNetworkKBps(): Float {
+        val bytes = try {
+            val rx = TrafficStats.getTotalRxBytes()
+            val tx = TrafficStats.getTotalTxBytes()
+            if (rx < 0 || tx < 0) return 0f
+            rx + tx
+        } catch (_: Exception) {
+            return 0f
+        }
+        val now = SystemClock.elapsedRealtime()
+        val prevB = prevNetBytes
+        val prevT = prevNetAt
+        prevNetBytes = bytes
+        prevNetAt = now
+        if (prevB < 0 || prevT <= 0L || now <= prevT) return 0f
+        val dtSec = (now - prevT) / 1000f
+        if (dtSec < 0.05f) return 0f
+        val dBytes = (bytes - prevB).coerceAtLeast(0L)
+        return (dBytes / 1024f) / dtSec
     }
 
     private fun readThermal(context: Context): String {
