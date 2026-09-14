@@ -9,6 +9,7 @@ import android.net.NetworkCapabilities
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Environment
+import android.os.PowerManager
 import android.os.StatFs
 import android.os.SystemClock
 import java.io.File
@@ -38,7 +39,8 @@ data class SystemSnapshot(
     val sdkInt: Int,
     val uptimeHours: Float,
     val appHeapUsedMb: Long,
-    val appHeapMaxMb: Long
+    val appHeapMaxMb: Long,
+    val thermalLabel: String
 )
 
 object SystemMetrics {
@@ -71,8 +73,8 @@ object SystemMetrics {
         val runtime = Runtime.getRuntime()
         val heapUsed = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)
         val heapMax = runtime.maxMemory() / (1024 * 1024)
+        val thermal = readThermal(context)
 
-        // Prefer real /proc/stat delta; fall back to loadavg normalised by cores
         val finalCpu: Float
         val finalOk: Boolean
         if (cpuOk && cpuPct >= 0f) {
@@ -82,7 +84,7 @@ object SystemMetrics {
             val load1 = load?.getOrNull(0)
             if (load1 != null && cores > 0) {
                 finalCpu = (load1 / cores * 100f).coerceIn(0f, 100f)
-                finalOk = false // mark as estimated
+                finalOk = false
             } else {
                 finalCpu = 0f
                 finalOk = false
@@ -113,7 +115,8 @@ object SystemMetrics {
             sdkInt = Build.VERSION.SDK_INT,
             uptimeHours = uptime,
             appHeapUsedMb = heapUsed,
-            appHeapMaxMb = heapMax
+            appHeapMaxMb = heapMax,
+            thermalLabel = thermal
         )
     }
 
@@ -149,14 +152,12 @@ object SystemMetrics {
 
     private fun readProcStat(): Pair<Long, Long>? {
         return try {
-            // Prefer reading via File — works more often than RandomAccessFile on some builds
             val line = File("/proc/stat").bufferedReader().use { it.readLine() } ?: return null
             if (!line.startsWith("cpu ")) return null
             val parts = line.split(Regex("\\s+")).drop(1).mapNotNull { it.toLongOrNull() }
             if (parts.size < 4) return null
-            val idle = parts[3] + parts.getOrElse(4) { 0L } // idle + iowait
-            val total = parts.sum()
-            idle to total
+            val idle = parts[3] + parts.getOrElse(4) { 0L }
+            idle to parts.sum()
         } catch (_: Exception) {
             try {
                 RandomAccessFile("/proc/stat", "r").use { reader ->
@@ -179,7 +180,6 @@ object SystemMetrics {
         val pTotal = prevTotal
         prevIdle = idle
         prevTotal = total
-        // First sample only seeds baseline — real % appears on next refresh
         if (pIdle < 0 || pTotal < 0) return 0f to true
         if (total <= pTotal) return 0f to true
         val dIdle = idle - pIdle
@@ -220,6 +220,25 @@ object SystemMetrics {
             caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> "Mobile"
             caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> "Ethernet"
             else -> "Connected"
+        }
+    }
+
+    private fun readThermal(context: Context): String {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return "—"
+        return try {
+            val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+            when (pm.currentThermalStatus) {
+                PowerManager.THERMAL_STATUS_NONE -> "None"
+                PowerManager.THERMAL_STATUS_LIGHT -> "Light"
+                PowerManager.THERMAL_STATUS_MODERATE -> "Moderate"
+                PowerManager.THERMAL_STATUS_SEVERE -> "Severe"
+                PowerManager.THERMAL_STATUS_CRITICAL -> "Critical"
+                PowerManager.THERMAL_STATUS_EMERGENCY -> "Emergency"
+                PowerManager.THERMAL_STATUS_SHUTDOWN -> "Shutdown"
+                else -> "—"
+            }
+        } catch (_: Exception) {
+            "—"
         }
     }
 }

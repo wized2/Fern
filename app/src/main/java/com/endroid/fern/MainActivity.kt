@@ -1,10 +1,12 @@
 package com.endroid.fern
 
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.endroid.fern.ui.FernApp
@@ -18,19 +20,31 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val theme by viewModel.themeMode.collectAsState()
+            val keepOn by viewModel.keepScreenOn.collectAsState()
+            LaunchedEffect(keepOn) {
+                if (keepOn) {
+                    window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                } else {
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                }
+            }
             FernTheme(mode = theme) {
                 val snap by viewModel.snapshot.collectAsState()
                 val cpu by viewModel.historyCpu.collectAsState()
                 val ram by viewModel.historyRam.collectAsState()
+                val bat by viewModel.historyBattery.collectAsState()
                 val refresh by viewModel.refreshMs.collectAsState()
                 FernApp(
                     snapshot = snap,
                     cpuHistory = cpu,
                     ramHistory = ram,
+                    batteryHistory = bat,
                     themeMode = theme,
                     refreshMs = refresh,
+                    keepScreenOn = keepOn,
                     onThemeMode = viewModel::setThemeMode,
-                    onRefreshMs = viewModel::setRefreshMs
+                    onRefreshMs = viewModel::setRefreshMs,
+                    onKeepScreenOn = viewModel::setKeepScreenOn
                 )
             }
         }

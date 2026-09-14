@@ -16,4 +16,8 @@ class Prefs(context: Context) {
     var refreshMs: Int
         get() = p.getInt("refresh_ms", 1500).coerceIn(500, 10_000)
         set(v) = p.edit().putInt("refresh_ms", v.coerceIn(500, 10_000)).apply()
+
+    var keepScreenOn: Boolean
+        get() = p.getBoolean("keep_screen_on", false)
+        set(v) = p.edit().putBoolean("keep_screen_on", v).apply()
 }

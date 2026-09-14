@@ -30,11 +30,17 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
     private val _historyRam = MutableStateFlow<List<Float>>(emptyList())
     val historyRam: StateFlow<List<Float>> = _historyRam.asStateFlow()
 
+    private val _historyBattery = MutableStateFlow<List<Float>>(emptyList())
+    val historyBattery: StateFlow<List<Float>> = _historyBattery.asStateFlow()
+
     private val _themeMode = MutableStateFlow(prefs.themeMode)
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
 
     private val _refreshMs = MutableStateFlow(prefs.refreshMs)
     val refreshMs: StateFlow<Int> = _refreshMs.asStateFlow()
+
+    private val _keepScreenOn = MutableStateFlow(prefs.keepScreenOn)
+    val keepScreenOn: StateFlow<Boolean> = _keepScreenOn.asStateFlow()
 
     private var loop: Job? = null
 
@@ -53,10 +59,15 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
         restartLoop()
     }
 
+    fun setKeepScreenOn(on: Boolean) {
+        prefs.keepScreenOn = on
+        _keepScreenOn.value = on
+    }
+
     private fun restartLoop() {
         loop?.cancel()
         loop = viewModelScope.launch {
-            // Seed CPU baseline immediately so the second tick has a real delta
+            // Seed CPU baseline quickly so first real % arrives soon
             withContext(Dispatchers.IO) {
                 SystemMetrics.capture(getApplication())
             }
@@ -66,8 +77,11 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
                     SystemMetrics.capture(getApplication())
                 }
                 _snapshot.value = snap
-                _historyCpu.value = (_historyCpu.value + snap.cpuPercent).takeLast(48)
-                _historyRam.value = (_historyRam.value + snap.ramPercent).takeLast(48)
+                _historyCpu.value = (_historyCpu.value + snap.cpuPercent).takeLast(40)
+                _historyRam.value = (_historyRam.value + snap.ramPercent).takeLast(40)
+                if (snap.batteryPercent >= 0) {
+                    _historyBattery.value = (_historyBattery.value + snap.batteryPercent.toFloat()).takeLast(40)
+                }
                 delay(_refreshMs.value.toLong())
             }
         }
