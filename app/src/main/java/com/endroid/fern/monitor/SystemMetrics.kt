@@ -47,15 +47,6 @@ object SystemMetrics {
     @Volatile private var prevTotal: Long = -1
 
     fun capture(context: Context): SystemSnapshot {
-        // Two-sample CPU when we have no prior baseline
-        if (prevTotal < 0) {
-            readProcStat()?.let { (idle, total) ->
-                prevIdle = idle
-                prevTotal = total
-                Thread.sleep(120)
-            }
-        }
-
         val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         val mem = ActivityManager.MemoryInfo()
         am.getMemoryInfo(mem)
@@ -81,6 +72,23 @@ object SystemMetrics {
         val heapUsed = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)
         val heapMax = runtime.maxMemory() / (1024 * 1024)
 
+        // Prefer real /proc/stat delta; fall back to loadavg normalised by cores
+        val finalCpu: Float
+        val finalOk: Boolean
+        if (cpuOk && cpuPct >= 0f) {
+            finalCpu = cpuPct
+            finalOk = true
+        } else {
+            val load1 = load?.getOrNull(0)
+            if (load1 != null && cores > 0) {
+                finalCpu = (load1 / cores * 100f).coerceIn(0f, 100f)
+                finalOk = false // mark as estimated
+            } else {
+                finalCpu = 0f
+                finalOk = false
+            }
+        }
+
         return SystemSnapshot(
             ramUsedMb = usedRam / (1024 * 1024),
             ramTotalMb = totalRam / (1024 * 1024),
@@ -92,8 +100,8 @@ object SystemMetrics {
             batteryCharging = battery.charging,
             batteryTempC = battery.tempC,
             batteryHealth = battery.health,
-            cpuPercent = cpuPct,
-            cpuAvailable = cpuOk,
+            cpuPercent = finalCpu,
+            cpuAvailable = finalOk,
             loadAvg1 = load?.getOrNull(0),
             loadAvg5 = load?.getOrNull(1),
             loadAvg15 = load?.getOrNull(2),
@@ -171,7 +179,9 @@ object SystemMetrics {
         val pTotal = prevTotal
         prevIdle = idle
         prevTotal = total
-        if (pIdle < 0 || pTotal < 0 || total <= pTotal) return 0f to true
+        // First sample only seeds baseline — real % appears on next refresh
+        if (pIdle < 0 || pTotal < 0) return 0f to true
+        if (total <= pTotal) return 0f to true
         val dIdle = idle - pIdle
         val dTotal = total - pTotal
         if (dTotal <= 0L) return 0f to true

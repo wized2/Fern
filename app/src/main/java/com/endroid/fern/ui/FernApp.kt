@@ -47,7 +47,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier.Modifier
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -131,8 +131,12 @@ private fun HomeContent(s: SystemSnapshot?, cpuH: List<Float>, ramH: List<Float>
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             val cpuOk = s.cpuAvailable
-            val cpuPct = if (cpuOk) s.cpuPercent else ((s.loadAvg1 ?: 0f) / s.cpuCores.coerceAtLeast(1) * 100f).coerceIn(0f, 100f)
-            val cpuSub = if (cpuOk) String.format("%.0f%%", s.cpuPercent) else s.loadAvg1?.let { String.format("load %.2f", it) } ?: "N/A"
+            val cpuPct = s.cpuPercent
+            val cpuSub = when {
+                cpuOk -> String.format("%.0f%%", s.cpuPercent)
+                s.loadAvg1 != null -> String.format("~%.0f%% · load %.2f", s.cpuPercent, s.loadAvg1)
+                else -> "N/A"
+            }
             Gauge("CPU", cpuPct, cpuSub, Modifier.weight(1f))
             Gauge("RAM", s.ramPercent, "${s.ramUsedMb}/${s.ramTotalMb} MB", Modifier.weight(1f))
         }
@@ -165,8 +169,8 @@ private fun DetailsContent(s: SystemSnapshot?) {
         Detail("Processor") {
             Line("Cores", "${s.cpuCores}")
             s.cpuMaxMhz?.let { Line("Max clock", "$it MHz") }
-            Line("CPU", if (s.cpuAvailable) String.format("%.1f%%", s.cpuPercent) else "Restricted — showing load")
-            s.loadAvg1?.let { Line("Load 1/5/15", String.format("%.2f / %.2f / %.2f", it, s.loadAvg5 ?: 0f, s.loadAvg15 ?: 0f)) }
+            Line("CPU", if (s.cpuAvailable) String.format("%.1f%%", s.cpuPercent) else String.format("~%.1f%% (est.)", s.cpuPercent))
+            s.loadAvg1?.let { Line("Load 1 / 5 / 15", String.format("%.2f / %.2f / %.2f", it, s.loadAvg5 ?: 0f, s.loadAvg15 ?: 0f)) }
         }
         Detail("Memory") {
             Line("Used", "${s.ramUsedMb} MB")
@@ -217,14 +221,23 @@ private fun SettingsContent(themeMode: ThemeMode, refreshMs: Int, onThemeMode: (
         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    LeafMark(modifier = Modifier.size(40.dp))
+                    LeafMark(modifier = Modifier.size(48.dp))
                     Spacer(modifier = Modifier.size(12.dp))
                     Column {
-                        Text("Fern", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
-                        Text("v1.1.0", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Fern", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text("v1.2.0", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                Text("Material 3 system monitor. Live CPU, RAM, storage, battery. Offline, no ads.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "Live system pulse for Android. Material 3 green theme, real-time CPU · RAM · storage · battery gauges and sparklines. Fully offline, no ads, no tracking.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    "CPU uses dual-sample /proc/stat (with loadavg fallback). Data stays on device.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -251,17 +264,24 @@ private fun Line(k: String, v: String) {
 @Composable
 fun LeafMark(modifier: Modifier = Modifier) {
     val leaf = MaterialTheme.colorScheme.primary
+    val vein = Color.White.copy(alpha = 0.45f)
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
         val path = Path().apply {
-            moveTo(w * 0.5f, h * 0.08f)
-            cubicTo(w * 0.15f, h * 0.35f, w * 0.1f, h * 0.6f, w * 0.5f, h * 0.92f)
-            cubicTo(w * 0.9f, h * 0.6f, w * 0.85f, h * 0.35f, w * 0.5f, h * 0.08f)
+            moveTo(w * 0.5f, h * 0.06f)
+            cubicTo(w * 0.12f, h * 0.32f, w * 0.08f, h * 0.58f, w * 0.5f, h * 0.94f)
+            cubicTo(w * 0.92f, h * 0.58f, w * 0.88f, h * 0.32f, w * 0.5f, h * 0.06f)
             close()
         }
         drawPath(path, color = leaf)
-        drawLine(Color.White.copy(alpha = 0.35f), Offset(w * 0.5f, h * 0.22f), Offset(w * 0.5f, h * 0.85f), strokeWidth = w * 0.06f, cap = StrokeCap.Round)
+        // Main vein
+        drawLine(vein, Offset(w * 0.5f, h * 0.18f), Offset(w * 0.5f, h * 0.88f), strokeWidth = w * 0.055f, cap = StrokeCap.Round)
+        // Side veins
+        drawLine(vein, Offset(w * 0.5f, h * 0.38f), Offset(w * 0.32f, h * 0.52f), strokeWidth = w * 0.03f, cap = StrokeCap.Round)
+        drawLine(vein, Offset(w * 0.5f, h * 0.38f), Offset(w * 0.68f, h * 0.52f), strokeWidth = w * 0.03f, cap = StrokeCap.Round)
+        drawLine(vein, Offset(w * 0.5f, h * 0.58f), Offset(w * 0.30f, h * 0.72f), strokeWidth = w * 0.025f, cap = StrokeCap.Round)
+        drawLine(vein, Offset(w * 0.5f, h * 0.58f), Offset(w * 0.70f, h * 0.72f), strokeWidth = w * 0.025f, cap = StrokeCap.Round)
     }
 }
 

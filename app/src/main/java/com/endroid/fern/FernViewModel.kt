@@ -56,14 +56,17 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
     private fun restartLoop() {
         loop?.cancel()
         loop = viewModelScope.launch {
+            // Seed CPU baseline immediately so the second tick has a real delta
+            withContext(Dispatchers.IO) {
+                SystemMetrics.capture(getApplication())
+            }
+            delay(180)
             while (isActive) {
                 val snap = withContext(Dispatchers.IO) {
                     SystemMetrics.capture(getApplication())
                 }
                 _snapshot.value = snap
-                if (snap.cpuAvailable) {
-                    _historyCpu.value = (_historyCpu.value + snap.cpuPercent).takeLast(48)
-                }
+                _historyCpu.value = (_historyCpu.value + snap.cpuPercent).takeLast(48)
                 _historyRam.value = (_historyRam.value + snap.ramPercent).takeLast(48)
                 delay(_refreshMs.value.toLong())
             }
