@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Leaf-like mark -->
+    <path
+        android:fillColor="#A5D6A7"
+        android:pathData="M54,22 C40,38 32,52 32,64 C32,76 42,86 54,86 C66,86 76,76 76,64 C76,52 68,38 54,22 Z" />
+    <path
+        android:fillColor="#2E7D32"
+        android:pathData="M54,34 L54,78"
+        android:strokeWidth="3"
+        android:strokeColor="#2E7D32" />
+</vector>
