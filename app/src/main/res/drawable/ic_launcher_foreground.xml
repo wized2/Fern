@@ -4,13 +4,52 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Leaf-like mark -->
+    <!-- Soft leaf body -->
     <path
-        android:fillColor="#A5D6A7"
-        android:pathData="M54,22 C40,38 32,52 32,64 C32,76 42,86 54,86 C66,86 76,76 76,64 C76,52 68,38 54,22 Z" />
+        android:fillColor="#81C784"
+        android:pathData="M54,18
+            C38,32 28,48 28,62
+            C28,78 40,90 54,90
+            C68,90 80,78 80,62
+            C80,48 70,32 54,18 Z" />
+    <!-- Inner highlight -->
     <path
-        android:fillColor="#2E7D32"
-        android:pathData="M54,34 L54,78"
-        android:strokeWidth="3"
-        android:strokeColor="#2E7D32" />
+        android:fillColor="#C8E6C9"
+        android:pathData="M54,28
+            C44,40 38,50 38,60
+            C38,70 45,78 54,78
+            C54,78 54,28 54,28 Z"
+        android:fillAlpha="0.55" />
+    <!-- Center vein -->
+    <path
+        android:pathData="M54,30 L54,82"
+        android:strokeWidth="3.5"
+        android:strokeColor="#1B5E20"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round" />
+    <!-- Side veins -->
+    <path
+        android:pathData="M54,42 L42,52"
+        android:strokeWidth="2"
+        android:strokeColor="#2E7D32"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M54,42 L66,52"
+        android:strokeWidth="2"
+        android:strokeColor="#2E7D32"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M54,56 L40,64"
+        android:strokeWidth="2"
+        android:strokeColor="#2E7D32"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M54,56 L68,64"
+        android:strokeWidth="2"
+        android:strokeColor="#2E7D32"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round" />
 </vector>

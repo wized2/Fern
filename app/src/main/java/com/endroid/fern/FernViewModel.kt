@@ -3,9 +3,12 @@ package com.endroid.fern
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.endroid.fern.data.Prefs
+import com.endroid.fern.data.ThemeMode
 import com.endroid.fern.monitor.SystemMetrics
 import com.endroid.fern.monitor.SystemSnapshot
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +19,8 @@ import kotlinx.coroutines.withContext
 
 class FernViewModel(app: Application) : AndroidViewModel(app) {
 
+    private val prefs = Prefs(app)
+
     private val _snapshot = MutableStateFlow<SystemSnapshot?>(null)
     val snapshot: StateFlow<SystemSnapshot?> = _snapshot.asStateFlow()
 
@@ -25,16 +30,42 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
     private val _historyRam = MutableStateFlow<List<Float>>(emptyList())
     val historyRam: StateFlow<List<Float>> = _historyRam.asStateFlow()
 
+    private val _themeMode = MutableStateFlow(prefs.themeMode)
+    val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
+
+    private val _refreshMs = MutableStateFlow(prefs.refreshMs)
+    val refreshMs: StateFlow<Int> = _refreshMs.asStateFlow()
+
+    private var loop: Job? = null
+
     init {
-        viewModelScope.launch {
+        restartLoop()
+    }
+
+    fun setThemeMode(mode: ThemeMode) {
+        prefs.themeMode = mode
+        _themeMode.value = mode
+    }
+
+    fun setRefreshMs(ms: Int) {
+        prefs.refreshMs = ms
+        _refreshMs.value = prefs.refreshMs
+        restartLoop()
+    }
+
+    private fun restartLoop() {
+        loop?.cancel()
+        loop = viewModelScope.launch {
             while (isActive) {
                 val snap = withContext(Dispatchers.IO) {
                     SystemMetrics.capture(getApplication())
                 }
                 _snapshot.value = snap
-                _historyCpu.value = (_historyCpu.value + snap.cpuPercent).takeLast(40)
-                _historyRam.value = (_historyRam.value + snap.ramPercent).takeLast(40)
-                delay(1500)
+                if (snap.cpuAvailable) {
+                    _historyCpu.value = (_historyCpu.value + snap.cpuPercent).takeLast(48)
+                }
+                _historyRam.value = (_historyRam.value + snap.ramPercent).takeLast(48)
+                delay(_refreshMs.value.toLong())
             }
         }
     }

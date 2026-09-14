@@ -7,7 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import com.endroid.fern.ui.Dashboard
+import com.endroid.fern.ui.FernApp
 import com.endroid.fern.ui.theme.FernTheme
 
 class MainActivity : ComponentActivity() {
@@ -17,11 +17,21 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            FernTheme {
+            val theme by viewModel.themeMode.collectAsState()
+            FernTheme(mode = theme) {
                 val snap by viewModel.snapshot.collectAsState()
                 val cpu by viewModel.historyCpu.collectAsState()
                 val ram by viewModel.historyRam.collectAsState()
-                Dashboard(snapshot = snap, cpuHistory = cpu, ramHistory = ram)
+                val refresh by viewModel.refreshMs.collectAsState()
+                FernApp(
+                    snapshot = snap,
+                    cpuHistory = cpu,
+                    ramHistory = ram,
+                    themeMode = theme,
+                    refreshMs = refresh,
+                    onThemeMode = viewModel::setThemeMode,
+                    onRefreshMs = viewModel::setRefreshMs
+                )
             }
         }
     }

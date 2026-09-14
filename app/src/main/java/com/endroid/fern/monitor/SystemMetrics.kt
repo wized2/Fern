@@ -10,6 +10,8 @@ import android.os.BatteryManager
 import android.os.Build
 import android.os.Environment
 import android.os.StatFs
+import android.os.SystemClock
+import java.io.File
 import java.io.RandomAccessFile
 
 data class SystemSnapshot(
@@ -22,20 +24,38 @@ data class SystemSnapshot(
     val batteryPercent: Int,
     val batteryCharging: Boolean,
     val batteryTempC: Float?,
+    val batteryHealth: String,
     val cpuPercent: Float,
+    val cpuAvailable: Boolean,
+    val loadAvg1: Float?,
+    val loadAvg5: Float?,
+    val loadAvg15: Float?,
+    val cpuCores: Int,
+    val cpuMaxMhz: Int?,
     val networkLabel: String,
     val deviceModel: String,
     val androidVersion: String,
     val sdkInt: Int,
-    val uptimeHours: Float
+    val uptimeHours: Float,
+    val appHeapUsedMb: Long,
+    val appHeapMaxMb: Long
 )
 
 object SystemMetrics {
 
-    private var prevIdle: Long = 0
-    private var prevTotal: Long = 0
+    @Volatile private var prevIdle: Long = -1
+    @Volatile private var prevTotal: Long = -1
 
     fun capture(context: Context): SystemSnapshot {
+        // Two-sample CPU when we have no prior baseline
+        if (prevTotal < 0) {
+            readProcStat()?.let { (idle, total) ->
+                prevIdle = idle
+                prevTotal = total
+                Thread.sleep(120)
+            }
+        }
+
         val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         val mem = ActivityManager.MemoryInfo()
         am.getMemoryInfo(mem)
@@ -51,9 +71,15 @@ object SystemMetrics {
         val storePct = if (totalStore > 0) usedStore.toFloat() / totalStore * 100f else 0f
 
         val battery = readBattery(context)
-        val cpu = readCpuPercent()
+        val (cpuPct, cpuOk) = readCpuPercent()
+        val load = readLoadAvg()
+        val cores = Runtime.getRuntime().availableProcessors()
+        val maxMhz = readMaxCpuMhz()
         val net = readNetwork(context)
-        val uptime = android.os.SystemClock.elapsedRealtime() / 3_600_000f
+        val uptime = SystemClock.elapsedRealtime() / 3_600_000f
+        val runtime = Runtime.getRuntime()
+        val heapUsed = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)
+        val heapMax = runtime.maxMemory() / (1024 * 1024)
 
         return SystemSnapshot(
             ramUsedMb = usedRam / (1024 * 1024),
@@ -62,21 +88,37 @@ object SystemMetrics {
             storageUsedGb = usedStore / 1e9f,
             storageTotalGb = totalStore / 1e9f,
             storagePercent = storePct,
-            batteryPercent = battery.first,
-            batteryCharging = battery.second,
-            batteryTempC = battery.third,
-            cpuPercent = cpu,
+            batteryPercent = battery.pct,
+            batteryCharging = battery.charging,
+            batteryTempC = battery.tempC,
+            batteryHealth = battery.health,
+            cpuPercent = cpuPct,
+            cpuAvailable = cpuOk,
+            loadAvg1 = load?.getOrNull(0),
+            loadAvg5 = load?.getOrNull(1),
+            loadAvg15 = load?.getOrNull(2),
+            cpuCores = cores,
+            cpuMaxMhz = maxMhz,
             networkLabel = net,
-            deviceModel = "${Build.MANUFACTURER} ${Build.MODEL}".trim(),
+            deviceModel = "${Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${Build.MODEL}".trim(),
             androidVersion = Build.VERSION.RELEASE ?: "?",
             sdkInt = Build.VERSION.SDK_INT,
-            uptimeHours = uptime
+            uptimeHours = uptime,
+            appHeapUsedMb = heapUsed,
+            appHeapMaxMb = heapMax
         )
     }
 
-    private fun readBattery(context: Context): Triple<Int, Boolean, Float?> {
+    private data class BatteryInfo(
+        val pct: Int,
+        val charging: Boolean,
+        val tempC: Float?,
+        val health: String
+    )
+
+    private fun readBattery(context: Context): BatteryInfo {
         val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-            ?: return Triple(-1, false, null)
+            ?: return BatteryInfo(-1, false, null, "Unknown")
         val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
         val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, 100).coerceAtLeast(1)
         val pct = (level * 100) / scale
@@ -85,27 +127,76 @@ object SystemMetrics {
             status == BatteryManager.BATTERY_STATUS_FULL
         val tempTenths = intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, Int.MIN_VALUE)
         val temp = if (tempTenths == Int.MIN_VALUE) null else tempTenths / 10f
-        return Triple(pct, charging, temp)
+        val health = when (intent.getIntExtra(BatteryManager.EXTRA_HEALTH, -1)) {
+            BatteryManager.BATTERY_HEALTH_GOOD -> "Good"
+            BatteryManager.BATTERY_HEALTH_OVERHEAT -> "Overheat"
+            BatteryManager.BATTERY_HEALTH_DEAD -> "Dead"
+            BatteryManager.BATTERY_HEALTH_OVER_VOLTAGE -> "Over voltage"
+            BatteryManager.BATTERY_HEALTH_COLD -> "Cold"
+            BatteryManager.BATTERY_HEALTH_UNSPECIFIED_FAILURE -> "Failed"
+            else -> "Unknown"
+        }
+        return BatteryInfo(pct, charging, temp, health)
     }
 
-    /** Best-effort CPU load from /proc/stat (may be restricted on some devices). */
-    private fun readCpuPercent(): Float {
+    private fun readProcStat(): Pair<Long, Long>? {
         return try {
-            RandomAccessFile("/proc/stat", "r").use { reader ->
-                val line = reader.readLine() ?: return 0f
-                val parts = line.split(Regex("\\s+")).drop(1).mapNotNull { it.toLongOrNull() }
-                if (parts.size < 4) return 0f
-                val idle = parts[3]
-                val total = parts.sum()
-                val dIdle = idle - prevIdle
-                val dTotal = total - prevTotal
-                prevIdle = idle
-                prevTotal = total
-                if (dTotal <= 0L) return 0f
-                ((dTotal - dIdle).toFloat() / dTotal * 100f).coerceIn(0f, 100f)
-            }
+            // Prefer reading via File — works more often than RandomAccessFile on some builds
+            val line = File("/proc/stat").bufferedReader().use { it.readLine() } ?: return null
+            if (!line.startsWith("cpu ")) return null
+            val parts = line.split(Regex("\\s+")).drop(1).mapNotNull { it.toLongOrNull() }
+            if (parts.size < 4) return null
+            val idle = parts[3] + parts.getOrElse(4) { 0L } // idle + iowait
+            val total = parts.sum()
+            idle to total
         } catch (_: Exception) {
-            0f
+            try {
+                RandomAccessFile("/proc/stat", "r").use { reader ->
+                    val line = reader.readLine() ?: return null
+                    val parts = line.split(Regex("\\s+")).drop(1).mapNotNull { it.toLongOrNull() }
+                    if (parts.size < 4) return null
+                    val idle = parts[3] + parts.getOrElse(4) { 0L }
+                    idle to parts.sum()
+                }
+            } catch (_: Exception) {
+                null
+            }
+        }
+    }
+
+    private fun readCpuPercent(): Pair<Float, Boolean> {
+        val sample = readProcStat() ?: return 0f to false
+        val (idle, total) = sample
+        val pIdle = prevIdle
+        val pTotal = prevTotal
+        prevIdle = idle
+        prevTotal = total
+        if (pIdle < 0 || pTotal < 0 || total <= pTotal) return 0f to true
+        val dIdle = idle - pIdle
+        val dTotal = total - pTotal
+        if (dTotal <= 0L) return 0f to true
+        val busy = ((dTotal - dIdle).toFloat() / dTotal * 100f).coerceIn(0f, 100f)
+        return busy to true
+    }
+
+    private fun readLoadAvg(): FloatArray? {
+        return try {
+            val line = File("/proc/loadavg").bufferedReader().use { it.readLine() } ?: return null
+            val p = line.split(Regex("\\s+"))
+            if (p.size < 3) return null
+            floatArrayOf(p[0].toFloat(), p[1].toFloat(), p[2].toFloat())
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun readMaxCpuMhz(): Int? {
+        return try {
+            val path = "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq"
+            val khz = File(path).readText().trim().toLongOrNull() ?: return null
+            (khz / 1000).toInt()
+        } catch (_: Exception) {
+            null
         }
     }
 

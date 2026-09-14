@@ -6,6 +6,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import com.endroid.fern.data.ThemeMode
 
 private val LightColors = lightColorScheme(
     primary = Color(0xFF2E7D32),
@@ -26,6 +27,7 @@ private val LightColors = lightColorScheme(
     onSurface = Color(0xFF1A1C19),
     surfaceVariant = Color(0xFFDCE5D8),
     onSurfaceVariant = Color(0xFF414941),
+    surfaceContainerHigh = Color(0xFFE8F5E9),
     outline = Color(0xFF717971)
 )
 
@@ -48,13 +50,19 @@ private val DarkColors = darkColorScheme(
     onSurface = Color(0xFFE8F5E9),
     surfaceVariant = Color(0xFF2A3B2E),
     onSurfaceVariant = Color(0xFFC0C9BE),
+    surfaceContainerHigh = Color(0xFF1A2E20),
     outline = Color(0xFF8A9389)
 )
 
 @Composable
-fun FernTheme(content: @Composable () -> Unit) {
+fun FernTheme(mode: ThemeMode, content: @Composable () -> Unit) {
+    val dark = when (mode) {
+        ThemeMode.AUTO -> isSystemInDarkTheme()
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
     MaterialTheme(
-        colorScheme = if (isSystemInDarkTheme()) DarkColors else LightColors,
+        colorScheme = if (dark) DarkColors else LightColors,
         content = content
     )
 }
