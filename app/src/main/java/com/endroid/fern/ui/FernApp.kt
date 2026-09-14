@@ -107,7 +107,7 @@ fun FernApp(
             }
         }
     ) { padding ->
-        Box(Modifier.padding(padding).fillMaxSize()) {
+        Box(Modifier = Modifier.padding(padding).fillMaxSize()) {
             when (tab) {
                 Tab.Home -> HomeTab(snapshot, cpuHistory, ramHistory)
                 Tab.Details -> DetailsTab(snapshot)
@@ -153,7 +153,7 @@ private fun HomeTab(
             return
         }
 
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             val cpuLabel = if (snapshot.cpuAvailable) {
                 String.format("%.0f%%", snapshot.cpuPercent)
             } else {
@@ -200,7 +200,7 @@ private fun HomeTab(
             shape = MaterialTheme.shapes.extraLarge,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Activity", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 Sparkline(
                     if (cpuHistory.isNotEmpty()) cpuHistory else listOf(0f, 0f),
@@ -309,7 +309,7 @@ private fun SettingsTab(
             shape = MaterialTheme.shapes.extraLarge,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Appearance", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 var expanded by remember { mutableStateOf(false) }
                 val label = when (themeMode) {
@@ -356,7 +356,7 @@ private fun SettingsTab(
             shape = MaterialTheme.shapes.extraLarge,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Refresh", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 Text(
                     "Every ${"%.1f".format(refreshMs / 1000f)} s",
@@ -376,7 +376,7 @@ private fun SettingsTab(
             shape = MaterialTheme.shapes.extraLarge,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     LeafIcon(Modifier = Modifier.size(40.dp))
                     Spacer(Modifier = Modifier.size(12.dp))
@@ -407,7 +407,7 @@ private fun DetailCard(title: String, content: @Composable () -> Unit) {
         shape = MaterialTheme.shapes.extraLarge,
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(Modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
             content()
         }
@@ -452,7 +452,7 @@ private fun GaugeCard(title: String, percent: Float, subtitle: String, modifier:
         shape = MaterialTheme.shapes.extraLarge,
         modifier = modifier.semantics { contentDescription = "$title $subtitle" }
     ) {
-        Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(Modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             Box(
                 Modifier.fillMaxWidth().aspectRatio(1f).padding(8.dp),
@@ -496,7 +496,7 @@ private fun MetricBarCard(icon: ImageVector, title: String, percent: Float, deta
         shape = MaterialTheme.shapes.extraLarge,
         modifier = Modifier.fillMaxWidth().semantics { contentDescription = "$title $detail" }
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(icon, null, tint = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier = Modifier.size(8.dp))
