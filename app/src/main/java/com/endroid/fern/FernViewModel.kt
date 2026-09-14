@@ -42,6 +42,9 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
     private val _keepScreenOn = MutableStateFlow(prefs.keepScreenOn)
     val keepScreenOn: StateFlow<Boolean> = _keepScreenOn.asStateFlow()
 
+    private val _lastUpdatedMs = MutableStateFlow(0L)
+    val lastUpdatedMs: StateFlow<Long> = _lastUpdatedMs.asStateFlow()
+
     private var loop: Job? = null
     private var running = false
 
@@ -73,6 +76,26 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
         loop = null
     }
 
+    fun refreshNow() {
+        viewModelScope.launch {
+            val snap = withContext(Dispatchers.IO) {
+                SystemMetrics.capture(getApplication())
+            }
+            applySnapshot(snap)
+        }
+    }
+
+    private fun applySnapshot(snap: SystemSnapshot) {
+        _snapshot.value = snap
+        _lastUpdatedMs.value = System.currentTimeMillis()
+        _historyCpu.value = (_historyCpu.value + snap.cpuPercent).takeLast(40)
+        _historyRam.value = (_historyRam.value + snap.ramPercent).takeLast(40)
+        if (snap.batteryPercent >= 0) {
+            _historyBattery.value =
+                (_historyBattery.value + snap.batteryPercent.toFloat()).takeLast(40)
+        }
+    }
+
     private fun restartLoop() {
         loop?.cancel()
         loop = viewModelScope.launch {
@@ -84,13 +107,7 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
                 val snap = withContext(Dispatchers.IO) {
                     SystemMetrics.capture(getApplication())
                 }
-                _snapshot.value = snap
-                _historyCpu.value = (_historyCpu.value + snap.cpuPercent).takeLast(40)
-                _historyRam.value = (_historyRam.value + snap.ramPercent).takeLast(40)
-                if (snap.batteryPercent >= 0) {
-                    _historyBattery.value =
-                        (_historyBattery.value + snap.batteryPercent.toFloat()).takeLast(40)
-                }
+                applySnapshot(snap)
                 delay(_refreshMs.value.toLong())
             }
         }

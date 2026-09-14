@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.BatteryFull
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -32,6 +33,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
@@ -75,9 +77,11 @@ fun FernApp(
     themeMode: ThemeMode,
     refreshMs: Int,
     keepScreenOn: Boolean,
+    lastUpdatedMs: Long,
     onThemeMode: (ThemeMode) -> Unit,
     onRefreshMs: (Int) -> Unit,
-    onKeepScreenOn: (Boolean) -> Unit
+    onKeepScreenOn: (Boolean) -> Unit,
+    onRefreshNow: () -> Unit
 ) {
     var tab by remember { mutableStateOf(Tab.Home) }
     Scaffold(
@@ -108,7 +112,7 @@ fun FernApp(
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             when (tab) {
-                Tab.Home -> HomeContent(snapshot, cpuHistory, ramHistory, batteryHistory)
+                Tab.Home -> HomeContent(snapshot, cpuHistory, ramHistory, batteryHistory, lastUpdatedMs, onRefreshNow)
                 Tab.Details -> DetailsContent(snapshot)
                 Tab.Settings -> SettingsContent(
                     themeMode, refreshMs, keepScreenOn,
@@ -124,7 +128,9 @@ private fun HomeContent(
     s: SystemSnapshot?,
     cpuH: List<Float>,
     ramH: List<Float>,
-    batH: List<Float>
+    batH: List<Float>,
+    lastUpdatedMs: Long,
+    onRefreshNow: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -133,20 +139,36 @@ private fun HomeContent(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
             LeafMark(Modifier.size(36.dp))
             Spacer(modifier = Modifier.size(10.dp))
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     "Fern",
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
+                val age = if (lastUpdatedMs > 0L) {
+                    val sec = ((System.currentTimeMillis() - lastUpdatedMs) / 1000L).coerceAtLeast(0)
+                    if (sec < 5) "just now" else "${sec}s ago"
+                } else {
+                    "live"
+                }
                 Text(
-                    "System pulse · live",
+                    "System pulse · $age",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            IconButton(onClick = onRefreshNow) {
+                Icon(
+                    Icons.Default.Refresh,
+                    contentDescription = "Refresh now",
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
         }

@@ -7,7 +7,7 @@ Material 3 green theme · bottom tabs · gauges & sparklines · offline · no ad
 ![Min API 26](https://img.shields.io/badge/minSdk-26-green)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0-blue)
 ![Compose](https://img.shields.io/badge/Material%203-green)
-![Version](https://img.shields.io/badge/version-1.3.0-blue)
+![Version](https://img.shields.io/badge/version-1.4.0-blue)
 
 ## Features
 
@@ -23,7 +23,8 @@ Material 3 green theme · bottom tabs · gauges & sparklines · offline · no ad
 
 - **Home** — live gauges, progress bars, CPU / RAM / Battery sparklines  
 - **Details** — cores, clock, load averages, thermal, memory & power  
-- **Settings** — theme (Auto / Light / Dark), refresh 0.5–5 s, keep-screen-on, About  
+- **Settings** — theme (Auto / Light / Dark), refresh 0.5–5 s, keep-screen-on, About
+- **Manual refresh** + last-updated age on Home; sampling pauses in background  
 
 Fully offline after install. R8 + resource shrink for a small release APK.
 
