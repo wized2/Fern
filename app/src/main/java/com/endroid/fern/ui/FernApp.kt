@@ -211,7 +211,7 @@ private fun HomeTab(
             }
         }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier = Modifier.height(8.dp))
     }
 }
 
@@ -414,7 +414,6 @@ private fun DetailCard(title: String, content: @Composable () -> Unit) {
     }
 }
 
-@Composable
 @Composable
 private fun LeafIcon(modifier: Modifier = Modifier) {
     val leaf = MaterialTheme.colorScheme.primary
