@@ -45,3 +45,9 @@ Only `ACCESS_NETWORK_STATE` (connectivity label). No internet, no accounts, no t
 ## License
 
 MIT
+
+## Release signing (CI)
+
+Release APKs are signed in GitHub Actions when repository secrets are configured.
+If secrets are absent, CI falls back to debug signing so builds still pass.
+Key material is never stored in this repository.
