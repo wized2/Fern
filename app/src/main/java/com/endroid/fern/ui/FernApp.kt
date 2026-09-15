@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.BatteryFull
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
@@ -44,6 +43,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
+import com.endroid.fern.R
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -236,7 +239,7 @@ private fun HomeContent(
             String.format("%.1f / %.1f GB", s.storageUsedGb, s.storageTotalGb)
         )
         Bar(
-            if (s.batteryCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
+            Icons.Default.BatteryFull,
             "Battery",
             s.batteryPercent.toFloat().coerceAtLeast(0f),
             buildString {
@@ -321,9 +324,13 @@ private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, p
         }
         Detail("Processor") {
             Line("Cores", "${s.cpuCores}")
+            Line("Hardware", s.cpuHardware)
+            Line("Board", s.cpuBoard)
+            Line("ABI", s.cpuAbi)
+            s.cpuCurrentMhz?.let { Line("Current clock", "$it MHz") }
             s.cpuMaxMhz?.let { Line("Max clock", "$it MHz") }
             Line(
-                "CPU",
+                "Usage",
                 if (s.cpuAvailable) String.format("%.1f%%", s.cpuPercent)
                 else String.format("~%.1f%% (est.)", s.cpuPercent)
             )
@@ -643,39 +650,13 @@ private fun Line(k: String, v: String) {
 
 @Composable
 fun LeafMark(modifier: Modifier = Modifier) {
-    val leaf = MaterialTheme.colorScheme.primary
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        val path = Path().apply {
-            moveTo(w * 0.5f, h * 0.08f)
-            cubicTo(w * 0.15f, h * 0.35f, w * 0.1f, h * 0.6f, w * 0.5f, h * 0.92f)
-            cubicTo(w * 0.9f, h * 0.6f, w * 0.85f, h * 0.35f, w * 0.5f, h * 0.08f)
-            close()
-        }
-        drawPath(path, color = leaf)
-        drawLine(
-            Color.White.copy(alpha = 0.4f),
-            Offset(w * 0.5f, h * 0.2f),
-            Offset(w * 0.5f, h * 0.85f),
-            strokeWidth = w * 0.055f,
-            cap = StrokeCap.Round
-        )
-        drawLine(
-            Color.White.copy(alpha = 0.25f),
-            Offset(w * 0.5f, h * 0.38f),
-            Offset(w * 0.32f, h * 0.5f),
-            strokeWidth = w * 0.035f,
-            cap = StrokeCap.Round
-        )
-        drawLine(
-            Color.White.copy(alpha = 0.25f),
-            Offset(w * 0.5f, h * 0.38f),
-            Offset(w * 0.68f, h * 0.5f),
-            strokeWidth = w * 0.035f,
-            cap = StrokeCap.Round
-        )
-    }
+    // App leaf logo (same vector as adaptive launcher foreground)
+    Image(
+        painter = painterResource(R.drawable.ic_launcher_foreground),
+        contentDescription = "Fern",
+        modifier = modifier,
+        contentScale = ContentScale.Fit
+    )
 }
 
 @Composable
