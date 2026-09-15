@@ -63,6 +63,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import kotlinx.coroutines.delay
 import com.endroid.fern.BuildConfig
 import com.endroid.fern.data.ThemeMode
@@ -181,7 +184,11 @@ private fun HomeContent(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            IconButton(onClick = onRefreshNow) {
+            val haptics = LocalHapticFeedback.current
+            IconButton(onClick = {
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                onRefreshNow()
+            }) {
                 Icon(
                     Icons.Default.Refresh,
                     contentDescription = "Refresh now",
