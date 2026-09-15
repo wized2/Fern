@@ -86,14 +86,14 @@ jobs:
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.4.3
-          name: Fern v1.4.3
+          tag_name: v1.4.4
+          name: Fern v1.4.4
           files: |
             release-assets/Fern-release.apk
             release-assets/Fern-debug.apk
           generate_release_notes: true
           body: |
-            ## Fern v1.4.3
+            ## Fern v1.4.4
 
             Live system pulse for Android — Material 3 green resource monitor.
 
