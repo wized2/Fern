@@ -29,9 +29,41 @@ jobs:
       - name: Accept licenses
         run: yes | sdkmanager --licenses || true
 
+
+      - name: Decode release keystore (optional)
+        id: keystore
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+        run: |
+          if [ -n "${RELEASE_KEYSTORE_BASE64:-}" ] && [ -n "${RELEASE_STORE_PASSWORD:-}" ] \
+             && [ -n "${RELEASE_KEY_PASSWORD:-}" ] && [ -n "${RELEASE_KEY_ALIAS:-}" ]; then
+            echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > "$GITHUB_WORKSPACE/release.jks"
+            echo "path=$GITHUB_WORKSPACE/release.jks" >> "$GITHUB_OUTPUT"
+            echo "present=true" >> "$GITHUB_OUTPUT"
+            echo "Release keystore decoded."
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "Release key secrets not set — release APK will use debug signing (skip)."
+          fi
+
       - name: Build debug + release APKs
+        env:
+          RELEASE_STORE_FILE: ${{ steps.keystore.outputs.present == 'true' && format('{0}/release.jks', github.workspace) || '' }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
           chmod +x gradlew
+          if [ "${{ steps.keystore.outputs.present }}" = "true" ]; then
+            export RELEASE_STORE_FILE="$GITHUB_WORKSPACE/release.jks"
+            echo "Signing release with uploaded keystore"
+          else
+            unset RELEASE_STORE_FILE || true
+            echo "No release keystore — Gradle falls back to debug signing"
+          fi
           ./gradlew assembleDebug assembleRelease --no-daemon --stacktrace
 
       - name: Upload debug APK
@@ -86,14 +118,14 @@ jobs:
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.5.0
-          name: Fern v1.5.0
+          tag_name: v1.5.1
+          name: Fern v1.5.1
           files: |
             release-assets/Fern-release.apk
             release-assets/Fern-debug.apk
           generate_release_notes: true
           body: |
-            ## Fern v1.5.0
+            ## Fern v1.5.1
 
             Live system pulse for Android — Material 3 green resource monitor.
 
