@@ -5,3 +5,4 @@
     public static *** v(...);
     public static *** i(...);
 }
+-keep class com.endroid.fern.widget.** { *; }
