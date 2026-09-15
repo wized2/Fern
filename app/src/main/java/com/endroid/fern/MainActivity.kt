@@ -37,6 +37,11 @@ class MainActivity : ComponentActivity() {
                 val storage by viewModel.historyStorage.collectAsState()
                 val refresh by viewModel.refreshMs.collectAsState()
                 val lastUpdated by viewModel.lastUpdatedMs.collectAsState()
+                val haptics by viewModel.haptics.collectAsState()
+                val pauseBg by viewModel.pauseInBackground.collectAsState()
+                val peakCpu by viewModel.peakCpu.collectAsState()
+                val peakRam by viewModel.peakRam.collectAsState()
+                val peakNet by viewModel.peakNet.collectAsState()
                 FernApp(
                     snapshot = snap,
                     cpuHistory = cpu,
@@ -47,10 +52,19 @@ class MainActivity : ComponentActivity() {
                     themeMode = theme,
                     refreshMs = refresh,
                     keepScreenOn = keepOn,
+                    haptics = haptics,
+                    pauseInBackground = pauseBg,
+                    peakCpu = peakCpu,
+                    peakRam = peakRam,
+                    peakNet = peakNet,
                     lastUpdatedMs = lastUpdated,
                     onThemeMode = viewModel::setThemeMode,
                     onRefreshMs = viewModel::setRefreshMs,
                     onKeepScreenOn = viewModel::setKeepScreenOn,
+                    onHaptics = viewModel::setHaptics,
+                    onPauseInBackground = viewModel::setPauseInBackground,
+                    onClearHistory = viewModel::clearHistory,
+                    onShareMetrics = viewModel::metricsShareText,
                     onRefreshNow = viewModel::refreshNow
                 )
             }
@@ -63,7 +77,9 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onStop() {
-        viewModel.stopSampling()
+        if (viewModel.pauseInBackground.value) {
+            viewModel.stopSampling()
+        }
         super.onStop()
     }
 }

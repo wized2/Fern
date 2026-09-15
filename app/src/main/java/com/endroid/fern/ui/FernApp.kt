@@ -63,6 +63,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -84,10 +85,19 @@ fun FernApp(
     themeMode: ThemeMode,
     refreshMs: Int,
     keepScreenOn: Boolean,
+    haptics: Boolean,
+    pauseInBackground: Boolean,
+    peakCpu: Float,
+    peakRam: Float,
+    peakNet: Float,
     lastUpdatedMs: Long,
     onThemeMode: (ThemeMode) -> Unit,
     onRefreshMs: (Int) -> Unit,
     onKeepScreenOn: (Boolean) -> Unit,
+    onHaptics: (Boolean) -> Unit,
+    onPauseInBackground: (Boolean) -> Unit,
+    onClearHistory: () -> Unit,
+    onShareMetrics: () -> String,
     onRefreshNow: () -> Unit
 ) {
     var tab by remember { mutableStateOf(Tab.Home) }
@@ -119,11 +129,11 @@ fun FernApp(
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             when (tab) {
-                Tab.Home -> HomeContent(snapshot, cpuHistory, ramHistory, batteryHistory, netHistory, storageHistory, lastUpdatedMs, onRefreshNow)
-                Tab.Details -> DetailsContent(snapshot)
+                Tab.Home -> HomeContent(snapshot, cpuHistory, ramHistory, batteryHistory, netHistory, storageHistory, lastUpdatedMs, haptics, onRefreshNow)
+                Tab.Details -> DetailsContent(snapshot, peakCpu, peakRam, peakNet, onShareMetrics)
                 Tab.Settings -> SettingsContent(
-                    themeMode, refreshMs, keepScreenOn,
-                    onThemeMode, onRefreshMs, onKeepScreenOn
+                    themeMode, refreshMs, keepScreenOn, haptics, pauseInBackground,
+                    onThemeMode, onRefreshMs, onKeepScreenOn, onHaptics, onPauseInBackground, onClearHistory
                 )
             }
         }
@@ -139,6 +149,7 @@ private fun HomeContent(
     netH: List<Float>,
     storageH: List<Float>,
     lastUpdatedMs: Long,
+    haptics: Boolean,
     onRefreshNow: () -> Unit
 ) {
     var nowTick by remember { mutableStateOf(System.currentTimeMillis()) }
@@ -184,9 +195,9 @@ private fun HomeContent(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            val haptics = LocalHapticFeedback.current
+            val haptic = LocalHapticFeedback.current
             IconButton(onClick = {
-                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                if (haptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 onRefreshNow()
             }) {
                 Icon(
@@ -290,7 +301,7 @@ private fun HomeContent(
 }
 
 @Composable
-private fun DetailsContent(s: SystemSnapshot?) {
+private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, peakNet: Float, onShareMetrics: () -> String) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -341,6 +352,23 @@ private fun DetailsContent(s: SystemSnapshot?) {
             Line("Network", s.networkLabel)
             Line("Throughput", if (s.networkKBps >= 1024f) String.format("%.2f MB/s", s.networkKBps / 1024f) else String.format("%.1f KB/s", s.networkKBps))
             Line("Uptime", String.format("%.1f h", s.uptimeHours))
+            Line("Peak CPU", String.format("%.1f%%", peakCpu))
+            Line("Peak RAM", String.format("%.1f%%", peakRam))
+            Line("Peak net", if (peakNet >= 1024f) String.format("%.2f MB/s", peakNet / 1024f) else String.format("%.1f KB/s", peakNet))
+        }
+        val context = LocalContext.current
+        androidx.compose.material3.Button(
+            onClick = {
+                val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(android.content.Intent.EXTRA_TEXT, onShareMetrics())
+                    putExtra(android.content.Intent.EXTRA_SUBJECT, "Fern metrics")
+                }
+                context.startActivity(android.content.Intent.createChooser(send, "Share metrics"))
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Share snapshot")
         }
     }
 }
@@ -351,9 +379,14 @@ private fun SettingsContent(
     themeMode: ThemeMode,
     refreshMs: Int,
     keepScreenOn: Boolean,
+    haptics: Boolean,
+    pauseInBackground: Boolean,
     onThemeMode: (ThemeMode) -> Unit,
     onRefreshMs: (Int) -> Unit,
-    onKeepScreenOn: (Boolean) -> Unit
+    onKeepScreenOn: (Boolean) -> Unit,
+    onHaptics: (Boolean) -> Unit,
+    onPauseInBackground: (Boolean) -> Unit,
+    onClearHistory: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -482,6 +515,56 @@ private fun SettingsContent(
                 Switch(checked = keepScreenOn, onCheckedChange = onKeepScreenOn)
             }
         }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf(500 to "0.5s", 1000 to "1s", 1500 to "1.5s", 2000 to "2s", 5000 to "5s").forEach { (ms, label) ->
+                val selected = refreshMs == ms
+                androidx.compose.material3.FilterChip(
+                    selected = selected,
+                    onClick = { onRefreshMs(ms) },
+                    label = { Text(label) }
+                )
+            }
+        }
+        Card(
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            ),
+            shape = MaterialTheme.shapes.extraLarge,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Haptic feedback", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                        Text("Vibrate on manual refresh", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(checked = haptics, onCheckedChange = onHaptics)
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Pause in background", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                        Text("Stop sampling when app is not visible", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(checked = pauseInBackground, onCheckedChange = onPauseInBackground)
+                }
+                androidx.compose.material3.OutlinedButton(onClick = onClearHistory, modifier = Modifier.fillMaxWidth()) {
+                    Text("Clear sparkline history")
+                }
+            }
+        }
+
         Card(
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh

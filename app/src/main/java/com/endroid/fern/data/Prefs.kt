@@ -20,4 +20,14 @@ class Prefs(context: Context) {
     var keepScreenOn: Boolean
         get() = p.getBoolean("keep_screen_on", false)
         set(v) = p.edit().putBoolean("keep_screen_on", v).apply()
+
+    /** Haptic feedback on manual refresh. */
+    var haptics: Boolean
+        get() = p.getBoolean("haptics", true)
+        set(v) = p.edit().putBoolean("haptics", v).apply()
+
+    /** Pause live sampling while app is in background (saves battery). */
+    var pauseInBackground: Boolean
+        get() = p.getBoolean("pause_bg", true)
+        set(v) = p.edit().putBoolean("pause_bg", v).apply()
 }

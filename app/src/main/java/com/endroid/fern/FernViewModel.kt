@@ -48,6 +48,19 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
     private val _keepScreenOn = MutableStateFlow(prefs.keepScreenOn)
     val keepScreenOn: StateFlow<Boolean> = _keepScreenOn.asStateFlow()
 
+    private val _haptics = MutableStateFlow(prefs.haptics)
+    val haptics: StateFlow<Boolean> = _haptics.asStateFlow()
+
+    private val _pauseInBackground = MutableStateFlow(prefs.pauseInBackground)
+    val pauseInBackground: StateFlow<Boolean> = _pauseInBackground.asStateFlow()
+
+    private val _peakCpu = MutableStateFlow(0f)
+    val peakCpu: StateFlow<Float> = _peakCpu.asStateFlow()
+    private val _peakRam = MutableStateFlow(0f)
+    val peakRam: StateFlow<Float> = _peakRam.asStateFlow()
+    private val _peakNet = MutableStateFlow(0f)
+    val peakNet: StateFlow<Float> = _peakNet.asStateFlow()
+
     private val _lastUpdatedMs = MutableStateFlow(0L)
     val lastUpdatedMs: StateFlow<Long> = _lastUpdatedMs.asStateFlow()
 
@@ -68,6 +81,27 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
     fun setKeepScreenOn(on: Boolean) {
         prefs.keepScreenOn = on
         _keepScreenOn.value = on
+    }
+
+    fun setHaptics(on: Boolean) {
+        prefs.haptics = on
+        _haptics.value = on
+    }
+
+    fun setPauseInBackground(on: Boolean) {
+        prefs.pauseInBackground = on
+        _pauseInBackground.value = on
+    }
+
+    fun clearHistory() {
+        _historyCpu.value = emptyList()
+        _historyRam.value = emptyList()
+        _historyBattery.value = emptyList()
+        _historyNet.value = emptyList()
+        _historyStorage.value = emptyList()
+        _peakCpu.value = 0f
+        _peakRam.value = 0f
+        _peakNet.value = 0f
     }
 
     fun startSampling() {
@@ -103,6 +137,33 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
         }
         _historyNet.value = (_historyNet.value + snap.networkKBps).takeLast(48)
         _historyStorage.value = (_historyStorage.value + snap.storagePercent).takeLast(48)
+        if (snap.cpuPercent > _peakCpu.value) _peakCpu.value = snap.cpuPercent
+        if (snap.ramPercent > _peakRam.value) _peakRam.value = snap.ramPercent
+        if (snap.networkKBps > _peakNet.value) _peakNet.value = snap.networkKBps
+    }
+
+    fun metricsShareText(): String {
+        val s = _snapshot.value ?: return "Fern: no sample yet"
+        return buildString {
+            appendLine("Fern system snapshot")
+            appendLine("Device: ${s.deviceModel} · Android ${s.androidVersion} (API ${s.sdkInt})")
+            appendLine(
+                "CPU: ${"%.1f".format(s.cpuPercent)}% (peak ${"%.1f".format(_peakCpu.value)}%) · ${s.cpuCores} cores"
+            )
+            appendLine(
+                "RAM: ${s.ramUsedMb}/${s.ramTotalMb} MB (${"%.1f".format(s.ramPercent)}%, peak ${"%.1f".format(_peakRam.value)}%)"
+            )
+            appendLine(
+                "Battery: ${s.batteryPercent}% ${if (s.batteryCharging) "charging" else "discharging"} · ${s.batteryHealth}"
+            )
+            appendLine(
+                "Storage: ${"%.1f".format(s.storageUsedGb)}/${"%.1f".format(s.storageTotalGb)} GB"
+            )
+            appendLine(
+                "Network: ${s.networkLabel} · ${"%.1f".format(s.networkKBps)} KB/s (peak ${"%.1f".format(_peakNet.value)})"
+            )
+            appendLine("Thermal: ${s.thermalLabel} · Uptime ${"%.1f".format(s.uptimeHours)} h")
+        }
     }
 
     private fun restartLoop() {
