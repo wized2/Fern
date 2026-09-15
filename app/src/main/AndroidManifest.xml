@@ -18,28 +18,5 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <receiver
-            android:name=".widget.BatteryWidgetProvider"
-            android:exported="true"
-            android:label="@string/widget_battery_title">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_battery_info" />
-        </receiver>
-        <receiver
-            android:name=".widget.RamWidgetProvider"
-            android:exported="true"
-            android:label="@string/widget_ram_title">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_ram_info" />
-        </receiver>
     </application>
 </manifest>

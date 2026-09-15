@@ -649,13 +649,25 @@ private fun Line(k: String, v: String) {
 
 @Composable
 fun LeafMark(modifier: Modifier = Modifier) {
-    // App leaf logo (same vector as adaptive launcher foreground)
-    Image(
-        painter = painterResource(R.drawable.ic_launcher_foreground),
-        contentDescription = "Fern",
-        modifier = modifier,
-        contentScale = ContentScale.Fit
-    )
+    val leaf = MaterialTheme.colorScheme.primary
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val path = Path().apply {
+            moveTo(w * 0.5f, h * 0.08f)
+            cubicTo(w * 0.15f, h * 0.35f, w * 0.1f, h * 0.6f, w * 0.5f, h * 0.92f)
+            cubicTo(w * 0.9f, h * 0.6f, w * 0.85f, h * 0.35f, w * 0.5f, h * 0.08f)
+            close()
+        }
+        drawPath(path, color = leaf)
+        drawLine(
+            Color.White.copy(alpha = 0.45f),
+            Offset(w * 0.5f, h * 0.18f),
+            Offset(w * 0.5f, h * 0.88f),
+            strokeWidth = w * 0.05f,
+            cap = StrokeCap.Round
+        )
+    }
 }
 
 @Composable
