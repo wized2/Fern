@@ -321,6 +321,9 @@ private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, p
         }
         Detail("Processor") {
             Line("Cores", "${s.cpuCores}")
+            Line("Chip", s.cpuHardware)
+            Line("Board", s.cpuBoard)
+            Line("ABI", s.cpuAbi)
             s.cpuMaxMhz?.let { Line("Max clock", "$it MHz") }
             Line(
                 "CPU",
