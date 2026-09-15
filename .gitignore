@@ -12,3 +12,12 @@
 app/release/
 app/build/
 .kotlin/
+
+# Release signing material — never commit
+*.jks
+*.keystore
+release.jks
+*.jks.b64
+KEYS.md
+release-keys/
+release-keys-backup/
