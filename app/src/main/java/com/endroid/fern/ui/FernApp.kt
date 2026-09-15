@@ -19,11 +19,13 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.BatteryFull
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
@@ -42,10 +44,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.ui.res.painterResource
-import androidx.compose.foundation.Image
-import androidx.compose.ui.layout.ContentScale
-import com.endroid.fern.R
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -238,7 +236,7 @@ private fun HomeContent(
             String.format("%.1f / %.1f GB", s.storageUsedGb, s.storageTotalGb)
         )
         Bar(
-            Icons.Default.BatteryFull,
+            if (s.batteryCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
             "Battery",
             s.batteryPercent.toFloat().coerceAtLeast(0f),
             buildString {
@@ -657,10 +655,24 @@ fun LeafMark(modifier: Modifier = Modifier) {
         }
         drawPath(path, color = leaf)
         drawLine(
-            Color.White.copy(alpha = 0.45f),
-            Offset(w * 0.5f, h * 0.18f),
-            Offset(w * 0.5f, h * 0.88f),
-            strokeWidth = w * 0.05f,
+            Color.White.copy(alpha = 0.4f),
+            Offset(w * 0.5f, h * 0.2f),
+            Offset(w * 0.5f, h * 0.85f),
+            strokeWidth = w * 0.055f,
+            cap = StrokeCap.Round
+        )
+        drawLine(
+            Color.White.copy(alpha = 0.25f),
+            Offset(w * 0.5f, h * 0.38f),
+            Offset(w * 0.32f, h * 0.5f),
+            strokeWidth = w * 0.035f,
+            cap = StrokeCap.Round
+        )
+        drawLine(
+            Color.White.copy(alpha = 0.25f),
+            Offset(w * 0.5f, h * 0.38f),
+            Offset(w * 0.68f, h * 0.5f),
+            strokeWidth = w * 0.035f,
             cap = StrokeCap.Round
         )
     }
