@@ -171,8 +171,12 @@ private fun HomeContent(
                 } else {
                     "live"
                 }
+                val thermal = s?.thermalLabel?.takeIf { it.isNotBlank() && !it.equals("Unknown", true) }
                 Text(
-                    "System pulse · $age",
+                    buildString {
+                        append("System pulse · $age")
+                        if (thermal != null) append(" · $thermal")
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
