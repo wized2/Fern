@@ -323,13 +323,9 @@ private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, p
         }
         Detail("Processor") {
             Line("Cores", "${s.cpuCores}")
-            Line("Hardware", s.cpuHardware)
-            Line("Board", s.cpuBoard)
-            Line("ABI", s.cpuAbi)
-            s.cpuCurrentMhz?.let { Line("Current clock", "$it MHz") }
             s.cpuMaxMhz?.let { Line("Max clock", "$it MHz") }
             Line(
-                "Usage",
+                "CPU",
                 if (s.cpuAvailable) String.format("%.1f%%", s.cpuPercent)
                 else String.format("~%.1f%% (est.)", s.cpuPercent)
             )
