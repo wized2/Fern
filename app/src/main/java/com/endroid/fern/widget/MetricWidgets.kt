@@ -67,7 +67,7 @@ private fun updateAll(
                     views.setTextViewText(R.id.widget_value, "${snap.batteryPercent}%")
                     val sub = buildString {
                         append(if (snap.batteryCharging) "Charging" else "Discharging")
-                        snap.batteryTempC?.let { append(" · %.0f°C".format(it)) }
+                        snap.batteryTempC?.let { append(String.format(" · %.0f°C", it)) }
                     }
                     views.setTextViewText(R.id.widget_subtitle, sub)
                 } else {
@@ -78,7 +78,7 @@ private fun updateAll(
             Kind.RAM -> {
                 views.setTextViewText(R.id.widget_title, "RAM")
                 if (snap != null) {
-                    views.setTextViewText(R.id.widget_value, "%.0f%%".format(snap.ramPercent))
+                    views.setTextViewText(R.id.widget_value, String.format("%.0f%%", snap.ramPercent))
                     views.setTextViewText(
                         R.id.widget_subtitle,
                         "${snap.ramUsedMb} / ${snap.ramTotalMb} MB"

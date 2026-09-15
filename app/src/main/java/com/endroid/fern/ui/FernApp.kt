@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BatteryFull
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
@@ -231,13 +232,13 @@ private fun HomeContent(
             )
         }
         Bar(
-            Icons.Default.Info,
+            Icons.Default.Storage,
             "Storage",
             s.storagePercent,
             String.format("%.1f / %.1f GB", s.storageUsedGb, s.storageTotalGb)
         )
         Bar(
-            Icons.Default.Info,
+            Icons.Default.BatteryFull,
             "Battery",
             s.batteryPercent.toFloat().coerceAtLeast(0f),
             buildString {
