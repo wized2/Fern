@@ -129,14 +129,14 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
         _snapshot.value = snap
         _lastUpdatedMs.value = System.currentTimeMillis()
         // Always append — even small changes should appear on the sparkline
-        _historyCpu.value = (_historyCpu.value + snap.cpuPercent).takeLast(48)
-        _historyRam.value = (_historyRam.value + snap.ramPercent).takeLast(48)
+        _historyCpu.value = (_historyCpu.value + snap.cpuPercent).takeLast(36)
+        _historyRam.value = (_historyRam.value + snap.ramPercent).takeLast(36)
         if (snap.batteryPercent >= 0) {
             _historyBattery.value =
-                (_historyBattery.value + snap.batteryPercent.toFloat()).takeLast(48)
+                (_historyBattery.value + snap.batteryPercent.toFloat()).takeLast(36)
         }
-        _historyNet.value = (_historyNet.value + snap.networkKBps).takeLast(48)
-        _historyStorage.value = (_historyStorage.value + snap.storagePercent).takeLast(48)
+        _historyNet.value = (_historyNet.value + snap.networkKBps).takeLast(36)
+        _historyStorage.value = (_historyStorage.value + snap.storagePercent).takeLast(36)
         if (snap.cpuPercent > _peakCpu.value) _peakCpu.value = snap.cpuPercent
         if (snap.ramPercent > _peakRam.value) _peakRam.value = snap.ramPercent
         if (snap.networkKBps > _peakNet.value) _peakNet.value = snap.networkKBps
