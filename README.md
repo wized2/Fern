@@ -1,32 +1,36 @@
 # Fern
 
-**Live system pulse for Android** — CPU, RAM, storage, battery, thermal, network.
+**Live system pulse for Android** — CPU, RAM, storage, battery, thermal, network, and hardware tests.
 
-Material 3 green theme · bottom tabs · gauges & sparklines · offline · no ads.
+Material 3 · offline · no ads · small release APK (R8 + resource shrink).
 
 ![Min API 26](https://img.shields.io/badge/minSdk-26-green)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0-blue)
 ![Compose](https://img.shields.io/badge/Material%203-green)
-![Version](https://img.shields.io/badge/version-1.4.0-blue)
+![Version](https://img.shields.io/badge/version-1.5.14-blue)
 
 ## Features
 
 | Metric | Source |
 |--------|--------|
-| **CPU** | Dual-sample `/proc/stat` (loadavg fallback when restricted) |
-| **RAM** | `ActivityManager.MemoryInfo` |
-| **Storage** | `StatFs` on internal data |
-| **Battery** | Level, charging, temperature, health + history sparkline |
+| **CPU %** | Multi-path `/proc/stat` dual-sample + cross-tick; loadavg fallback |
+| **CPU detail** | Cores, current/max MHz, governor, ABI, chip, load 1/5/15 |
+| **RAM** | Used / free / total + app heap |
+| **Storage** | Internal `StatFs`; external when distinct |
+| **Battery** | Level, charge state, health, tech, °C, mV, mA + sparkline |
 | **Thermal** | `PowerManager` status (API 29+) |
-| **Network** | Wi-Fi / mobile / Ethernet / offline |
-| **Device** | Model, Android version, uptime, app heap |
+| **Network** | Type + live KB/s throughput |
+| **Display** | Resolution, DPI, refresh Hz |
+| **System** | Security patch, kernel, locale, timezone, sensor count |
 
-- **Home** — live gauges, progress bars, CPU / RAM / Battery sparklines  
-- **Details** — cores, clock, load averages, thermal, memory & power  
-- **Settings** — theme (Auto / Light / Dark), refresh 0.5–5 s, keep-screen-on, About
-- **Manual refresh** + last-updated age on Home; sampling pauses in background  
+### Tabs
 
-Fully offline after install. R8 + resource shrink for a small release APK.
+- **Home** — gauges, bars, sparklines (CPU / RAM / battery / net / storage), manual refresh  
+- **Details** — processor, memory, power, display, device peaks  
+- **Tests** — display color panels, vibration, live accel/gyro, touch counter, sensor list  
+- **Settings** — theme (Auto / Light / Dark), refresh interval, keep-screen-on, haptics, pause in background, About + GitHub link  
+
+Sampling pauses when the app is backgrounded (optional). Fully offline after install.
 
 ## Build
 
@@ -36,18 +40,9 @@ Fully offline after install. R8 + resource shrink for a small release APK.
 
 Min SDK 26 · Target 35 · Kotlin + Jetpack Compose + Material 3.
 
-CI builds both APKs and attaches them to the GitHub Release on every `main` push / tag.
-
-## Privacy
-
-Only `ACCESS_NETWORK_STATE` (connectivity label). No internet, no accounts, no tracking. All metrics stay on device.
+CI builds debug + release APKs and attaches them to GitHub Releases on `main` / tags.  
+Release signing uses GitHub secrets when present; otherwise falls back to the debug keystore.
 
 ## License
 
-MIT
-
-## Release signing (CI)
-
-Release APKs are signed in GitHub Actions when repository secrets are configured.
-If secrets are absent, CI falls back to debug signing so builds still pass.
-Key material is never stored in this repository.
+MIT · [wized2/Fern](https://github.com/wized2/Fern)

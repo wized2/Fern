@@ -705,6 +705,7 @@ private fun TestsContent() {
     var touchHits by remember { mutableStateOf(0) }
     var accel by remember { mutableStateOf("—") }
     var gyro by remember { mutableStateOf("—") }
+    var light by remember { mutableStateOf("—") }
     var sensorNames by remember { mutableStateOf<List<String>>(emptyList()) }
 
     DisposableEffect(Unit) {
@@ -725,6 +726,11 @@ private fun TestsContent() {
                             gyro = String.format("x %.2f  y %.2f  z %.2f", v[0], v[1], v[2])
                         }
                     }
+                    Sensor.TYPE_LIGHT -> {
+                        if (v.isNotEmpty()) {
+                            light = String.format("%.1f lx", v[0])
+                        }
+                    }
                 }
             }
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
@@ -733,6 +739,9 @@ private fun TestsContent() {
             sm.registerListener(listener, it, SensorManager.SENSOR_DELAY_UI)
         }
         sm?.getDefaultSensor(Sensor.TYPE_GYROSCOPE)?.let {
+            sm.registerListener(listener, it, SensorManager.SENSOR_DELAY_UI)
+        }
+        sm?.getDefaultSensor(Sensor.TYPE_LIGHT)?.let {
             sm.registerListener(listener, it, SensorManager.SENSOR_DELAY_UI)
         }
         onDispose {
@@ -816,6 +825,7 @@ private fun TestsContent() {
         Detail("Motion sensors") {
             Line("Accelerometer", accel)
             Line("Gyroscope", gyro)
+            Line("Light", light)
         }
 
         Detail("Touch") {
