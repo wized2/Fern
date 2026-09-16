@@ -186,13 +186,18 @@ private fun HomeContent(
                     "live"
                 }
                 val thermal = s?.thermalLabel?.takeIf { it.isNotBlank() && !it.equals("Unknown", true) }
+                val thermalHot = thermal != null && (
+                    thermal.contains("HOT", true) || thermal.contains("CRITICAL", true) ||
+                        thermal.contains("EMERGENCY", true) || thermal.contains("SEVERE", true)
+                )
                 Text(
                     buildString {
                         append("System pulse · $age")
                         if (thermal != null) append(" · $thermal")
                     },
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (thermalHot) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             val haptic = LocalHapticFeedback.current
