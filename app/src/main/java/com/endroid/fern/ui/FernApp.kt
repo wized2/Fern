@@ -353,8 +353,19 @@ private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, p
         }
         Detail("Memory") {
             Line("Used", "${s.ramUsedMb} MB")
+            Line("Free", "${s.freeRamMb} MB")
             Line("Total", "${s.ramTotalMb} MB")
             Line("App heap", "${s.appHeapUsedMb} / ${s.appHeapMaxMb} MB")
+            if (s.externalStorageTotalGb != null && s.externalStorageFreeGb != null) {
+                Line(
+                    "External",
+                    String.format(
+                        "%.1f / %.1f GB free",
+                        s.externalStorageFreeGb,
+                        s.externalStorageTotalGb
+                    )
+                )
+            }
         }
         Detail("Power") {
             Line("Level", "${s.batteryPercent}%")
@@ -380,6 +391,9 @@ private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, p
             Line("Kernel", s.kernelVersion)
             Line("Network", s.networkLabel)
             Line("Throughput", if (s.networkKBps >= 1024f) String.format("%.2f MB/s", s.networkKBps / 1024f) else String.format("%.1f KB/s", s.networkKBps))
+            Line("Locale", s.localeTag)
+            Line("Time zone", s.timeZoneId)
+            Line("Sensors", "${s.sensorCount}")
             Line("Uptime", String.format("%.1f h", s.uptimeHours))
             Line("Peak CPU", String.format("%.1f%%", peakCpu))
             Line("Peak RAM", String.format("%.1f%%", peakRam))

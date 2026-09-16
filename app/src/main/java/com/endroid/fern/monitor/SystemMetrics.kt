@@ -61,7 +61,13 @@ data class SystemSnapshot(
     val displayDensityDpi: Int,
     val displayRefreshHz: Float,
     val cpuCurMhz: Int?,
-    val cpuGovernor: String
+    val cpuGovernor: String,
+    val freeRamMb: Long,
+    val localeTag: String,
+    val timeZoneId: String,
+    val sensorCount: Int,
+    val externalStorageFreeGb: Float?,
+    val externalStorageTotalGb: Float?
 )
 
 object SystemMetrics {
@@ -99,6 +105,7 @@ object SystemMetrics {
         val heapMax = runtime.maxMemory() / (1024 * 1024)
         val thermal = readThermal(context)
         val display = readDisplay(context)
+        val ext = readExternalStorage()
 
         return SystemSnapshot(
             ramUsedMb = usedRam / (1024 * 1024),
@@ -141,7 +148,13 @@ object SystemMetrics {
             displayDensityDpi = display.densityDpi,
             displayRefreshHz = display.refreshHz,
             cpuCurMhz = readCpuCurMhz(),
-            cpuGovernor = readCpuGovernor()
+            cpuGovernor = readCpuGovernor(),
+            freeRamMb = availRam / (1024 * 1024),
+            localeTag = java.util.Locale.getDefault().toLanguageTag(),
+            timeZoneId = java.util.TimeZone.getDefault().id,
+            sensorCount = readSensorCount(context),
+            externalStorageFreeGb = ext?.first,
+            externalStorageTotalGb = ext?.second
         )
     }
 
@@ -411,6 +424,36 @@ object SystemMetrics {
         if (dtSec < 0.05f) return 0f
         val dBytes = (bytes - prevB).coerceAtLeast(0L)
         return (dBytes / 1024f) / dtSec
+    }
+
+
+    private fun readSensorCount(context: Context): Int {
+        return try {
+            val sm = context.getSystemService(Context.SENSOR_SERVICE) as? android.hardware.SensorManager
+            sm?.getSensorList(android.hardware.Sensor.TYPE_ALL)?.size ?: 0
+        } catch (_: Exception) {
+            0
+        }
+    }
+
+    private fun readExternalStorage(): Pair<Float, Float>? {
+        return try {
+            val state = Environment.getExternalStorageState()
+            if (state != Environment.MEDIA_MOUNTED && state != Environment.MEDIA_MOUNTED_READ_ONLY) {
+                return null
+            }
+            val path = Environment.getExternalStorageDirectory() ?: return null
+            val st = StatFs(path.path)
+            val total = st.totalBytes
+            val free = st.availableBytes
+            if (total <= 0L) return null
+            // Skip if same as internal data partition (common on modern phones)
+            val internal = StatFs(Environment.getDataDirectory().path).totalBytes
+            if (kotlin.math.abs(total - internal) < 50L * 1024 * 1024) return null
+            (free / 1e9f) to (total / 1e9f)
+        } catch (_: Exception) {
+            null
+        }
     }
 
     private fun readThermal(context: Context): String {
