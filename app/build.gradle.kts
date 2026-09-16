@@ -12,10 +12,10 @@ android {
         applicationId = "com.endroid.fern"
         minSdk = 26
         targetSdk = 35
-        versionCode = 24
-        versionName = "1.5.12"
+        versionCode = 25
+        versionName = "1.5.13"
         resourceConfigurations += listOf("en")
-        buildConfigField("String", "VERSION_NAME", "\"1.5.12\"")
+        buildConfigField("String", "VERSION_NAME", "\"1.5.13\"")
     }
 
 
@@ -95,6 +95,6 @@ dependencies {
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.material3)
-    implementation("androidx.compose.material:material-icons-core")
+    implementation("androidx.compose.material:material-icons-extended")
     debugImplementation(libs.androidx.ui.tooling.preview)
 }

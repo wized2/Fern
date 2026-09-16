@@ -20,6 +20,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.BatteryChargingFull
+import androidx.compose.material.icons.filled.BatteryFull
+import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Refresh
@@ -74,9 +77,24 @@ import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.sp
 import com.endroid.fern.R
 
-private enum class Tab { Home, Details, Settings }
+private enum class Tab { Home, Details, Tests, Settings }
 
 @Composable
 fun FernApp(
@@ -123,6 +141,12 @@ fun FernApp(
                     label = { Text("Details") }
                 )
                 NavigationBarItem(
+                    selected = tab == Tab.Tests,
+                    onClick = { tab = Tab.Tests },
+                    icon = { Icon(Icons.Default.Science, contentDescription = "Tests") },
+                    label = { Text("Tests") }
+                )
+                NavigationBarItem(
                     selected = tab == Tab.Settings,
                     onClick = { tab = Tab.Settings },
                     icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
@@ -135,6 +159,7 @@ fun FernApp(
             when (tab) {
                 Tab.Home -> HomeContent(snapshot, cpuHistory, ramHistory, batteryHistory, netHistory, storageHistory, lastUpdatedMs, haptics, onRefreshNow)
                 Tab.Details -> DetailsContent(snapshot, peakCpu, peakRam, peakNet, onShareMetrics)
+                Tab.Tests -> TestsContent()
                 Tab.Settings -> SettingsContent(
                     themeMode, refreshMs, keepScreenOn, haptics, pauseInBackground,
                     onThemeMode, onRefreshMs, onKeepScreenOn, onHaptics, onPauseInBackground, onClearHistory
@@ -245,7 +270,7 @@ private fun HomeContent(
             String.format("%.1f / %.1f GB", s.storageUsedGb, s.storageTotalGb)
         )
         Bar(
-            if (s.batteryCharging) Icons.Default.Star else Icons.Default.Star,
+            if (s.batteryCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
             "Battery",
             s.batteryPercent.toFloat().coerceAtLeast(0f),
             buildString {
@@ -670,6 +695,160 @@ private fun SettingsContent(
         }
     }
 }
+
+
+
+@Composable
+private fun TestsContent() {
+    val context = LocalContext.current
+    var colorTest by remember { mutableStateOf<Color?>(null) }
+    var touchHits by remember { mutableStateOf(0) }
+    var accel by remember { mutableStateOf("—") }
+    var gyro by remember { mutableStateOf("—") }
+    var sensorNames by remember { mutableStateOf<List<String>>(emptyList()) }
+
+    DisposableEffect(Unit) {
+        val sm = context.getSystemService(android.content.Context.SENSOR_SERVICE) as? SensorManager
+        sensorNames = sm?.getSensorList(Sensor.TYPE_ALL)?.map { it.name }?.sorted()?.take(40) ?: emptyList()
+        val listener = object : SensorEventListener {
+            override fun onSensorChanged(event: SensorEvent?) {
+                if (event == null) return
+                val v = event.values
+                when (event.sensor.type) {
+                    Sensor.TYPE_ACCELEROMETER -> {
+                        if (v.size >= 3) {
+                            accel = String.format("x %.2f  y %.2f  z %.2f", v[0], v[1], v[2])
+                        }
+                    }
+                    Sensor.TYPE_GYROSCOPE -> {
+                        if (v.size >= 3) {
+                            gyro = String.format("x %.2f  y %.2f  z %.2f", v[0], v[1], v[2])
+                        }
+                    }
+                }
+            }
+            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+        }
+        sm?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let {
+            sm.registerListener(listener, it, SensorManager.SENSOR_DELAY_UI)
+        }
+        sm?.getDefaultSensor(Sensor.TYPE_GYROSCOPE)?.let {
+            sm.registerListener(listener, it, SensorManager.SENSOR_DELAY_UI)
+        }
+        onDispose {
+            runCatching { sm?.unregisterListener(listener) }
+        }
+    }
+
+    if (colorTest != null) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colorTest!!)
+                .clickable { colorTest = null },
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                "Tap to exit",
+                color = if (colorTest == Color.Black || colorTest == Color.Blue) Color.White else Color.Black,
+                style = MaterialTheme.typography.titleMedium
+            )
+        }
+        return
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("Hardware tests", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+        Text(
+            "Quick checks for display, vibration, sensors and touch. Fully offline.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Detail("Display") {
+            Text("Full-screen color — tap the screen to leave", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                listOf(
+                    "White" to Color.White,
+                    "Black" to Color.Black,
+                    "Red" to Color.Red,
+                    "Green" to Color(0xFF00C853),
+                    "Blue" to Color.Blue
+                ).forEach { (label, c) ->
+                    OutlinedButton(onClick = { colorTest = c }, modifier = Modifier.weight(1f)) {
+                        Text(label, fontSize = 11.sp, maxLines = 1)
+                    }
+                }
+            }
+        }
+
+        Detail("Vibration") {
+            Button(
+                onClick = {
+                    runCatching {
+                        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            val vm = context.getSystemService(android.content.Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+                            vm.defaultVibrator
+                        } else {
+                            @Suppress("DEPRECATION")
+                            context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as Vibrator
+                        }
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            vibrator.vibrate(VibrationEffect.createOneShot(80, VibrationEffect.DEFAULT_AMPLITUDE))
+                        } else {
+                            @Suppress("DEPRECATION")
+                            vibrator.vibrate(80)
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Vibrate once")
+            }
+        }
+
+        Detail("Motion sensors") {
+            Line("Accelerometer", accel)
+            Line("Gyroscope", gyro)
+        }
+
+        Detail("Touch") {
+            Text("Taps: $touchHits", style = MaterialTheme.typography.titleMedium)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp)
+                    .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.medium)
+                    .pointerInput(Unit) {
+                        detectTapGestures { touchHits += 1 }
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Tap here", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            OutlinedButton(onClick = { touchHits = 0 }, modifier = Modifier.fillMaxWidth()) {
+                Text("Reset taps")
+            }
+        }
+
+        Detail("Sensors on device (${sensorNames.size})") {
+            if (sensorNames.isEmpty()) {
+                Text("No sensors reported", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                sensorNames.forEach { name ->
+                    Text(name, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface)
+                }
+            }
+        }
+    }
+}
+
 
 @Composable
 private fun Detail(title: String, content: @Composable () -> Unit) {
