@@ -148,7 +148,7 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
             appendLine("Fern system snapshot")
             appendLine("Device: ${s.deviceModel} · Android ${s.androidVersion} (API ${s.sdkInt})")
             appendLine(
-                "CPU: ${"%.1f".format(s.cpuPercent)}% (peak ${"%.1f".format(_peakCpu.value)}%) · ${s.cpuCores} cores"
+                "CPU: ${"%.1f".format(s.cpuPercent)}% (peak ${"%.1f".format(_peakCpu.value)}%) · ${s.cpuCores} cores · ${s.cpuHardware}"
             )
             appendLine(
                 "RAM: ${s.ramUsedMb}/${s.ramTotalMb} MB (${"%.1f".format(s.ramPercent)}%, peak ${"%.1f".format(_peakRam.value)}%)"

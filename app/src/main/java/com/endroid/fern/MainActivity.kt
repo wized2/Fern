@@ -1,6 +1,7 @@
 package com.endroid.fern
 
 import android.os.Bundle
+import android.content.Intent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -10,10 +11,31 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.endroid.fern.ui.FernApp
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
+import com.endroid.fern.widget.BatteryWidgetProvider
+import com.endroid.fern.widget.RamWidgetProvider
 import com.endroid.fern.ui.theme.FernTheme
 
 class MainActivity : ComponentActivity() {
     private val viewModel: FernViewModel by viewModels()
+
+    override fun onResume() {
+        super.onResume()
+        refreshWidgets()
+    }
+
+    private fun refreshWidgets() {
+        val mgr = AppWidgetManager.getInstance(this)
+        val batteryIds = mgr.getAppWidgetIds(ComponentName(this, BatteryWidgetProvider::class.java))
+        if (batteryIds.isNotEmpty()) {
+            sendBroadcast(Intent(this, BatteryWidgetProvider::class.java).setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE).putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, batteryIds))
+        }
+        val ramIds = mgr.getAppWidgetIds(ComponentName(this, RamWidgetProvider::class.java))
+        if (ramIds.isNotEmpty()) {
+            sendBroadcast(Intent(this, RamWidgetProvider::class.java).setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE).putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ramIds))
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
