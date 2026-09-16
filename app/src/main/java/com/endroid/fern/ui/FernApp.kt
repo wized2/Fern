@@ -1,6 +1,15 @@
 package com.endroid.fern.ui
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.draw.clip
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -15,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -96,6 +106,7 @@ import com.endroid.fern.R
 
 private enum class Tab { Home, Details, Tests, Settings }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FernApp(
     snapshot: SystemSnapshot?,
@@ -124,39 +135,68 @@ fun FernApp(
 ) {
     var tab by remember { mutableStateOf(Tab.Home) }
     Scaffold(
-        modifier = Modifier.fillMaxSize().statusBarsPadding(),
+        modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        "Fern",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.primary
+                ),
+                windowInsets = WindowInsets.statusBars
+            )
+        },
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                tonalElevation = 0.dp
+            ) {
                 NavigationBarItem(
                     selected = tab == Tab.Home,
                     onClick = { tab = Tab.Home },
                     icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-                    label = { Text("Home") }
+                    label = { Text("Home", style = MaterialTheme.typography.labelMedium) },
+                    alwaysShowLabel = false
                 )
                 NavigationBarItem(
                     selected = tab == Tab.Details,
                     onClick = { tab = Tab.Details },
                     icon = { Icon(Icons.Default.Info, contentDescription = "Details") },
-                    label = { Text("Details") }
+                    label = { Text("Details", style = MaterialTheme.typography.labelMedium) },
+                    alwaysShowLabel = false
                 )
                 NavigationBarItem(
                     selected = tab == Tab.Tests,
                     onClick = { tab = Tab.Tests },
                     icon = { Icon(Icons.Default.Science, contentDescription = "Tests") },
-                    label = { Text("Tests") }
+                    label = { Text("Tests", style = MaterialTheme.typography.labelMedium) },
+                    alwaysShowLabel = false
                 )
                 NavigationBarItem(
                     selected = tab == Tab.Settings,
                     onClick = { tab = Tab.Settings },
                     icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
-                    label = { Text("Settings") }
+                    label = { Text("Settings", style = MaterialTheme.typography.labelMedium) },
+                    alwaysShowLabel = false
                 )
             }
         }
     ) { padding ->
-        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
-            when (tab) {
+        AnimatedContent(
+            targetState = tab,
+            transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
+            modifier = Modifier.padding(padding).fillMaxSize(),
+            label = "tab"
+        ) { current ->
+            when (current) {
                 Tab.Home -> HomeContent(snapshot, cpuHistory, ramHistory, batteryHistory, netHistory, storageHistory, lastUpdatedMs, haptics, onRefreshNow)
                 Tab.Details -> DetailsContent(snapshot, peakCpu, peakRam, peakNet, onShareMetrics)
                 Tab.Tests -> TestsContent()
@@ -281,7 +321,7 @@ private fun HomeContent(
         )
         Card(
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
             ),
             shape = MaterialTheme.shapes.extraLarge,
             modifier = Modifier.fillMaxWidth()
@@ -291,9 +331,9 @@ private fun HomeContent(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
-                    "Activity",
+                    "Trends",
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Spark(
                     if (cpuH.size >= 2) cpuH else listOf(0f, 0f),
@@ -467,7 +507,7 @@ private fun SettingsContent(
         )
         Card(
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
             ),
             shape = MaterialTheme.shapes.extraLarge,
             modifier = Modifier.fillMaxWidth()
@@ -528,7 +568,7 @@ private fun SettingsContent(
         }
         Card(
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
             ),
             shape = MaterialTheme.shapes.extraLarge,
             modifier = Modifier.fillMaxWidth()
@@ -552,7 +592,7 @@ private fun SettingsContent(
         }
         Card(
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
             ),
             shape = MaterialTheme.shapes.extraLarge,
             modifier = Modifier.fillMaxWidth()
@@ -595,7 +635,7 @@ private fun SettingsContent(
         }
         Card(
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
             ),
             shape = MaterialTheme.shapes.extraLarge,
             modifier = Modifier.fillMaxWidth()
@@ -631,7 +671,7 @@ private fun SettingsContent(
 
         Card(
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
             ),
             shape = MaterialTheme.shapes.extraLarge,
             modifier = Modifier.fillMaxWidth()
@@ -874,7 +914,7 @@ private fun TestsContent() {
 private fun Detail(title: String, content: @Composable () -> Unit) {
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
         shape = MaterialTheme.shapes.extraLarge,
         modifier = Modifier.fillMaxWidth()
@@ -957,7 +997,7 @@ private fun Gauge(
     val arc = MaterialTheme.colorScheme.primary
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
         shape = MaterialTheme.shapes.extraLarge,
         modifier = modifier
@@ -968,18 +1008,18 @@ private fun Gauge(
         ) {
             Text(
                 title,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
-                    .padding(6.dp),
+                    .padding(4.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
-                    val stroke = size.minDimension * 0.1f
+                    val stroke = size.minDimension * 0.09f
                     val d = size.minDimension - stroke
                     val tl = Offset((size.width - d) / 2f, (size.height - d) / 2f)
                     drawArc(
@@ -1015,7 +1055,7 @@ private fun Bar(icon: ImageVector, title: String, percent: Float, detail: String
     )
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
         shape = MaterialTheme.shapes.extraLarge,
         modifier = Modifier
@@ -1033,7 +1073,10 @@ private fun Bar(icon: ImageVector, title: String, percent: Float, detail: String
             }
             LinearProgressIndicator(
                 progress = { a },
-                modifier = Modifier.fillMaxWidth().height(10.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp)),
                 color = MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 strokeCap = StrokeCap.Round
