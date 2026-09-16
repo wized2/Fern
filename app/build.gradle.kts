@@ -12,8 +12,8 @@ android {
         applicationId = "com.endroid.fern"
         minSdk = 26
         targetSdk = 35
-        versionCode = 18
-        versionName = "1.5.6"
+        versionCode = 19
+        versionName = "1.5.7"
         resourceConfigurations += listOf("en")
         buildConfigField("String", "VERSION_NAME", "\"1.5.1\"")
     }
@@ -78,7 +78,9 @@ android {
                 "META-INF/LGPL2.1",
                 "META-INF/*.kotlin_module",
                 "META-INF/DEPENDENCIES",
-                "DebugProbesKt.bin"
+                "DebugProbesKt.bin",
+                "META-INF/*.version",
+                "kotlin-tooling-metadata.json"
             )
         }
     }
