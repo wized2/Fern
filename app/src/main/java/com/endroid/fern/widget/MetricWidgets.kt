@@ -36,26 +36,31 @@ private fun buildViews(context: Context, isBattery: Boolean): RemoteViews {
     if (isBattery) {
         views.setTextViewText(R.id.widget_title, "Battery")
         if (snap != null) {
-            views.setTextViewText(R.id.widget_value, snap.batteryPercent.toString() + "%")
-            val sub = if (snap.batteryCharging) "Charging" else "Discharging"
-            views.setTextViewText(R.id.widget_subtitle, sub)
+            val pct = snap.batteryPercent.coerceIn(0, 100)
+            views.setTextViewText(R.id.widget_value, "$pct%")
+            views.setProgressBar(R.id.widget_progress, 100, pct, false)
+            views.setTextViewText(
+                R.id.widget_subtitle,
+                if (snap.batteryCharging) "Charging" else "Discharging"
+            )
         } else {
             views.setTextViewText(R.id.widget_value, "—")
+            views.setProgressBar(R.id.widget_progress, 100, 0, false)
             views.setTextViewText(R.id.widget_subtitle, "Open Fern")
         }
     } else {
         views.setTextViewText(R.id.widget_title, "RAM")
         if (snap != null) {
-            views.setTextViewText(
-                R.id.widget_value,
-                String.format("%.0f%%", snap.ramPercent)
-            )
+            val pct = snap.ramPercent.toInt().coerceIn(0, 100)
+            views.setTextViewText(R.id.widget_value, String.format("%d%%", pct))
+            views.setProgressBar(R.id.widget_progress, 100, pct, false)
             views.setTextViewText(
                 R.id.widget_subtitle,
                 snap.ramUsedMb.toString() + " / " + snap.ramTotalMb + " MB"
             )
         } else {
             views.setTextViewText(R.id.widget_value, "—")
+            views.setProgressBar(R.id.widget_progress, 100, 0, false)
             views.setTextViewText(R.id.widget_subtitle, "Open Fern")
         }
     }
