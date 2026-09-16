@@ -71,6 +71,12 @@ import kotlinx.coroutines.delay
 import com.endroid.fern.BuildConfig
 import com.endroid.fern.data.ThemeMode
 import com.endroid.fern.monitor.SystemSnapshot
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.endroid.fern.R
 
 private enum class Tab { Home, Details, Settings }
 
@@ -585,7 +591,16 @@ private fun SettingsContent(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    LeafMark(modifier = Modifier.size(40.dp))
+                    Image(
+                        painter = painterResource(R.drawable.ic_launcher_foreground),
+                        contentDescription = "Fern logo",
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(
+                                MaterialTheme.colorScheme.surfaceContainerHighest,
+                                shape = MaterialTheme.shapes.medium
+                            )
+                    )
                     Spacer(modifier = Modifier.size(12.dp))
                     Column {
                         Text(
@@ -604,6 +619,22 @@ private fun SettingsContent(
                     "Material 3 system monitor. Live CPU, RAM, storage, battery & thermal. Fully offline, no ads, no accounts.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                val ctx = LocalContext.current
+                Text(
+                    "github.com/wized2/Fern",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.clickable {
+                        runCatching {
+                            ctx.startActivity(
+                                Intent(
+                                    Intent.ACTION_VIEW,
+                                    Uri.parse("https://github.com/wized2/Fern")
+                                )
+                            )
+                        }
+                    }
                 )
                 Text(
                     "MIT · endroid",

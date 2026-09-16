@@ -147,84 +147,128 @@ object SystemMetrics {
         return BatteryInfo(pct, charging, temp, health)
     }
 
+    private fun parseProcStatLine(line: String?): Pair<Long, Long>? {
+        if (line.isNullOrBlank()) return null
+        val trimmed = line.trim()
+        if (!trimmed.startsWith("cpu")) return null
+        // Aggregate line is "cpu " (with space); per-core is "cpu0" etc. — only use aggregate.
+        if (trimmed.length > 3 && trimmed[3].isDigit()) return null
+        val parts = trimmed.split(Regex("\\s+")).drop(1).mapNotNull { it.toLongOrNull() }
+        if (parts.size < 4) return null
+        val idle = parts[3] + parts.getOrElse(4) { 0L } // idle + iowait
+        val total = parts.sum()
+        if (total <= 0L) return null
+        return idle to total
+    }
+
+    /** Several open paths — SELinux often blocks one style of access on phones. */
     private fun readProcStat(): Pair<Long, Long>? {
-        return try {
-            val line = File("/proc/stat").bufferedReader().use { it.readLine() } ?: return null
-            if (!line.startsWith("cpu ")) return null
-            val parts = line.split(Regex("\\s+")).drop(1).mapNotNull { it.toLongOrNull() }
-            if (parts.size < 4) return null
-            val idle = parts[3] + parts.getOrElse(4) { 0L }
-            idle to parts.sum()
-        } catch (_: Exception) {
-            try {
-                RandomAccessFile("/proc/stat", "r").use { reader ->
-                    val line = reader.readLine() ?: return null
-                    val parts = line.split(Regex("\\s+")).drop(1).mapNotNull { it.toLongOrNull() }
-                    if (parts.size < 4) return null
-                    val idle = parts[3] + parts.getOrElse(4) { 0L }
-                    idle to parts.sum()
-                }
-            } catch (_: Exception) {
-                null
+        try {
+            parseProcStatLine(File("/proc/stat").bufferedReader().use { it.readLine() })?.let { return it }
+        } catch (_: Exception) { }
+        try {
+            RandomAccessFile("/proc/stat", "r").use { raf ->
+                parseProcStatLine(raf.readLine())?.let { return it }
             }
-        }
+        } catch (_: Exception) { }
+        try {
+            File("/proc/stat").inputStream().bufferedReader().use { br ->
+                parseProcStatLine(br.readLine())?.let { return it }
+            }
+        } catch (_: Exception) { }
+        try {
+            val proc = Runtime.getRuntime().exec(arrayOf("cat", "/proc/stat"))
+            try {
+                parseProcStatLine(proc.inputStream.bufferedReader().use { it.readLine() })?.let { return it }
+            } finally {
+                proc.destroy()
+            }
+        } catch (_: Exception) { }
+        return null
+    }
+
+    private fun cpuFromLoad(cores: Int, load: FloatArray?): Pair<Float, Boolean> {
+        val load1 = load?.getOrNull(0) ?: return 0f to false
+        val c = cores.coerceAtLeast(1)
+        return (load1 / c * 100f).coerceIn(0f, 100f) to false
     }
 
     /**
-     * Always dual-sample /proc/stat with a short gap so each snapshot has a real delta.
-     * Falls back to loadavg when /proc/stat is restricted.
+     * Dual-sample /proc/stat in this call; if the delta is zero or /proc is blocked,
+     * use the cross-tick prevIdle/prevTotal from the last poll; finally loadavg.
      */
     private fun readCpuPercentAccurate(cores: Int, load: FloatArray?): Pair<Float, Boolean> {
         val first = readProcStat()
-        if (first == null) {
-            val load1 = load?.getOrNull(0)
-            return if (load1 != null && cores > 0) {
-                (load1 / cores * 100f).coerceIn(0f, 100f) to false
-            } else {
-                0f to false
+        if (first != null) {
+            try {
+                Thread.sleep(180)
+            } catch (_: InterruptedException) { }
+            val second = readProcStat()
+            if (second != null) {
+                val (idle1, total1) = first
+                val (idle2, total2) = second
+                val dTotal = total2 - total1
+                val dIdle = idle2 - idle1
+                if (dTotal > 0L) {
+                    prevIdle = idle2
+                    prevTotal = total2
+                    val busy = ((dTotal - dIdle).toFloat() / dTotal * 100f).coerceIn(0f, 100f)
+                    return busy to true
+                }
             }
         }
-        try {
-            Thread.sleep(220)
-        } catch (_: InterruptedException) {
-            // ignore
-        }
-        val second = readProcStat()
-        if (second == null) {
-            val load1 = load?.getOrNull(0)
-            return if (load1 != null && cores > 0) {
-                (load1 / cores * 100f).coerceIn(0f, 100f) to false
+
+        // Cross-tick against values stored on the previous successful sample
+        val now = readProcStat() ?: first
+        if (now != null) {
+            val (idle2, total2) = now
+            val pIdle = prevIdle
+            val pTotal = prevTotal
+            if (pIdle >= 0L && pTotal > 0L && total2 >= pTotal) {
+                val dTotal = total2 - pTotal
+                val dIdle = idle2 - pIdle
+                prevIdle = idle2
+                prevTotal = total2
+                if (dTotal > 0L) {
+                    val busy = ((dTotal - dIdle).toFloat() / dTotal * 100f).coerceIn(0f, 100f)
+                    return busy to true
+                }
             } else {
-                0f to false
+                prevIdle = idle2
+                prevTotal = total2
             }
         }
-        val (idle1, total1) = first
-        val (idle2, total2) = second
-        prevIdle = idle2
-        prevTotal = total2
-        val dTotal = total2 - total1
-        val dIdle = idle2 - idle1
-        if (dTotal <= 0L) {
-            val load1 = load?.getOrNull(0)
-            return if (load1 != null && cores > 0) {
-                (load1 / cores * 100f).coerceIn(0f, 100f) to false
-            } else {
-                0f to true
-            }
-        }
-        val busy = ((dTotal - dIdle).toFloat() / dTotal * 100f).coerceIn(0f, 100f)
-        return busy to true
+
+        return cpuFromLoad(cores, load)
     }
 
     private fun readLoadAvg(): FloatArray? {
-        return try {
-            val line = File("/proc/loadavg").bufferedReader().use { it.readLine() } ?: return null
-            val p = line.split(Regex("\\s+"))
+        fun parse(line: String?): FloatArray? {
+            if (line.isNullOrBlank()) return null
+            val p = line.trim().split(Regex("\\s+"))
             if (p.size < 3) return null
-            floatArrayOf(p[0].toFloat(), p[1].toFloat(), p[2].toFloat())
-        } catch (_: Exception) {
-            null
+            val a = p[0].toFloatOrNull() ?: return null
+            val b = p[1].toFloatOrNull() ?: return null
+            val c = p[2].toFloatOrNull() ?: return null
+            return floatArrayOf(a, b, c)
         }
+        try {
+            parse(File("/proc/loadavg").bufferedReader().use { it.readLine() })?.let { return it }
+        } catch (_: Exception) { }
+        try {
+            RandomAccessFile("/proc/loadavg", "r").use { raf ->
+                parse(raf.readLine())?.let { return it }
+            }
+        } catch (_: Exception) { }
+        try {
+            val proc = Runtime.getRuntime().exec(arrayOf("cat", "/proc/loadavg"))
+            try {
+                parse(proc.inputStream.bufferedReader().use { it.readLine() })?.let { return it }
+            } finally {
+                proc.destroy()
+            }
+        } catch (_: Exception) { }
+        return null
     }
 
     private fun readMaxCpuMhz(): Int? {
