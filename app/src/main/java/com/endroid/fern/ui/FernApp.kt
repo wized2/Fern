@@ -356,14 +356,12 @@ private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, p
             Line("Free", "${s.freeRamMb} MB")
             Line("Total", "${s.ramTotalMb} MB")
             Line("App heap", "${s.appHeapUsedMb} / ${s.appHeapMaxMb} MB")
-            if (s.externalStorageTotalGb != null && s.externalStorageFreeGb != null) {
+            val extFree = s.externalStorageFreeGb
+            val extTotal = s.externalStorageTotalGb
+            if (extFree != null && extTotal != null) {
                 Line(
                     "External",
-                    String.format(
-                        "%.1f / %.1f GB free",
-                        s.externalStorageFreeGb,
-                        s.externalStorageTotalGb
-                    )
+                    String.format("%.1f / %.1f GB free", extFree, extTotal)
                 )
             }
         }
