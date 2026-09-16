@@ -134,6 +134,13 @@ fun FernApp(
     onRefreshNow: () -> Unit
 ) {
     var tab by remember { mutableStateOf(Tab.Home) }
+    val navHaptic = LocalHapticFeedback.current
+    fun selectTab(next: Tab) {
+        if (next != tab && haptics) {
+            navHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        }
+        tab = next
+    }
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
@@ -161,28 +168,28 @@ fun FernApp(
             ) {
                 NavigationBarItem(
                     selected = tab == Tab.Home,
-                    onClick = { tab = Tab.Home },
+                    onClick = { selectTab(Tab.Home) },
                     icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
                     label = { Text("Home", style = MaterialTheme.typography.labelMedium) },
                     alwaysShowLabel = false
                 )
                 NavigationBarItem(
                     selected = tab == Tab.Details,
-                    onClick = { tab = Tab.Details },
+                    onClick = { selectTab(Tab.Details) },
                     icon = { Icon(Icons.Default.Info, contentDescription = "Details") },
                     label = { Text("Details", style = MaterialTheme.typography.labelMedium) },
                     alwaysShowLabel = false
                 )
                 NavigationBarItem(
                     selected = tab == Tab.Tests,
-                    onClick = { tab = Tab.Tests },
+                    onClick = { selectTab(Tab.Tests) },
                     icon = { Icon(Icons.Default.Science, contentDescription = "Tests") },
                     label = { Text("Tests", style = MaterialTheme.typography.labelMedium) },
                     alwaysShowLabel = false
                 )
                 NavigationBarItem(
                     selected = tab == Tab.Settings,
-                    onClick = { tab = Tab.Settings },
+                    onClick = { selectTab(Tab.Settings) },
                     icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
                     label = { Text("Settings", style = MaterialTheme.typography.labelMedium) },
                     alwaysShowLabel = false

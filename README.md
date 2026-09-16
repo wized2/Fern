@@ -7,7 +7,7 @@ Material 3 · offline · no ads · small release APK (R8 + resource shrink).
 ![Min API 26](https://img.shields.io/badge/minSdk-26-green)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0-blue)
 ![Compose](https://img.shields.io/badge/Material%203-green)
-![Version](https://img.shields.io/badge/version-1.5.16-blue)
+![Version](https://img.shields.io/badge/version-1.5.18-blue)
 
 ## Features
 
@@ -25,12 +25,18 @@ Material 3 · offline · no ads · small release APK (R8 + resource shrink).
 
 ### Tabs
 
-- **Home** — gauges, bars, sparklines (CPU / RAM / battery / net / storage), manual refresh  
-- **Details** — processor, memory, power, display, device peaks  
-- **Tests** — display color panels, vibration, live accel/gyro, touch counter, sensor list  
-- **Settings** — theme (Auto / Light / Dark), refresh interval, keep-screen-on, haptics, pause in background, About + GitHub link  
+- **Home** — live status, gauges, bars, trend sparklines, manual refresh  
+- **Details** — processor, memory, power, display, device peaks; share snapshot  
+- **Tests** — color panels, vibration, accel / gyro / light / magnetometer, touch, sensor list  
+- **Settings** — theme (Auto / Light / Dark), refresh rate, keep-screen-on, haptics, pause in background, About  
 
-Sampling pauses when the app is backgrounded (optional). Fully offline after install.
+### UX
+
+- Centered top bar, fade tab transitions, nav labels only when selected  
+- Soft surface containers, refined green Material 3 palette (light + OLED dark)  
+- Sampling can pause in background; optional haptic feedback  
+
+Fully offline after install.
 
 ## Build
 
@@ -42,6 +48,10 @@ Min SDK 26 · Target 35 · Kotlin + Jetpack Compose + Material 3.
 
 CI builds debug + release APKs and attaches them to GitHub Releases on `main` / tags.  
 Release signing uses GitHub secrets when present; otherwise falls back to the debug keystore.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
