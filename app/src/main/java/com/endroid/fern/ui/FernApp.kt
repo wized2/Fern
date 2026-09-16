@@ -706,6 +706,7 @@ private fun TestsContent() {
     var accel by remember { mutableStateOf("—") }
     var gyro by remember { mutableStateOf("—") }
     var light by remember { mutableStateOf("—") }
+    var mag by remember { mutableStateOf("—") }
     var sensorNames by remember { mutableStateOf<List<String>>(emptyList()) }
 
     DisposableEffect(Unit) {
@@ -731,6 +732,11 @@ private fun TestsContent() {
                             light = String.format("%.1f lx", v[0])
                         }
                     }
+                    Sensor.TYPE_MAGNETIC_FIELD -> {
+                        if (v.size >= 3) {
+                            mag = String.format("x %.1f  y %.1f  z %.1f µT", v[0], v[1], v[2])
+                        }
+                    }
                 }
             }
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
@@ -742,6 +748,9 @@ private fun TestsContent() {
             sm.registerListener(listener, it, SensorManager.SENSOR_DELAY_UI)
         }
         sm?.getDefaultSensor(Sensor.TYPE_LIGHT)?.let {
+            sm.registerListener(listener, it, SensorManager.SENSOR_DELAY_UI)
+        }
+        sm?.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)?.let {
             sm.registerListener(listener, it, SensorManager.SENSOR_DELAY_UI)
         }
         onDispose {
@@ -826,6 +835,7 @@ private fun TestsContent() {
             Line("Accelerometer", accel)
             Line("Gyroscope", gyro)
             Line("Light", light)
+            Line("Magnetometer", mag)
         }
 
         Detail("Touch") {
