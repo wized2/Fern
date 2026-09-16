@@ -239,20 +239,21 @@ private fun HomeContent(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-            LeafMark(Modifier.size(36.dp))
-            Spacer(modifier = Modifier.size(10.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "Fern",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    "System pulse",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 val age = if (lastUpdatedMs > 0L) {
                     val sec = ((nowTick - lastUpdatedMs) / 1000L).coerceAtLeast(0)
-                    if (sec < 5) "just now" else "${sec}s ago"
+                    when {
+                        sec < 3 -> "Live"
+                        sec < 60 -> "Updated ${sec}s ago"
+                        else -> "Updated ${sec / 60}m ago"
+                    }
                 } else {
-                    "live"
+                    "Connecting…"
                 }
                 val thermal = s?.thermalLabel?.takeIf { it.isNotBlank() && !it.equals("Unknown", true) }
                 val thermalHot = thermal != null && (
@@ -261,8 +262,8 @@ private fun HomeContent(
                 )
                 Text(
                     buildString {
-                        append("System pulse · $age")
-                        if (thermal != null) append(" · $thermal")
+                        append(age)
+                        if (thermal != null) append(" · Thermal $thermal")
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (thermalHot) MaterialTheme.colorScheme.error
@@ -1137,9 +1138,9 @@ private fun Spark(
                 lineTo(pts.last().x, size.height)
                 close()
             }
-            drawPath(fill, color = color.copy(alpha = 0.18f))
+            drawPath(fill, color = color.copy(alpha = 0.14f))
             for (i in 0 until pts.lastIndex) {
-                drawLine(color, pts[i], pts[i + 1], strokeWidth = 3.5f, cap = StrokeCap.Round)
+                drawLine(color, pts[i], pts[i + 1], strokeWidth = 2.75f, cap = StrokeCap.Round)
             }
             // endpoint dots so movement is obvious
             drawCircle(color, radius = 3.5f, center = pts.last())
