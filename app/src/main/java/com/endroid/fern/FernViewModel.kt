@@ -154,8 +154,13 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
                 "RAM: ${s.ramUsedMb}/${s.ramTotalMb} MB (${"%.1f".format(s.ramPercent)}%, peak ${"%.1f".format(_peakRam.value)}%)"
             )
             appendLine(
-                "Battery: ${s.batteryPercent}% ${if (s.batteryCharging) "charging" else "discharging"} · ${s.batteryHealth}"
+                "Battery: ${s.batteryPercent}% ${if (s.batteryCharging) "charging" else "discharging"} · ${s.batteryHealth}" +
+                    (s.batteryVoltageMv?.let { " · ${it} mV" } ?: "") +
+                    (s.batteryCurrentUa?.let { " · ${"%.0f".format(it / 1000f)} mA" } ?: "")
             )
+            appendLine("Display: ${s.displayWidthPx}x${s.displayHeightPx} @ ${"%.0f".format(s.displayRefreshHz)} Hz · ${s.displayDensityDpi} dpi")
+            appendLine("Security patch: ${s.securityPatch}")
+            appendLine("Kernel: ${s.kernelVersion}")
             appendLine(
                 "Storage: ${"%.1f".format(s.storageUsedGb)}/${"%.1f".format(s.storageTotalGb)} GB"
             )

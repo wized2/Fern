@@ -335,7 +335,9 @@ private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, p
             Line("Chip", s.cpuHardware)
             Line("Board", s.cpuBoard)
             Line("ABI", s.cpuAbi)
+            s.cpuCurMhz?.let { Line("Clock now", "$it MHz") }
             s.cpuMaxMhz?.let { Line("Max clock", "$it MHz") }
+            Line("Governor", s.cpuGovernor)
             Line(
                 "CPU",
                 if (s.cpuAvailable) String.format("%.1f%%", s.cpuPercent)
@@ -358,11 +360,24 @@ private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, p
             Line("Level", "${s.batteryPercent}%")
             Line("Status", if (s.batteryCharging) "Charging" else "Discharging")
             Line("Health", s.batteryHealth)
+            Line("Technology", s.batteryTechnology)
             s.batteryTempC?.let { Line("Temp", String.format("%.1f °C", it)) }
+            s.batteryVoltageMv?.let { Line("Voltage", "$it mV") }
+            s.batteryCurrentUa?.let {
+                val ma = it / 1000f
+                Line("Current", String.format("%+.0f mA", ma))
+            }
+        }
+        Detail("Display") {
+            Line("Resolution", "${s.displayWidthPx} × ${s.displayHeightPx}")
+            Line("Density", "${s.displayDensityDpi} dpi")
+            Line("Refresh", String.format("%.0f Hz", s.displayRefreshHz))
         }
         Detail("Device") {
             Line("Model", s.deviceModel)
             Line("Android", "${s.androidVersion} (API ${s.sdkInt})")
+            Line("Security patch", s.securityPatch)
+            Line("Kernel", s.kernelVersion)
             Line("Network", s.networkLabel)
             Line("Throughput", if (s.networkKBps >= 1024f) String.format("%.2f MB/s", s.networkKBps / 1024f) else String.format("%.1f KB/s", s.networkKBps))
             Line("Uptime", String.format("%.1f h", s.uptimeHours))

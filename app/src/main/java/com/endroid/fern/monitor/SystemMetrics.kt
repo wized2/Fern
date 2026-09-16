@@ -13,6 +13,8 @@ import android.os.Environment
 import android.os.PowerManager
 import android.os.StatFs
 import android.os.SystemClock
+import android.util.DisplayMetrics
+import android.view.WindowManager
 import java.io.File
 import java.io.RandomAccessFile
 
@@ -46,7 +48,20 @@ data class SystemSnapshot(
     val uptimeHours: Float,
     val appHeapUsedMb: Long,
     val appHeapMaxMb: Long,
-    val thermalLabel: String
+    val thermalLabel: String,
+    // DevInfo-inspired extras (offline, no extra dangerous permissions)
+    val batteryVoltageMv: Int?,
+    val batteryCurrentUa: Int?,
+    val batteryTechnology: String,
+    val securityPatch: String,
+    val kernelVersion: String,
+    val buildFingerprint: String,
+    val displayWidthPx: Int,
+    val displayHeightPx: Int,
+    val displayDensityDpi: Int,
+    val displayRefreshHz: Float,
+    val cpuCurMhz: Int?,
+    val cpuGovernor: String
 )
 
 object SystemMetrics {
@@ -73,7 +88,7 @@ object SystemMetrics {
 
         val battery = readBattery(context)
         val load = readLoadAvg()
-        val cores = Runtime.getRuntime().availableProcessors()
+        val cores = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
         val (cpuPct, cpuOk) = readCpuPercentAccurate(cores, load)
         val maxMhz = readMaxCpuMhz()
         val net = readNetwork(context)
@@ -83,6 +98,7 @@ object SystemMetrics {
         val heapUsed = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)
         val heapMax = runtime.maxMemory() / (1024 * 1024)
         val thermal = readThermal(context)
+        val display = readDisplay(context)
 
         return SystemSnapshot(
             ramUsedMb = usedRam / (1024 * 1024),
@@ -113,7 +129,19 @@ object SystemMetrics {
             uptimeHours = uptime,
             appHeapUsedMb = heapUsed,
             appHeapMaxMb = heapMax,
-            thermalLabel = thermal
+            thermalLabel = thermal,
+            batteryVoltageMv = battery.voltageMv,
+            batteryCurrentUa = battery.currentUa,
+            batteryTechnology = battery.technology,
+            securityPatch = readSecurityPatch(),
+            kernelVersion = readKernelVersion(),
+            buildFingerprint = Build.FINGERPRINT ?: "?",
+            displayWidthPx = display.widthPx,
+            displayHeightPx = display.heightPx,
+            displayDensityDpi = display.densityDpi,
+            displayRefreshHz = display.refreshHz,
+            cpuCurMhz = readCpuCurMhz(),
+            cpuGovernor = readCpuGovernor()
         )
     }
 
@@ -121,12 +149,15 @@ object SystemMetrics {
         val pct: Int,
         val charging: Boolean,
         val tempC: Float?,
-        val health: String
+        val health: String,
+        val voltageMv: Int?,
+        val currentUa: Int?,
+        val technology: String
     )
 
     private fun readBattery(context: Context): BatteryInfo {
         val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-            ?: return BatteryInfo(-1, false, null, "Unknown")
+            ?: return BatteryInfo(-1, false, null, "Unknown", null, null, "?")
         val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
         val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, 100).coerceAtLeast(1)
         val pct = (level * 100) / scale
@@ -144,24 +175,32 @@ object SystemMetrics {
             BatteryManager.BATTERY_HEALTH_UNSPECIFIED_FAILURE -> "Failed"
             else -> "Unknown"
         }
-        return BatteryInfo(pct, charging, temp, health)
+        val voltage = intent.getIntExtra(BatteryManager.EXTRA_VOLTAGE, -1).takeIf { it > 0 }
+        val tech = intent.getStringExtra(BatteryManager.EXTRA_TECHNOLOGY)?.takeIf { it.isNotBlank() } ?: "?"
+        var currentUa: Int? = null
+        try {
+            val bm = context.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
+            if (bm != null) {
+                val ua = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW)
+                if (ua != Int.MIN_VALUE && ua != 0) currentUa = ua
+            }
+        } catch (_: Exception) { }
+        return BatteryInfo(pct, charging, temp, health, voltage, currentUa, tech)
     }
 
     private fun parseProcStatLine(line: String?): Pair<Long, Long>? {
         if (line.isNullOrBlank()) return null
         val trimmed = line.trim()
         if (!trimmed.startsWith("cpu")) return null
-        // Aggregate line is "cpu " (with space); per-core is "cpu0" etc. — only use aggregate.
         if (trimmed.length > 3 && trimmed[3].isDigit()) return null
         val parts = trimmed.split(Regex("\\s+")).drop(1).mapNotNull { it.toLongOrNull() }
         if (parts.size < 4) return null
-        val idle = parts[3] + parts.getOrElse(4) { 0L } // idle + iowait
+        val idle = parts[3] + parts.getOrElse(4) { 0L }
         val total = parts.sum()
         if (total <= 0L) return null
         return idle to total
     }
 
-    /** Several open paths — SELinux often blocks one style of access on phones. */
     private fun readProcStat(): Pair<Long, Long>? {
         try {
             parseProcStatLine(File("/proc/stat").bufferedReader().use { it.readLine() })?.let { return it }
@@ -193,10 +232,6 @@ object SystemMetrics {
         return (load1 / c * 100f).coerceIn(0f, 100f) to false
     }
 
-    /**
-     * Dual-sample /proc/stat in this call; if the delta is zero or /proc is blocked,
-     * use the cross-tick prevIdle/prevTotal from the last poll; finally loadavg.
-     */
     private fun readCpuPercentAccurate(cores: Int, load: FloatArray?): Pair<Float, Boolean> {
         val first = readProcStat()
         if (first != null) {
@@ -217,8 +252,6 @@ object SystemMetrics {
                 }
             }
         }
-
-        // Cross-tick against values stored on the previous successful sample
         val now = readProcStat() ?: first
         if (now != null) {
             val (idle2, total2) = now
@@ -238,7 +271,6 @@ object SystemMetrics {
                 prevTotal = total2
             }
         }
-
         return cpuFromLoad(cores, load)
     }
 
@@ -278,6 +310,72 @@ object SystemMetrics {
             (khz / 1000).toInt()
         } catch (_: Exception) {
             null
+        }
+    }
+
+    private fun readCpuCurMhz(): Int? {
+        return try {
+            val path = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq"
+            val khz = File(path).readText().trim().toLongOrNull() ?: return null
+            (khz / 1000).toInt()
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun readCpuGovernor(): String {
+        return try {
+            File("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor").readText().trim()
+                .ifBlank { "—" }
+        } catch (_: Exception) {
+            "—"
+        }
+    }
+
+    private fun readSecurityPatch(): String {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                Build.VERSION.SECURITY_PATCH ?: "—"
+            } else "—"
+        } catch (_: Exception) {
+            "—"
+        }
+    }
+
+    private fun readKernelVersion(): String {
+        return try {
+            File("/proc/version").bufferedReader().use { it.readLine() }
+                ?.substringBefore(" (")
+                ?.take(80)
+                ?: System.getProperty("os.version") ?: "—"
+        } catch (_: Exception) {
+            System.getProperty("os.version") ?: "—"
+        }
+    }
+
+    private data class DisplayInfo(
+        val widthPx: Int,
+        val heightPx: Int,
+        val densityDpi: Int,
+        val refreshHz: Float
+    )
+
+    private fun readDisplay(context: Context): DisplayInfo {
+        return try {
+            val dm = context.resources.displayMetrics
+            var refresh = 60f
+            try {
+                val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    refresh = wm.defaultDisplay?.mode?.refreshRate ?: 60f
+                } else {
+                    @Suppress("DEPRECATION")
+                    refresh = wm.defaultDisplay?.refreshRate ?: 60f
+                }
+            } catch (_: Exception) { }
+            DisplayInfo(dm.widthPixels, dm.heightPixels, dm.densityDpi, refresh)
+        } catch (_: Exception) {
+            DisplayInfo(0, 0, DisplayMetrics.DENSITY_DEFAULT, 60f)
         }
     }
 
