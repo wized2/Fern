@@ -80,67 +80,58 @@ jobs:
           path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
 
+      - name: Read versionName
+        if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main')
+        id: ver
+        run: |
+          VN=$(grep -E 'versionName\s*=' app/build.gradle.kts | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+          echo "name=$VN" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VN" >> "$GITHUB_OUTPUT"
+          echo "Version $VN"
+
       - name: Prepare release assets
         if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main')
         run: |
           mkdir -p release-assets
           cp app/build/outputs/apk/release/*.apk release-assets/Fern-release.apk
-          cp app/build/outputs/apk/debug/*.apk release-assets/Fern-debug.apk
+          # debug APK stays as workflow artifact only (smaller GitHub Releases; avoids large upload timeouts)
           ls -la release-assets/
 
       - name: Create GitHub Release (tag push)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            release-assets/Fern-release.apk
-            release-assets/Fern-debug.apk
+          files: release-assets/Fern-release.apk
           generate_release_notes: true
+          fail_on_unmatched_files: true
           body: |
             ## Fern ${{ github.ref_name }}
 
-            Live system pulse for Android — Material 3 green resource monitor.
+            Live system pulse for Android — Material 3 resource monitor.
 
-            - Dual-sample CPU + loadavg fallback
-            - Keep-screen-on toggle
-            - Battery history sparkline
-            - Thermal status (API 29+)
-            - Smaller APK (icons-core, packaging excludes, R8)
-
-            **Fern-release.apk** — recommended (minified)
-            **Fern-debug.apk** — debug build
+            **Fern-release.apk** — minified + resource-shrunk
 
             Min SDK 26 · offline · no ads · MIT
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create / update latest release (main)
+      - name: Create / update release (main)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.5.1
-          name: Fern v1.5.1
-          files: |
-            release-assets/Fern-release.apk
-            release-assets/Fern-debug.apk
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: Fern ${{ steps.ver.outputs.name }}
+          files: release-assets/Fern-release.apk
           generate_release_notes: true
+          fail_on_unmatched_files: true
           body: |
-            ## Fern v1.5.1
+            ## Fern ${{ steps.ver.outputs.name }}
 
-            Live system pulse for Android — Material 3 green resource monitor.
+            Live system pulse for Android — Material 3 resource monitor.
 
-            ### What's new
-            - Working dual-sample CPU (`/proc/stat` + loadavg fallback)
-            - Keep-screen-on toggle
-            - Battery history sparkline
-            - Thermal status (API 29+)
-            - Smaller APK (icons-core, packaging excludes, R8)
-            - Settings: theme, refresh, about
-            - Bottom tabs: Home · Details · Settings
+            **Fern-release.apk** — minified + resource-shrunk (from `main`)
 
-            ### Downloads
-            - **Fern-release.apk** — minified + resource-shrunk (recommended)
-            - **Fern-debug.apk** — debug build
+            Debug APK is attached as a workflow artifact on this run.
 
             Min SDK 26 · offline · no ads · MIT
         env:
