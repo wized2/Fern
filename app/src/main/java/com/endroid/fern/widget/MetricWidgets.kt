@@ -47,7 +47,11 @@ private fun buildViews(context: Context, kind: MetricKind): RemoteViews {
                 val status = if (snap.batteryCharging) "Charging" else "On battery"
                 views.setTextViewText(
                     R.id.widget_subtitle,
-                    if (temp > 0f) String.format("%s · %.0f°C", status, temp) else status
+                    if (temp != null && temp > 0f) {
+                        String.format("%s · %.0f°C", status, temp)
+                    } else {
+                        status
+                    }
                 )
             } else {
                 views.setTextViewText(R.id.widget_value, "—")
