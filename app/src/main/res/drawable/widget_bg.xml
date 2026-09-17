@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
-    <solid android:color="#0B1F17" />
-    <corners android:radius="16dp" />
-    <stroke android:width="1dp" android:color="#14532D" />
+    <!-- Deep forest glass-like panel -->
+    <solid android:color="#E60B0F0C" />
+    <corners android:radius="20dp" />
+    <stroke android:width="1dp" android:color="#3351DB7B" />
+    <padding android:left="2dp" android:top="2dp" android:right="2dp" android:bottom="2dp" />
 </shape>

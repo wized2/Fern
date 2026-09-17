@@ -2,6 +2,15 @@
 
 All notable changes to Fern are listed here.
 
+## 1.5.22 — 2026-09-17
+
+### Widgets
+- Glass-style panel, thicker ring, mint accents
+- Battery shows temp when available; RAM titled Memory
+
+### UI / UX
+- Overview section label, refined gauge captions
+
 ## 1.5.21 — 2026-09-17
 
 ### Metrics

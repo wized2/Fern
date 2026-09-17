@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:gravity="center_horizontal"
-    android:padding="10dp"
+    android:padding="12dp"
     android:background="@drawable/widget_bg">
 
     <TextView
@@ -13,16 +13,18 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:textColor="#A7F3D0"
-        android:textSize="12sp"
+        android:letterSpacing="0.08"
+        android:textAllCaps="true"
+        android:textColor="#8DD9A5"
+        android:textSize="11sp"
         android:textStyle="bold"
         android:text="Metric" />
 
     <FrameLayout
-        android:layout_width="72dp"
-        android:layout_height="72dp"
-        android:layout_marginTop="6dp"
-        android:layout_marginBottom="4dp">
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="6dp">
 
         <ProgressBar
             android:id="@+id/widget_progress"
@@ -40,8 +42,8 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:gravity="center"
-            android:textColor="#ECFDF5"
-            android:textSize="18sp"
+            android:textColor="#F0FDF4"
+            android:textSize="20sp"
             android:textStyle="bold"
             android:text="—" />
     </FrameLayout>
@@ -51,7 +53,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:textColor="#6EE7B7"
+        android:textColor="#A7F3D0"
         android:textSize="11sp"
+        android:maxLines="1"
+        android:ellipsize="end"
         android:text="" />
 </LinearLayout>
