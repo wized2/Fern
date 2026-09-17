@@ -12,10 +12,10 @@ android {
         applicationId = "com.endroid.fern"
         minSdk = 26
         targetSdk = 35
-        versionCode = 30
-        versionName = "1.5.18"
+        versionCode = 31
+        versionName = "1.5.19"
         resourceConfigurations += listOf("en")
-        buildConfigField("String", "VERSION_NAME", "\"1.5.18\"")
+        buildConfigField("String", "VERSION_NAME", "\"1.5.19\"")
     }
 
 

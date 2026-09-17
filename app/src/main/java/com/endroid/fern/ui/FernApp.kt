@@ -335,13 +335,13 @@ private fun HomeContent(
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    "Trends",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    "Live trends",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spark(
                     if (cpuH.size >= 2) cpuH else listOf(0f, 0f),
@@ -355,25 +355,13 @@ private fun HomeContent(
                     "RAM",
                     fixedMax = 100f
                 )
-                Spark(
-                    if (batH.size >= 2) batH else listOf(0f, 0f),
-                    MaterialTheme.colorScheme.tertiary,
-                    "Battery",
-                    fixedMax = 100f
-                )
-                Spark(
-                    if (storageH.size >= 2) storageH else listOf(0f, 0f),
-                    MaterialTheme.colorScheme.secondary,
-                    "Storage",
-                    fixedMax = 100f
-                )
                 val netLabel = s?.let {
                     if (it.networkKBps >= 1024f) String.format("Net · %.1f MB/s", it.networkKBps / 1024f)
                     else String.format("Net · %.0f KB/s · %s", it.networkKBps, it.networkLabel)
                 } ?: "Net"
                 Spark(
                     if (netH.size >= 2) netH else listOf(0f, 0f),
-                    MaterialTheme.colorScheme.primary,
+                    MaterialTheme.colorScheme.tertiary,
                     netLabel,
                     fixedMax = null
                 )
@@ -1011,12 +999,12 @@ private fun Gauge(
         modifier = modifier
     ) {
         Column(
-            modifier = Modifier.padding(14.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 title,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Box(
@@ -1071,13 +1059,13 @@ private fun Bar(icon: ImageVector, title: String, percent: Float, detail: String
             .semantics { contentDescription = "$title $detail" }
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.size(8.dp))
-                Text(title, style = MaterialTheme.typography.titleMedium)
+                Text(title, style = MaterialTheme.typography.titleSmall)
             }
             LinearProgressIndicator(
                 progress = { a },
@@ -1114,7 +1102,7 @@ private fun Spark(
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
+                .height(44.dp)
                 .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.medium)
                 .padding(6.dp)
         ) {

@@ -2,6 +2,12 @@
 
 All notable changes to Fern are listed here.
 
+## 1.5.19 — 2026-09-17
+
+### UX
+- Home trends: only CPU, RAM, and network (dropped slow battery/storage sparks)
+- Tighter gauges, bars, and spark heights — less visual noise
+
 ## 1.5.18 — 2026-09-16
 
 ### UX
