@@ -155,7 +155,8 @@ fun FernApp(
                     )
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                     titleContentColor = MaterialTheme.colorScheme.primary
                 ),
                 windowInsets = WindowInsets.statusBars
@@ -163,7 +164,7 @@ fun FernApp(
         },
         bottomBar = {
             NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                 tonalElevation = 0.dp
             ) {
                 NavigationBarItem(
@@ -329,7 +330,7 @@ private fun HomeContent(
         )
         Card(
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
             ),
             shape = MaterialTheme.shapes.extraLarge,
             modifier = Modifier.fillMaxWidth()
@@ -503,7 +504,7 @@ private fun SettingsContent(
         )
         Card(
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
             ),
             shape = MaterialTheme.shapes.extraLarge,
             modifier = Modifier.fillMaxWidth()
@@ -564,7 +565,7 @@ private fun SettingsContent(
         }
         Card(
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
             ),
             shape = MaterialTheme.shapes.extraLarge,
             modifier = Modifier.fillMaxWidth()
@@ -588,7 +589,7 @@ private fun SettingsContent(
         }
         Card(
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
             ),
             shape = MaterialTheme.shapes.extraLarge,
             modifier = Modifier.fillMaxWidth()
@@ -631,7 +632,7 @@ private fun SettingsContent(
         }
         Card(
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
             ),
             shape = MaterialTheme.shapes.extraLarge,
             modifier = Modifier.fillMaxWidth()
@@ -667,7 +668,7 @@ private fun SettingsContent(
 
         Card(
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
             ),
             shape = MaterialTheme.shapes.extraLarge,
             modifier = Modifier.fillMaxWidth()
@@ -910,7 +911,7 @@ private fun TestsContent() {
 private fun Detail(title: String, content: @Composable () -> Unit) {
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         ),
         shape = MaterialTheme.shapes.extraLarge,
         modifier = Modifier.fillMaxWidth()
@@ -993,7 +994,7 @@ private fun Gauge(
     val arc = MaterialTheme.colorScheme.primary
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         ),
         shape = MaterialTheme.shapes.extraLarge,
         modifier = modifier
@@ -1029,8 +1030,9 @@ private fun Gauge(
                 }
                 Text(
                     String.format("%.0f%%", percent.coerceIn(0f, 100f)),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
             Text(
@@ -1051,7 +1053,7 @@ private fun Bar(icon: ImageVector, title: String, percent: Float, detail: String
     )
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         ),
         shape = MaterialTheme.shapes.extraLarge,
         modifier = Modifier

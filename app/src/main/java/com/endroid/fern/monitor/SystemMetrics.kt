@@ -284,7 +284,34 @@ object SystemMetrics {
                 prevTotal = total2
             }
         }
+        // dumpsys cpuinfo when /proc/stat is blocked (OEM SELinux)
+        readCpuFromDumpsys()?.let { return it to false }
         return cpuFromLoad(cores, load)
+    }
+
+    private fun readCpuFromDumpsys(): Float? {
+        return try {
+            val proc = Runtime.getRuntime().exec(arrayOf("dumpsys", "cpuinfo"))
+            try {
+                val text = proc.inputStream.bufferedReader().use { it.readText() }
+                Regex("(\\d+(?:\\.\\d+)?)%\\s*TOTAL", RegexOption.IGNORE_CASE)
+                    .find(text)
+                    ?.groupValues
+                    ?.getOrNull(1)
+                    ?.toFloatOrNull()
+                    ?.coerceIn(0f, 100f)
+                    ?: Regex("TOTAL:\\s*(\\d+(?:\\.\\d+)?)%", RegexOption.IGNORE_CASE)
+                        .find(text)
+                        ?.groupValues
+                        ?.getOrNull(1)
+                        ?.toFloatOrNull()
+                        ?.coerceIn(0f, 100f)
+            } finally {
+                proc.destroy()
+            }
+        } catch (_: Exception) {
+            null
+        }
     }
 
     private fun readLoadAvg(): FloatArray? {
@@ -317,6 +344,18 @@ object SystemMetrics {
     }
 
     private fun readMaxCpuMhz(): Int? {
+        val freqs = mutableListOf<Long>()
+        try {
+            val base = File("/sys/devices/system/cpu")
+            val dirs = base.listFiles()?.filter { it.name.matches(Regex("cpu\\d+")) }.orEmpty()
+            for (dir in dirs) {
+                val f = File(dir, "cpufreq/cpuinfo_max_freq")
+                if (!f.canRead()) continue
+                val khz = f.readText().trim().toLongOrNull() ?: continue
+                if (khz > 0L) freqs.add(khz)
+            }
+        } catch (_: Exception) { }
+        if (freqs.isNotEmpty()) return (freqs.maxOrNull()!! / 1000L).toInt()
         return try {
             val path = "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq"
             val khz = File(path).readText().trim().toLongOrNull() ?: return null
@@ -327,6 +366,21 @@ object SystemMetrics {
     }
 
     private fun readCpuCurMhz(): Int? {
+        // Average scaling_cur_freq across online cores (sysfs often works when /proc/stat does not).
+        val freqs = mutableListOf<Long>()
+        try {
+            val base = File("/sys/devices/system/cpu")
+            val dirs = base.listFiles()?.filter { it.name.matches(Regex("cpu\\d+")) }.orEmpty()
+            for (dir in dirs) {
+                val f = File(dir, "cpufreq/scaling_cur_freq")
+                if (!f.canRead()) continue
+                val khz = f.readText().trim().toLongOrNull() ?: continue
+                if (khz > 0L) freqs.add(khz)
+            }
+        } catch (_: Exception) { }
+        if (freqs.isNotEmpty()) {
+            return (freqs.average() / 1000.0).toInt().coerceAtLeast(0)
+        }
         return try {
             val path = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq"
             val khz = File(path).readText().trim().toLongOrNull() ?: return null

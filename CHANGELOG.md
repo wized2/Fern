@@ -2,6 +2,15 @@
 
 All notable changes to Fern are listed here.
 
+## 1.5.21 — 2026-09-17
+
+### Metrics
+- CPU layering: `/proc/stat` deltas → `dumpsys cpuinfo` → loadavg
+- Clock: average `scaling_cur_freq` across cores; max from highest `cpuinfo_max_freq`
+
+### UI
+- Soft surface elevation, larger gauge percentage, refined top bar
+
 ## 1.5.20 — 2026-09-17
 
 ### Docs
