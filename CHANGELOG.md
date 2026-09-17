@@ -2,6 +2,11 @@
 
 All notable changes to Fern are listed here.
 
+## 1.5.20 — 2026-09-17
+
+### Docs
+- Release notes on GitHub Releases expanded for the 1.5.x line
+
 ## 1.5.19 — 2026-09-17
 
 ### UX
