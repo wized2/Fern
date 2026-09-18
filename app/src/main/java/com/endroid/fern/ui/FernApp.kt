@@ -55,6 +55,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.core.view.WindowCompat
+import android.app.Activity
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -66,6 +69,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -141,6 +145,15 @@ fun FernApp(
         }
         tab = next
     }
+    val view = LocalView.current
+    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    SideEffect {
+        val window = (view.context as? Activity)?.window ?: return@SideEffect
+        val controller = WindowCompat.getInsetsController(window, view)
+        controller.isAppearanceLightStatusBars = !dark
+        controller.isAppearanceLightNavigationBars = !dark
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
@@ -155,8 +168,8 @@ fun FernApp(
                     )
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                     titleContentColor = MaterialTheme.colorScheme.primary
                 ),
                 windowInsets = WindowInsets.statusBars
@@ -263,7 +276,7 @@ private fun HomeContent(
                 } else {
                     "Connecting…"
                 }
-                val thermal = s?.thermalLabel?.takeIf { it.isNotBlank() && !it.equals("Unknown", true) }
+                val thermal = s?.thermalLabel?.takeIf { it.isNotBlank() && !it.equals("Unknown", true) && !it.equals("None", true) && it != "—" }
                 val thermalHot = thermal != null && (
                     thermal.contains("HOT", true) || thermal.contains("CRITICAL", true) ||
                         thermal.contains("EMERGENCY", true) || thermal.contains("SEVERE", true)
@@ -308,7 +321,7 @@ private fun HomeContent(
             Gauge(
                 "RAM",
                 s.ramPercent,
-                "${s.ramUsedMb}/${s.ramTotalMb} MB",
+                ${formatMb(s.ramUsedMb)} / ${formatMb(s.ramTotalMb)},
                 Modifier.weight(1f)
             )
         }
@@ -395,13 +408,13 @@ private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, p
             Line("Chip", s.cpuHardware)
             Line("Board", s.cpuBoard)
             Line("ABI", s.cpuAbi)
-            s.cpuCurMhz?.let { Line("Clock now", "$it MHz") }
+            s.cpuCurMhz?.let { Line("Clock now", formatMhz(it)) }
             if (s.cpuCoreMhz.isNotEmpty()) {
                 val cores = s.cpuCoreMhz
                 val label = cores.mapIndexed { i, mhz -> "CPU$i $mhz" }.joinToString(" · ")
                 Line("Per-core MHz", label.take(120) + if (label.length > 120) "…" else "")
             }
-            s.cpuMaxMhz?.let { Line("Max clock", "$it MHz") }
+            s.cpuMaxMhz?.let { Line("Max clock", formatMhz(it)) }
             Line("Governor", s.cpuGovernor)
             Line(
                 "CPU",
@@ -417,10 +430,10 @@ private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, p
             Line("Thermal", s.thermalLabel)
         }
         Detail("Memory") {
-            Line("Used", "${s.ramUsedMb} MB")
-            Line("Free", "${s.freeRamMb} MB")
-            Line("Total", "${s.ramTotalMb} MB")
-            Line("App heap", "${s.appHeapUsedMb} / ${s.appHeapMaxMb} MB")
+            Line("Used", formatMb(s.ramUsedMb))
+            Line("Free", formatMb(s.freeRamMb))
+            Line("Total", formatMb(s.ramTotalMb))
+            Line("App heap", "${formatMb(s.appHeapUsedMb)} / ${formatMb(s.appHeapMaxMb)}")
             val extFree = s.externalStorageFreeGb
             val extTotal = s.externalStorageTotalGb
             if (extFree != null && extTotal != null) {
@@ -436,7 +449,7 @@ private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, p
             Line("Health", s.batteryHealth)
             Line("Technology", s.batteryTechnology)
             s.batteryTempC?.let { Line("Temp", String.format("%.1f °C", it)) }
-            s.batteryVoltageMv?.let { Line("Voltage", "$it mV") }
+            s.batteryVoltageMv?.let { Line("Voltage", String.format("%.2f V", it / 1000f)) }
             s.batteryCurrentUa?.let {
                 val ma = it / 1000f
                 Line("Current", String.format("%+.0f mA", ma))
@@ -444,7 +457,7 @@ private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, p
         }
         Detail("Display") {
             Line("Resolution", "${s.displayWidthPx} × ${s.displayHeightPx}")
-            Line("Density", "${s.displayDensityDpi} dpi")
+            Line("Density", "${s.displayDensityDpi} dpi · ${String.format("%.1f", s.displayDensityDpi / 160f)}x")
             Line("Refresh", String.format("%.0f Hz", s.displayRefreshHz))
         }
         Detail("Device") {
@@ -945,6 +958,14 @@ private fun Detail(title: String, content: @Composable () -> Unit) {
 }
 
 @Composable
+private fun formatMb(mb: Long): String {
+    return if (mb >= 1024) String.format("%.2f GB", mb / 1024.0) else "$mb MB"
+}
+
+private fun formatMhz(mhz: Int): String {
+    return if (mhz >= 1000) String.format("%.2f GHz", mhz / 1000.0) else "$mhz MHz"
+}
+
 private fun Line(k: String, v: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
