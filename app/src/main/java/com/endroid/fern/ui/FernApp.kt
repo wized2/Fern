@@ -334,7 +334,7 @@ private fun HomeContent(
             Gauge(
                 "RAM",
                 s.ramPercent,
-                ${formatMb(s.ramUsedMb)} / ${formatMb(s.ramTotalMb)},
+                "${formatMb(s.ramUsedMb)} / ${formatMb(s.ramTotalMb)}",
                 Modifier.weight(1f)
             )
         }
@@ -970,7 +970,6 @@ private fun Detail(title: String, content: @Composable () -> Unit) {
     }
 }
 
-@Composable
 private fun formatMb(mb: Long): String {
     return if (mb >= 1024) String.format("%.2f GB", mb / 1024.0) else "$mb MB"
 }
