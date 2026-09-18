@@ -155,7 +155,7 @@ fun FernApp(
                     )
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
                     scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                     titleContentColor = MaterialTheme.colorScheme.primary
                 ),
@@ -249,7 +249,7 @@ private fun HomeContent(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "System pulse",
+                    "Live overview",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
