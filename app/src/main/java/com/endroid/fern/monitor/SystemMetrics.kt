@@ -74,8 +74,8 @@ data class SystemSnapshot(
 
 object SystemMetrics {
 
-    @Volatile @Volatile private var prevIdle: Long = -1
-    @Volatile @Volatile private var prevTotal: Long = -1
+    @Volatile private var prevIdle: Long = -1
+    @Volatile private var prevTotal: Long = -1
     @Volatile private var prevNetBytes: Long = -1
     @Volatile private var prevNetAt: Long = 0
 
