@@ -457,7 +457,16 @@ private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, p
             Line("Locale", s.localeTag)
             Line("Time zone", s.timeZoneId)
             Line("Sensors", "${s.sensorCount}")
-            Line("Uptime", String.format("%.1f h", s.uptimeHours))
+            Line(
+                "Uptime",
+                run {
+                    val h = s.uptimeHours
+                    val hours = h.toInt()
+                    val mins = ((h - hours) * 60).toInt().coerceIn(0, 59)
+                    if (hours >= 24) String.format("%dd %dh", hours / 24, hours % 24)
+                    else String.format("%dh %02dm", hours, mins)
+                }
+            )
             Line("Peak CPU", String.format("%.1f%%", peakCpu))
             Line("Peak RAM", String.format("%.1f%%", peakRam))
             Line("Peak net", if (peakNet >= 1024f) String.format("%.2f MB/s", peakNet / 1024f) else String.format("%.1f KB/s", peakNet))
