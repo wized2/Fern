@@ -289,7 +289,7 @@ private fun HomeContent(
                 } else {
                     "Connecting…"
                 }
-                val thermal = s?.thermalLabel?.takeIf { it.isNotBlank() && !it.equals("Unknown", true) && !it.equals("None", true) && !it.equals("None", true) && it != "—" }
+                val thermal = s?.thermalLabel?.takeIf { it.isNotBlank() && !it.equals("Unknown", true) && !it.equals("None", true) && it != "—" }
                 val thermalHot = thermal != null && (
                     thermal.contains("HOT", true) || thermal.contains("CRITICAL", true) ||
                         thermal.contains("EMERGENCY", true) || thermal.contains("SEVERE", true)
