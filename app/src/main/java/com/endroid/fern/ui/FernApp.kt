@@ -30,13 +30,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.BatteryChargingFull
-import androidx.compose.material.icons.filled.BatteryFull
-import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
@@ -210,7 +210,7 @@ fun FernApp(
                 NavigationBarItem(
                     selected = tab == Tab.Tests,
                     onClick = { selectTab(Tab.Tests) },
-                    icon = { Icon(Icons.Default.Science, contentDescription = "Tests") },
+                    icon = { Icon(Icons.Default.Share, contentDescription = "Tests") },
                     label = { Text("Tests", style = MaterialTheme.typography.labelMedium) },
                     alwaysShowLabel = false
                 )
@@ -339,13 +339,13 @@ private fun HomeContent(
             )
         }
         Bar(
-            Icons.Default.Storage,
+            Icons.Default.Menu,
             "Storage",
             s.storagePercent,
             String.format("%.1f / %.1f GB", s.storageUsedGb, s.storageTotalGb)
         )
         Bar(
-            if (s.batteryCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
+            if (s.batteryCharging) Icons.Default.Favorite else Icons.Default.Star,
             "Battery",
             s.batteryPercent.toFloat().coerceAtLeast(0f),
             buildString {
