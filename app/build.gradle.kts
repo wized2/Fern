@@ -12,10 +12,10 @@ android {
         applicationId = "com.endroid.fern"
         minSdk = 26
         targetSdk = 35
-        versionCode = 41
-        versionName = "1.5.29"
+        versionCode = 42
+        versionName = "1.5.30"
         resourceConfigurations += listOf("en")
-        buildConfigField("String", "VERSION_NAME", "\"1.5.19\"")
+        buildConfigField("String", "VERSION_NAME", "\"1.5.30\"")
     }
 
 
@@ -80,7 +80,11 @@ android {
                 "META-INF/DEPENDENCIES",
                 "DebugProbesKt.bin",
                 "META-INF/*.version",
-                "kotlin-tooling-metadata.json"
+                "kotlin-tooling-metadata.json",
+                "META-INF/androidx.**",
+                "META-INF/com.**",
+                "META-INF/org.**",
+                "**/attach_hotspot_windows.dll"
             )
         }
     }
@@ -95,6 +99,6 @@ dependencies {
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.material3)
-    implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.compose.material:material-icons-core")
     debugImplementation(libs.androidx.ui.tooling.preview)
 }
