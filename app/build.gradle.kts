@@ -12,8 +12,8 @@ android {
         applicationId = "com.endroid.fern"
         minSdk = 26
         targetSdk = 35
-        versionCode = 36
-        versionName = "1.5.24"
+        versionCode = 37
+        versionName = "1.5.25"
         resourceConfigurations += listOf("en")
         buildConfigField("String", "VERSION_NAME", "\"1.5.19\"")
     }
