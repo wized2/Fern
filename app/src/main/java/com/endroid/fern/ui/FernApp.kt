@@ -150,8 +150,13 @@ fun FernApp(
     SideEffect {
         val window = (view.context as? Activity)?.window ?: return@SideEffect
         val controller = WindowCompat.getInsetsController(window, view)
+        // Light theme → dark status icons; dark theme → light icons (readable on tinted top bar)
         controller.isAppearanceLightStatusBars = !dark
         controller.isAppearanceLightNavigationBars = !dark
+        @Suppress("DEPRECATION")
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        @Suppress("DEPRECATION")
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
     }
 
     Scaffold(
@@ -161,15 +166,23 @@ fun FernApp(
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
-                    Text(
-                        "Fern",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            "Fern",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            "System monitor",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                     titleContentColor = MaterialTheme.colorScheme.primary
                 ),
                 windowInsets = WindowInsets.statusBars
@@ -276,7 +289,7 @@ private fun HomeContent(
                 } else {
                     "Connecting…"
                 }
-                val thermal = s?.thermalLabel?.takeIf { it.isNotBlank() && !it.equals("Unknown", true) && !it.equals("None", true) && it != "—" }
+                val thermal = s?.thermalLabel?.takeIf { it.isNotBlank() && !it.equals("Unknown", true) && !it.equals("None", true) && !it.equals("None", true) && it != "—" }
                 val thermalHot = thermal != null && (
                     thermal.contains("HOT", true) || thermal.contains("CRITICAL", true) ||
                         thermal.contains("EMERGENCY", true) || thermal.contains("SEVERE", true)
@@ -411,8 +424,8 @@ private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, p
             s.cpuCurMhz?.let { Line("Clock now", formatMhz(it)) }
             if (s.cpuCoreMhz.isNotEmpty()) {
                 val cores = s.cpuCoreMhz
-                val label = cores.mapIndexed { i, mhz -> "CPU$i $mhz" }.joinToString(" · ")
-                Line("Per-core MHz", label.take(120) + if (label.length > 120) "…" else "")
+                val label = cores.mapIndexed { i, mhz -> "CPU$i ${formatMhz(mhz)}" }.joinToString(" · ")
+                Line("Per-core", label.take(140) + if (label.length > 140) "…" else "")
             }
             s.cpuMaxMhz?.let { Line("Max clock", formatMhz(it)) }
             Line("Governor", s.cpuGovernor)
@@ -466,7 +479,7 @@ private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, p
             Line("Security patch", s.securityPatch)
             Line("Kernel", s.kernelVersion)
             Line("Network", s.networkLabel)
-            Line("Throughput", if (s.networkKBps >= 1024f) String.format("%.2f MB/s", s.networkKBps / 1024f) else String.format("%.1f KB/s", s.networkKBps))
+            Line("Network speed", formatRate(s.networkKBps) + " · " + s.networkLabel)
             Line("Locale", s.localeTag)
             Line("Time zone", s.timeZoneId)
             Line("Sensors", "${s.sensorCount}")
@@ -960,6 +973,15 @@ private fun Detail(title: String, content: @Composable () -> Unit) {
 @Composable
 private fun formatMb(mb: Long): String {
     return if (mb >= 1024) String.format("%.2f GB", mb / 1024.0) else "$mb MB"
+}
+
+private fun formatRate(kbps: Float): String {
+    return when {
+        kbps >= 1024f * 1024f -> String.format("%.2f GB/s", kbps / (1024f * 1024f))
+        kbps >= 1024f -> String.format("%.1f MB/s", kbps / 1024f)
+        kbps >= 1f -> String.format("%.0f KB/s", kbps)
+        else -> String.format("%.1f KB/s", kbps)
+    }
 }
 
 private fun formatMhz(mhz: Int): String {
