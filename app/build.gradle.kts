@@ -12,10 +12,13 @@ android {
         applicationId = "com.endroid.fern"
         minSdk = 26
         targetSdk = 35
-        versionCode = 43
-        versionName = "1.5.31"
+        versionCode = 44
+        versionName = "1.5.32"
         resourceConfigurations += listOf("en")
-        buildConfigField("String", "VERSION_NAME", "\"1.5.31\"")
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+        }
+        buildConfigField("String", "VERSION_NAME", "\"1.5.32\"")
     }
 
 
@@ -72,6 +75,9 @@ android {
         buildConfig = true
     }
     packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
         resources {
             excludes += setOf(
                 "META-INF/AL2.0",
