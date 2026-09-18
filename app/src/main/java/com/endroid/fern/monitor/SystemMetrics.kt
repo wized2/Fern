@@ -61,6 +61,8 @@ data class SystemSnapshot(
     val displayDensityDpi: Int,
     val displayRefreshHz: Float,
     val cpuCurMhz: Int?,
+    /** Per-core current MHz (sysfs scaling_cur_freq), empty if unavailable. */
+    val cpuCoreMhz: List<Int> = emptyList(),
     val cpuGovernor: String,
     val freeRamMb: Long,
     val localeTag: String,
@@ -148,6 +150,7 @@ object SystemMetrics {
             displayDensityDpi = display.densityDpi,
             displayRefreshHz = display.refreshHz,
             cpuCurMhz = readCpuCurMhz(),
+            cpuCoreMhz = readCpuCoreMhz(),
             cpuGovernor = readCpuGovernor(),
             freeRamMb = availRam / (1024 * 1024),
             localeTag = java.util.Locale.getDefault().toLanguageTag(),
@@ -388,6 +391,24 @@ object SystemMetrics {
         } catch (_: Exception) {
             null
         }
+    }
+
+
+    private fun readCpuCoreMhz(): List<Int> {
+        val out = mutableListOf<Int>()
+        try {
+            val base = File("/sys/devices/system/cpu")
+            val dirs = base.listFiles()?.filter { it.name.matches(Regex("cpu\\d+")) }?.sortedBy {
+                it.name.removePrefix("cpu").toIntOrNull() ?: 0
+            }.orEmpty()
+            for (dir in dirs) {
+                val f = File(dir, "cpufreq/scaling_cur_freq")
+                if (!f.canRead()) continue
+                val khz = f.readText().trim().toLongOrNull() ?: continue
+                if (khz > 0L) out.add((khz / 1000L).toInt())
+            }
+        } catch (_: Exception) { }
+        return out
     }
 
     private fun readCpuGovernor(): String {
