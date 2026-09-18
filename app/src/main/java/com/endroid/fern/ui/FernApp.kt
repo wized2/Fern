@@ -396,6 +396,11 @@ private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, p
             Line("Board", s.cpuBoard)
             Line("ABI", s.cpuAbi)
             s.cpuCurMhz?.let { Line("Clock now", "$it MHz") }
+            if (s.cpuCoreMhz.isNotEmpty()) {
+                val cores = s.cpuCoreMhz
+                val label = cores.mapIndexed { i, mhz -> "CPU$i $mhz" }.joinToString(" · ")
+                Line("Per-core MHz", label.take(120) + if (label.length > 120) "…" else "")
+            }
             s.cpuMaxMhz?.let { Line("Max clock", "$it MHz") }
             Line("Governor", s.cpuGovernor)
             Line(
