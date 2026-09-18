@@ -987,6 +987,7 @@ private fun formatMhz(mhz: Int): String {
     return if (mhz >= 1000) String.format("%.2f GHz", mhz / 1000.0) else "$mhz MHz"
 }
 
+@Composable
 private fun Line(k: String, v: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
