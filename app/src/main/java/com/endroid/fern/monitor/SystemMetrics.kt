@@ -245,35 +245,19 @@ object SystemMetrics {
     private fun cpuFromLoad(cores: Int, load: FloatArray?): Pair<Float, Boolean> {
         val load1 = load?.getOrNull(0) ?: return 0f to false
         val c = cores.coerceAtLeast(1)
-        return (load1 / c * 100f).coerceIn(0f, 100f) to false
+        // loadavg is runnable tasks; scale to percent of cores
+        val pct = (load1 / c * 100f).coerceIn(0f, 100f)
+        return pct to false
     }
 
     private fun readCpuPercentAccurate(cores: Int, load: FloatArray?): Pair<Float, Boolean> {
-        val first = readProcStat()
-        if (first != null) {
-            try {
-                Thread.sleep(180)
-            } catch (_: InterruptedException) { }
-            val second = readProcStat()
-            if (second != null) {
-                val (idle1, total1) = first
-                val (idle2, total2) = second
-                val dTotal = total2 - total1
-                val dIdle = idle2 - idle1
-                if (dTotal > 0L) {
-                    prevIdle = idle2
-                    prevTotal = total2
-                    val busy = ((dTotal - dIdle).toFloat() / dTotal * 100f).coerceIn(0f, 100f)
-                    return busy to true
-                }
-            }
-        }
-        val now = readProcStat() ?: first
-        if (now != null) {
-            val (idle2, total2) = now
+        // Prefer cross-tick /proc/stat delta (ViewModel samples every refresh interval).
+        val nowStat = readProcStat()
+        if (nowStat != null) {
+            val (idle2, total2) = nowStat
             val pIdle = prevIdle
             val pTotal = prevTotal
-            if (pIdle >= 0L && pTotal > 0L && total2 >= pTotal) {
+            if (pIdle >= 0L && pTotal > 0L && total2 > pTotal) {
                 val dTotal = total2 - pTotal
                 val dIdle = idle2 - pIdle
                 prevIdle = idle2
@@ -283,13 +267,54 @@ object SystemMetrics {
                     return busy to true
                 }
             } else {
+                // Seed baselines; try a short dual sample only when we have no prior tick.
                 prevIdle = idle2
                 prevTotal = total2
+                try {
+                    Thread.sleep(220)
+                } catch (_: InterruptedException) { }
+                val second = readProcStat()
+                if (second != null) {
+                    val (idle3, total3) = second
+                    val dTotal = total3 - total2
+                    val dIdle = idle3 - idle2
+                    prevIdle = idle3
+                    prevTotal = total3
+                    if (dTotal > 0L) {
+                        val busy = ((dTotal - dIdle).toFloat() / dTotal * 100f).coerceIn(0f, 100f)
+                        return busy to true
+                    }
+                }
             }
         }
-        // dumpsys cpuinfo when /proc/stat is blocked (OEM SELinux)
-        readCpuFromDumpsys()?.let { return it to false }
+        // dumpsys cpuinfo (may need DUMP permission; still try)
+        readCpuFromDumpsys()?.let { return it to true }
+        // Clock scaling as activity proxy when tick counters are blocked (CPU-Z style fallback)
+        readCpuFromFreq()?.let { return it to false }
         return cpuFromLoad(cores, load)
+    }
+
+    /** Rough activity from avg(cur/max) across cores — not true utilization but better than a stuck 0. */
+    private fun readCpuFromFreq(): Float? {
+        return try {
+            val base = File("/sys/devices/system/cpu")
+            val dirs = base.listFiles()?.filter { it.name.matches(Regex("cpu\\d+")) }.orEmpty()
+            var sum = 0f
+            var n = 0
+            for (dir in dirs) {
+                val curF = File(dir, "cpufreq/scaling_cur_freq")
+                val maxF = File(dir, "cpufreq/cpuinfo_max_freq")
+                if (!curF.canRead() || !maxF.canRead()) continue
+                val cur = curF.readText().trim().toFloatOrNull() ?: continue
+                val max = maxF.readText().trim().toFloatOrNull() ?: continue
+                if (max <= 0f) continue
+                sum += (cur / max * 100f).coerceIn(0f, 100f)
+                n++
+            }
+            if (n == 0) null else (sum / n).coerceIn(0f, 100f)
+        } catch (_: Exception) {
+            null
+        }
     }
 
     private fun readCpuFromDumpsys(): Float? {
