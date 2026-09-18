@@ -74,8 +74,8 @@ data class SystemSnapshot(
 
 object SystemMetrics {
 
-    @Volatile private var prevIdle: Long = -1
-    @Volatile private var prevTotal: Long = -1
+    @Volatile @Volatile private var prevIdle: Long = -1
+    @Volatile @Volatile private var prevTotal: Long = -1
     @Volatile private var prevNetBytes: Long = -1
     @Volatile private var prevNetAt: Long = 0
 
@@ -271,7 +271,7 @@ object SystemMetrics {
                 prevIdle = idle2
                 prevTotal = total2
                 try {
-                    Thread.sleep(220)
+                    Thread.sleep(320)
                 } catch (_: InterruptedException) { }
                 val second = readProcStat()
                 if (second != null) {
