@@ -1,3 +1,8 @@
+## 1.5.35
+- Overview: soft Live status chip, roomier Trends, taller sparklines
+- Sleep-friendly density: slightly larger card padding, quieter progress tracks
+- Gauge/bar motion remains 900ms ease-out for calm updates
+
 ## 1.5.34
 - Details: clearer hardware section header and subtitle
 

@@ -268,7 +268,7 @@ private fun HomeContent(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 18.dp, vertical = 14.dp),
+            .padding(horizontal = 18.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Row(
@@ -297,15 +297,46 @@ private fun HomeContent(
                     thermal.contains("HOT", true) || thermal.contains("CRITICAL", true) ||
                         thermal.contains("EMERGENCY", true) || thermal.contains("SEVERE", true)
                 )
-                Text(
-                    buildString {
-                        append(age)
-                        if (thermal != null) append(" · Thermal $thermal")
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (thermalHot) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (age == "Live") {
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                                    RoundedCornerShape(50)
+                                )
+                                .padding(horizontal = 10.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                "Live",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        if (thermal != null) {
+                            Text(
+                                "Thermal $thermal",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (thermalHot) MaterialTheme.colorScheme.error
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    } else {
+                        Text(
+                            buildString {
+                                append(age)
+                                if (thermal != null) append(" · Thermal $thermal")
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (thermalHot) MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
             val haptic = LocalHapticFeedback.current
             IconButton(onClick = {
@@ -366,7 +397,7 @@ private fun HomeContent(
         ) {
             Column(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
                     "Trends",
@@ -1140,10 +1171,10 @@ private fun Bar(icon: ImageVector, title: String, percent: Float, detail: String
                 progress = { a },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(8.dp)
+                    .height(7.dp)
                     .clip(RoundedCornerShape(4.dp)),
                 color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
                 strokeCap = StrokeCap.Round
             )
             Text(
@@ -1171,9 +1202,9 @@ private fun Spark(
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp)
+                .height(58.dp)
                 .background(
-                    MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.65f),
+                    MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.45f),
                     MaterialTheme.shapes.medium
                 )
                 .padding(8.dp)
