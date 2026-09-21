@@ -12,13 +12,13 @@ android {
         applicationId = "com.endroid.fern"
         minSdk = 26
         targetSdk = 35
-        versionCode = 47
-        versionName = "1.5.35"
+        versionCode = 48
+        versionName = "1.6.0"
         resourceConfigurations += listOf("en")
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")
         }
-        buildConfigField("String", "VERSION_NAME", "\"1.5.35\"")
+        buildConfigField("String", "VERSION_NAME", "\"1.6.0\"")
     }
 
 
@@ -99,6 +99,7 @@ android {
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
@@ -106,5 +107,6 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.material3)
     implementation("androidx.compose.material:material-icons-core")
+    implementation(libs.androidx.material.icons.extended)
     debugImplementation(libs.androidx.ui.tooling.preview)
 }

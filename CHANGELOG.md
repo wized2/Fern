@@ -1,3 +1,10 @@
+## 1.6.0
+- Navigation: Home · Details · Active Apps · More
+- Active Apps: optional Usage access — recent foreground apps, time windows, system filter
+- More menu: Tests, Settings, Sensors (data-driven list)
+- Sensors: full device list with details + optional live values
+- Honest UI: no per-app CPU/RAM claims; open system App info on tap
+
 ## 1.5.35
 - Overview: soft Live status chip, roomier Trends, taller sparklines
 - Sleep-friendly density: slightly larger card padding, quieter progress tracks

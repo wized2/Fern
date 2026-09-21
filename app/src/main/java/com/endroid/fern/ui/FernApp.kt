@@ -29,6 +29,8 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
@@ -37,6 +39,42 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.Science
+import androidx.compose.material.icons.filled.Sensors
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.core.graphics.drawable.toBitmap
+import android.app.AppOpsManager
+import android.content.pm.PackageManager
+import android.provider.Settings
+import android.app.usage.UsageStatsManager
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import com.endroid.fern.monitor.ActiveApp
+import com.endroid.fern.monitor.ActiveAppsRepository
+import com.endroid.fern.monitor.ActiveWindow
+import com.endroid.fern.monitor.AppState
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
@@ -108,7 +146,10 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.sp
 import com.endroid.fern.R
 
-private enum class Tab { Home, Details, Tests, Settings }
+private enum class Tab { Home, Details, ActiveApps, More }
+
+/** Nested destinations opened from the More tab. */
+private enum class MoreSub { None, Tests, Settings, Sensors }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -138,19 +179,28 @@ fun FernApp(
     onRefreshNow: () -> Unit
 ) {
     var tab by remember { mutableStateOf(Tab.Home) }
+    var moreSub by remember { mutableStateOf(MoreSub.None) }
     val navHaptic = LocalHapticFeedback.current
     fun selectTab(next: Tab) {
         if (next != tab && haptics) {
             navHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
         }
         tab = next
+        if (next != Tab.More) moreSub = MoreSub.None
+    }
+    fun openMore(sub: MoreSub) {
+        if (haptics) navHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        moreSub = sub
+    }
+    fun backFromMore() {
+        if (haptics) navHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        moreSub = MoreSub.None
     }
     val view = LocalView.current
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     SideEffect {
         val window = (view.context as? Activity)?.window ?: return@SideEffect
         val controller = WindowCompat.getInsetsController(window, view)
-        // Match top app bar surface: dark bars need light icons and vice versa
         controller.isAppearanceLightStatusBars = !dark
         controller.isAppearanceLightNavigationBars = !dark
         @Suppress("DEPRECATION")
@@ -160,6 +210,14 @@ fun FernApp(
         if (android.os.Build.VERSION.SDK_INT >= 29) window.isStatusBarContrastEnforced = false
     }
 
+    val onMoreChild = tab == Tab.More && moreSub != MoreSub.None
+    val topTitle = when {
+        onMoreChild && moreSub == MoreSub.Tests -> "Tests"
+        onMoreChild && moreSub == MoreSub.Settings -> "Settings"
+        onMoreChild && moreSub == MoreSub.Sensors -> "Sensors"
+        else -> null
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
@@ -167,18 +225,37 @@ fun FernApp(
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    if (topTitle != null) {
                         Text(
-                            "Fern",
+                            topTitle,
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.primary
                         )
-                        Text(
-                            "System monitor",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    } else {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                "Fern",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                "System monitor",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                },
+                navigationIcon = {
+                    if (onMoreChild) {
+                        IconButton(onClick = { backFromMore() }) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -210,36 +287,46 @@ fun FernApp(
                     alwaysShowLabel = false
                 )
                 NavigationBarItem(
-                    selected = tab == Tab.Tests,
-                    onClick = { selectTab(Tab.Tests) },
-                    icon = { Icon(Icons.Default.Share, contentDescription = "Tests") },
-                    label = { Text("Tests", style = MaterialTheme.typography.labelMedium) },
+                    selected = tab == Tab.ActiveApps,
+                    onClick = { selectTab(Tab.ActiveApps) },
+                    icon = { Icon(Icons.Default.Apps, contentDescription = "Active Apps") },
+                    label = { Text("Apps", style = MaterialTheme.typography.labelMedium) },
                     alwaysShowLabel = false
                 )
                 NavigationBarItem(
-                    selected = tab == Tab.Settings,
-                    onClick = { selectTab(Tab.Settings) },
-                    icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
-                    label = { Text("Settings", style = MaterialTheme.typography.labelMedium) },
+                    selected = tab == Tab.More,
+                    onClick = { selectTab(Tab.More) },
+                    icon = { Icon(Icons.Default.MoreHoriz, contentDescription = "More") },
+                    label = { Text("More", style = MaterialTheme.typography.labelMedium) },
                     alwaysShowLabel = false
                 )
             }
         }
     ) { padding ->
         AnimatedContent(
-            targetState = tab,
+            targetState = when {
+                tab == Tab.More && moreSub != MoreSub.None -> "more/${moreSub.name}"
+                else -> tab.name
+            },
             transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
             modifier = Modifier.padding(padding).fillMaxSize(),
             label = "tab"
-        ) { current ->
-            when (current) {
-                Tab.Home -> HomeContent(snapshot, cpuHistory, ramHistory, batteryHistory, netHistory, storageHistory, lastUpdatedMs, haptics, onRefreshNow)
-                Tab.Details -> DetailsContent(snapshot, peakCpu, peakRam, peakNet, onShareMetrics)
-                Tab.Tests -> TestsContent()
-                Tab.Settings -> SettingsContent(
+        ) { key ->
+            when {
+                key == Tab.Home.name -> HomeContent(
+                    snapshot, cpuHistory, ramHistory, batteryHistory, netHistory, storageHistory,
+                    lastUpdatedMs, haptics, onRefreshNow
+                )
+                key == Tab.Details.name -> DetailsContent(snapshot, peakCpu, peakRam, peakNet, onShareMetrics)
+                key == Tab.ActiveApps.name -> ActiveAppsContent(haptics = haptics)
+                key == Tab.More.name || key == "more/None" -> MoreContent(onOpen = { openMore(it) })
+                key == "more/Tests" -> TestsContent()
+                key == "more/Settings" -> SettingsContent(
                     themeMode, refreshMs, keepScreenOn, haptics, pauseInBackground,
                     onThemeMode, onRefreshMs, onKeepScreenOn, onHaptics, onPauseInBackground, onClearHistory
                 )
+                key == "more/Sensors" -> SensorsContent()
+                else -> MoreContent(onOpen = { openMore(it) })
             }
         }
     }
@@ -812,6 +899,533 @@ private fun SettingsContent(
     }
 }
 
+
+
+
+private data class MoreItem(
+    val title: String,
+    val subtitle: String,
+    val icon: ImageVector,
+    val sub: MoreSub
+)
+
+@Composable
+private fun MoreContent(onOpen: (MoreSub) -> Unit) {
+    val items = listOf(
+        MoreItem("Tests", "Run device tests", Icons.Default.Science, MoreSub.Tests),
+        MoreItem("Settings", "Theme, refresh rate, screen", Icons.Default.Settings, MoreSub.Settings),
+        MoreItem("Sensors", "Sensors available on this device", Icons.Default.Sensors, MoreSub.Sensors)
+    )
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 18.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            "More",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            "Tools and preferences",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Card(
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            ),
+            shape = MaterialTheme.shapes.extraLarge,
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column {
+                items.forEachIndexed { index, item ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onOpen(item.sub) }
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
+                                    MaterialTheme.shapes.medium
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                item.icon,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.size(14.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                item.title,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                item.subtitle,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Icon(
+                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (index < items.lastIndex) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = 70.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+                        )
+                    }
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            "Fern v${BuildConfig.VERSION_NAME}",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.outline,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+        Text(
+            "Offline · no ads · no accounts",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.outline,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+    }
+}
+
+@Composable
+private fun SensorsContent() {
+    val context = LocalContext.current
+    val sensors = remember {
+        val sm = context.getSystemService(android.content.Context.SENSOR_SERVICE) as? SensorManager
+        sm?.getSensorList(Sensor.TYPE_ALL)?.sortedBy { it.name.lowercase() } ?: emptyList()
+    }
+    var expanded by remember { mutableStateOf<String?>(null) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 18.dp, vertical = 12.dp)
+    ) {
+        Text(
+            if (sensors.isEmpty()) "No sensors reported"
+            else "${sensors.size} sensors",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 10.dp)
+        )
+        if (sensors.isEmpty()) {
+            Text(
+                "This device did not report any sensors.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            return
+        }
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            items(sensors, key = { "${it.name}|${it.type}|${it.vendor}" }) { sensor ->
+                val key = "${sensor.name}|${sensor.type}|${sensor.vendor}"
+                val open = expanded == key
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                    ),
+                    shape = MaterialTheme.shapes.large,
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { expanded = if (open) null else key }
+                ) {
+                    Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+                        Text(
+                            sensor.name,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            sensorTypeLabel(sensor.type) + " · " + (sensor.vendor.ifBlank { "unknown vendor" }),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (open) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Line("Type", sensorTypeLabel(sensor.type))
+                            Line("Vendor", sensor.vendor.ifBlank { "—" })
+                            Line("Max range", String.format("%.4g", sensor.maximumRange))
+                            Line("Resolution", String.format("%.4g", sensor.resolution))
+                            Line("Power", String.format("%.2f mA", sensor.power))
+                            if (sensor.stringType != null) {
+                                Line("String type", sensor.stringType)
+                            }
+                            SensorLiveBlock(sensor)
+                        }
+                    }
+                }
+            }
+            item { Spacer(modifier = Modifier.height(12.dp)) }
+        }
+    }
+}
+
+@Composable
+private fun SensorLiveBlock(sensor: Sensor) {
+    val context = LocalContext.current
+    var values by remember(sensor.name, sensor.type) { mutableStateOf("Listening…") }
+    DisposableEffect(sensor.name, sensor.type) {
+        val sm = context.getSystemService(android.content.Context.SENSOR_SERVICE) as? SensorManager
+        val listener = object : SensorEventListener {
+            override fun onSensorChanged(event: SensorEvent?) {
+                if (event == null) return
+                values = event.values.take(4).joinToString("  ") { String.format("%.3f", it) }
+            }
+            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+        }
+        sm?.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_UI)
+        onDispose { runCatching { sm?.unregisterListener(listener) } }
+    }
+    Text(
+        "Live: $values",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(top = 4.dp)
+    )
+}
+
+private fun sensorTypeLabel(type: Int): String = when (type) {
+    Sensor.TYPE_ACCELEROMETER -> "Accelerometer"
+    Sensor.TYPE_MAGNETIC_FIELD -> "Magnetic field"
+    Sensor.TYPE_ORIENTATION -> "Orientation"
+    Sensor.TYPE_GYROSCOPE -> "Gyroscope"
+    Sensor.TYPE_LIGHT -> "Light"
+    Sensor.TYPE_PRESSURE -> "Pressure"
+    Sensor.TYPE_TEMPERATURE -> "Temperature"
+    Sensor.TYPE_PROXIMITY -> "Proximity"
+    Sensor.TYPE_GRAVITY -> "Gravity"
+    Sensor.TYPE_LINEAR_ACCELERATION -> "Linear acceleration"
+    Sensor.TYPE_ROTATION_VECTOR -> "Rotation vector"
+    Sensor.TYPE_RELATIVE_HUMIDITY -> "Humidity"
+    Sensor.TYPE_AMBIENT_TEMPERATURE -> "Ambient temperature"
+    Sensor.TYPE_GAME_ROTATION_VECTOR -> "Game rotation"
+    Sensor.TYPE_GYROSCOPE_UNCALIBRATED -> "Gyro uncalibrated"
+    Sensor.TYPE_SIGNIFICANT_MOTION -> "Significant motion"
+    Sensor.TYPE_STEP_DETECTOR -> "Step detector"
+    Sensor.TYPE_STEP_COUNTER -> "Step counter"
+    Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR -> "Geomagnetic rotation"
+    Sensor.TYPE_HEART_RATE -> "Heart rate"
+    Sensor.TYPE_POSE_6DOF -> "Pose 6DoF"
+    Sensor.TYPE_STATIONARY_DETECT -> "Stationary detect"
+    Sensor.TYPE_MOTION_DETECT -> "Motion detect"
+    Sensor.TYPE_HEART_BEAT -> "Heart beat"
+    Sensor.TYPE_LOW_LATENCY_OFFBODY_DETECT -> "Off-body detect"
+    Sensor.TYPE_ACCELEROMETER_UNCALIBRATED -> "Accel uncalibrated"
+    else -> "Type $type"
+}
+
+@Composable
+private fun ActiveAppsContent(haptics: Boolean) {
+    val context = LocalContext.current
+    val repo = remember { ActiveAppsRepository(context) }
+    var hasAccess by remember { mutableStateOf(repo.hasUsageAccess()) }
+    var window by remember { mutableStateOf(ActiveWindow.HOUR_1) }
+    var showSystem by remember { mutableStateOf(false) }
+    var apps by remember { mutableStateOf<List<ActiveApp>>(emptyList()) }
+    var loading by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
+
+    fun refresh() {
+        hasAccess = repo.hasUsageAccess()
+        if (!hasAccess) {
+            apps = emptyList()
+            return
+        }
+        scope.launch {
+            loading = true
+            apps = runCatching { repo.load(window, showSystem) }.getOrElse { emptyList() }
+            loading = false
+        }
+    }
+
+    // Re-check permission when returning from system settings
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val obs = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) refresh()
+        }
+        lifecycleOwner.lifecycle.addObserver(obs)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
+    }
+
+    LaunchedEffect(window, showSystem) { refresh() }
+
+    // Auto-refresh while visible
+    LaunchedEffect(hasAccess, window, showSystem) {
+        if (!hasAccess) return@LaunchedEffect
+        while (true) {
+            kotlinx.coroutines.delay(5_000)
+            apps = runCatching { repo.load(window, showSystem) }.getOrElse { apps }
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp, vertical = 10.dp)
+    ) {
+        Text(
+            "Active Apps",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            "Recently in the foreground",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+
+        if (!hasAccess) {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                ),
+                shape = MaterialTheme.shapes.extraLarge,
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        "Usage access needed",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        "Fern can show which apps were recently active. Everything stays on this device — nothing is uploaded. Grant Usage access to enable this list.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Button(
+                        onClick = {
+                            runCatching {
+                                context.startActivity(
+                                    Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+                                )
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Open Usage access")
+                    }
+                }
+            }
+            return
+        }
+
+        // Time window chips
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            ActiveWindow.entries.forEach { w ->
+                FilterChip(
+                    selected = window == w,
+                    onClick = {
+                        if (haptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        window = w
+                    },
+                    label = { Text(w.label) }
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                "System apps",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Switch(checked = showSystem, onCheckedChange = {
+                if (haptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                showSystem = it
+            })
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+
+        if (apps.isEmpty() && !loading) {
+            Text(
+                "No recent activity in this window",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(vertical = 24.dp)
+            )
+        } else {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                items(apps, key = { it.packageName }) { app ->
+                    ActiveAppRow(app) {
+                        runCatching {
+                            val uri = Uri.parse("package:${app.packageName}")
+                            context.startActivity(
+                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, uri)
+                            )
+                        }
+                    }
+                }
+                item {
+                    Text(
+                        "Android doesn't allow apps to see other apps' CPU or RAM. This shows which apps were recently active.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActiveAppRow(app: ActiveApp, onClick: () -> Unit) {
+    val context = LocalContext.current
+    val iconPainter = remember(app.packageName) {
+        try {
+            val d = context.packageManager.getApplicationIcon(app.packageName)
+            val bmp = d.toBitmap(96, 96)
+            BitmapPainter(bmp.asImageBitmap())
+        } catch (_: Exception) {
+            null
+        }
+    }
+    val now = System.currentTimeMillis()
+    val ago = relativeTime(now - app.lastUsedMs)
+    val fg = formatDuration(app.foregroundTimeMs)
+
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ),
+        shape = MaterialTheme.shapes.large,
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (iconPainter != null) {
+                Image(
+                    painter = iconPainter,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(MaterialTheme.shapes.medium)
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(
+                            MaterialTheme.colorScheme.surfaceContainerHighest,
+                            MaterialTheme.shapes.medium
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Apps, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                }
+            }
+            Spacer(modifier = Modifier.size(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        app.label,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (app.state == AppState.FOREGROUND) {
+                        Spacer(modifier = Modifier.size(8.dp))
+                        Surface(
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            shape = MaterialTheme.shapes.small
+                        ) {
+                            Text(
+                                "Active now",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
+                Text(
+                    "Used $ago · Foreground $fg",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+private fun relativeTime(deltaMs: Long): String {
+    val s = (deltaMs / 1000).coerceAtLeast(0)
+    return when {
+        s < 60 -> "${s}s"
+        s < 3600 -> "${s / 60} min"
+        s < 86400 -> String.format("%.1f h", s / 3600.0)
+        else -> "${s / 86400} d"
+    }
+}
+
+private fun formatDuration(ms: Long): String {
+    val s = (ms / 1000).coerceAtLeast(0)
+    return when {
+        s < 60 -> "${s}s"
+        s < 3600 -> "${s / 60} min"
+        else -> String.format("%.1f h", s / 3600.0)
+    }
+}
 
 
 @Composable

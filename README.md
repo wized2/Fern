@@ -7,7 +7,7 @@ Material 3 · offline · no ads · small release APK (R8 + resource shrink).
 ![Min API 26](https://img.shields.io/badge/minSdk-26-green)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0-blue)
 ![Compose](https://img.shields.io/badge/Material%203-green)
-![Version](https://img.shields.io/badge/version-1.5.22-blue)
+![Version](https://img.shields.io/badge/version-1.6.0-blue)
 
 ## Features
 
@@ -27,8 +27,18 @@ Material 3 · offline · no ads · small release APK (R8 + resource shrink).
 
 - **Home** — live status, gauges, bars, trend sparklines, manual refresh  
 - **Details** — processor, memory, power, display, device peaks; share snapshot  
-- **Tests** — color panels, vibration, accel / gyro / light / magnetometer, touch, sensor list  
-- **Settings** — theme (Auto / Light / Dark), refresh rate, keep-screen-on, haptics, pause in background, About  
+- **Active Apps** — recently active apps (optional Usage access; data stays on device)  
+- **More** — Tests, Settings, Sensors  
+
+### Permissions
+
+| Permission | Required | Purpose |
+|------------|----------|---------|
+| `ACCESS_NETWORK_STATE` | yes | Network type / throughput on Home |
+| `VIBRATE` | yes | Haptics and Tests vibration |
+| `PACKAGE_USAGE_STATS` | optional | Active Apps only — user grants Usage access in system settings; never leaves the device |
+
+No internet permission. No accounts. No tracking.
 
 ### UX
 
