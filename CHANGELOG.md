@@ -1,3 +1,9 @@
+## 1.7.1
+- Fix Shizuku: register ShizukuProvider so the binder is delivered
+- Binder received/dead listeners + sticky refresh
+- Clearer Advanced status when service is up but permission is missing
+- More reliable elevated shell (service + reflection)
+
 ## 1.7.0
 - Advanced mode (optional): Shizuku or root — off by default in Settings
 - When elevated: thermal zones for Home Thermal bar, per-app memory on Active Apps, force-stop

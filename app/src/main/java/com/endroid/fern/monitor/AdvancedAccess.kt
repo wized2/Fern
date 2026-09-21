@@ -3,9 +3,12 @@ package com.endroid.fern.monitor
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.IBinder
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
+import rikka.shizuku.ShizukuBinderWrapper
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.concurrent.TimeUnit
@@ -22,55 +25,72 @@ data class ElevatedStatus(
 /**
  * Optional elevated shell for Advanced mode.
  * Prefer Shizuku (user-controlled); fall back to root `su` when present.
- * Never requested unless the user enables Advanced mode in Settings.
  */
 class AdvancedAccess(private val context: Context) {
 
     private val lastBackend = AtomicReference(ElevatedBackend.None)
 
     fun isShizukuInstalled(): Boolean {
-        return try {
-            context.packageManager.getPackageInfo("moe.shizuku.privileged.api", 0)
-            true
-        } catch (_: Exception) {
+        val pm = context.packageManager
+        val pkgs = listOf(
+            "moe.shizuku.privileged.api",
+            "moe.shizuku.manager",
+            "moe.shizuku.privileged"
+        )
+        for (pkg in pkgs) {
             try {
-                context.packageManager.getPackageInfo("moe.shizuku.manager", 0)
-                true
+                if (Build.VERSION.SDK_INT >= 33) {
+                    pm.getPackageInfo(pkg, PackageManager.PackageInfoFlags.of(0))
+                } else {
+                    @Suppress("DEPRECATION")
+                    pm.getPackageInfo(pkg, 0)
+                }
+                return true
             } catch (_: Exception) {
-                false
             }
         }
+        return false
     }
 
     fun isShizukuRunning(): Boolean = try {
         Shizuku.pingBinder()
-    } catch (_: Exception) {
+    } catch (e: Exception) {
+        Log.d(TAG, "pingBinder failed: ${e.message}")
         false
     }
 
-    fun hasShizukuPermission(): Boolean = try {
-        if (!isShizukuRunning()) false
-        else Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
-    } catch (_: Exception) {
-        false
+    fun hasShizukuPermission(): Boolean {
+        return try {
+            if (!isShizukuRunning()) return false
+            // Pre-v11: binder presence implies access
+            if (Shizuku.isPreV11()) return true
+            val granted = Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
+            Log.d(TAG, "checkSelfPermission granted=$granted uid=${Shizuku.getUid()}")
+            granted
+        } catch (e: Exception) {
+            Log.w(TAG, "hasShizukuPermission: ${e.message}")
+            false
+        }
     }
 
     fun requestShizukuPermission(requestCode: Int = REQ_SHIZUKU) {
         try {
-            if (isShizukuRunning() && !hasShizukuPermission()) {
+            if (!isShizukuRunning()) {
+                Log.w(TAG, "requestPermission: binder not ready")
+                return
+            }
+            if (Shizuku.isPreV11()) return
+            if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
                 Shizuku.requestPermission(requestCode)
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.e(TAG, "requestShizukuPermission", e)
         }
     }
 
     fun isRootAvailable(): Boolean {
         val paths = arrayOf("/system/bin/su", "/system/xbin/su", "/sbin/su", "/vendor/bin/su")
-        if (paths.any { java.io.File(it).exists() }) {
-            // Cheap presence check — full proof is a successful `su -c id`
-            return true
-        }
-        return false
+        return paths.any { java.io.File(it).exists() }
     }
 
     suspend fun probeRoot(): Boolean = withContext(Dispatchers.IO) {
@@ -83,47 +103,51 @@ class AdvancedAccess(private val context: Context) {
             return ElevatedStatus(
                 ElevatedBackend.None,
                 "Off",
-                "Enable Advanced mode in Settings to use Shizuku or root"
+                "Enable Advanced mode to use Shizuku or root"
             )
         }
-        if (hasShizukuPermission()) {
+
+        val running = isShizukuRunning()
+        val granted = hasShizukuPermission()
+        Log.i(TAG, "status advanced=true running=$running granted=$granted installed=${isShizukuInstalled()}")
+
+        if (running && granted) {
             lastBackend.set(ElevatedBackend.Shizuku)
             return ElevatedStatus(
                 ElevatedBackend.Shizuku,
-                "Shizuku",
-                "Connected — thermal zones, per-app memory, force-stop"
+                "Shizuku connected",
+                "Thermal zones, per-app memory, and force-stop are available"
             )
         }
-        if (isShizukuRunning() && !hasShizukuPermission()) {
+        if (running && !granted) {
             lastBackend.set(ElevatedBackend.None)
             return ElevatedStatus(
                 ElevatedBackend.None,
-                "Shizuku running",
-                "Tap “Grant Shizuku” to authorize Fern"
+                "Shizuku running — permission needed",
+                "Tap “Grant Shizuku”, or open the Shizuku app and allow Fern"
             )
         }
         if (isShizukuInstalled()) {
             lastBackend.set(ElevatedBackend.None)
             return ElevatedStatus(
                 ElevatedBackend.None,
-                "Shizuku installed",
-                "Start Shizuku, then grant permission"
+                "Shizuku installed — not connected",
+                "Open Shizuku and start the service, then return here and tap Refresh"
             )
         }
-        // Root as fallback when Advanced is on
         if (isRootAvailable()) {
             lastBackend.set(ElevatedBackend.Root)
             return ElevatedStatus(
                 ElevatedBackend.Root,
-                "Root",
-                "su detected — elevated shell available"
+                "Root (su)",
+                "su found — elevated shell available"
             )
         }
         lastBackend.set(ElevatedBackend.None)
         return ElevatedStatus(
             ElevatedBackend.None,
             "Unavailable",
-            "Install Shizuku (recommended) or use a rooted device"
+            "Install Shizuku from GitHub/Play, start it, then grant Fern"
         )
     }
 
@@ -132,7 +156,6 @@ class AdvancedAccess(private val context: Context) {
         return hasShizukuPermission() || isRootAvailable()
     }
 
-    /** Run a shell command with the best available backend. */
     suspend fun exec(command: String, timeoutMs: Long = 5_000): String? =
         withContext(Dispatchers.IO) {
             if (hasShizukuPermission()) {
@@ -145,8 +168,16 @@ class AdvancedAccess(private val context: Context) {
         }
 
     private fun execShizuku(command: String, timeoutMs: Long): String? {
+        // 1) Reflection on Shizuku.newProcess (present on some API builds)
+        tryReflectNewProcess(command, timeoutMs)?.let { return it }
+        // 2) IShizukuService.newProcess via binder
+        tryServiceNewProcess(command, timeoutMs)?.let { return it }
+        Log.w(TAG, "execShizuku: no working newProcess path")
+        return null
+    }
+
+    private fun tryReflectNewProcess(command: String, timeoutMs: Long): String? {
         return try {
-            // newProcess visibility varies by Shizuku API revision — call via reflection
             val method = Shizuku::class.java.getDeclaredMethod(
                 "newProcess",
                 Array<String>::class.java,
@@ -160,8 +191,49 @@ class AdvancedAccess(private val context: Context) {
                 null,
                 null
             ) as? java.lang.Process ?: return null
+            readProcess(process, timeoutMs)
+        } catch (e: Exception) {
+            Log.d(TAG, "reflect newProcess: ${e.message}")
+            null
+        }
+    }
+
+    private fun tryServiceNewProcess(command: String, timeoutMs: Long): String? {
+        return try {
+            val binder = Shizuku.getBinder() ?: return null
+            val serviceClass = Class.forName("moe.shizuku.server.IShizukuService\$Stub")
+            val asInterface = serviceClass.getMethod("asInterface", IBinder::class.java)
+            val wrapped = ShizukuBinderWrapper(binder)
+            val service = asInterface.invoke(null, wrapped) ?: return null
+            val newProcess = service.javaClass.getMethod(
+                "newProcess",
+                Array<String>::class.java,
+                Array<String>::class.java,
+                String::class.java
+            )
+            val remote = newProcess.invoke(
+                service,
+                arrayOf("sh", "-c", command),
+                null,
+                null
+            ) ?: return null
+            // RemoteProcess: getInputStream()
+            val getIn = remote.javaClass.methods.firstOrNull {
+                it.name == "getInputStream" && it.parameterTypes.isEmpty()
+            }
+            val getErr = remote.javaClass.methods.firstOrNull {
+                it.name == "getErrorStream" && it.parameterTypes.isEmpty()
+            }
+            val waitFor = remote.javaClass.methods.firstOrNull {
+                it.name == "waitFor" && it.parameterTypes.isEmpty()
+            }
+            val destroy = remote.javaClass.methods.firstOrNull {
+                it.name == "destroy" && it.parameterTypes.isEmpty()
+            }
+            val input = getIn?.invoke(remote) as? java.io.InputStream
+                ?: return null
             val out = StringBuilder()
-            BufferedReader(InputStreamReader(process.inputStream)).use { reader ->
+            BufferedReader(InputStreamReader(input)).use { reader ->
                 var line: String?
                 while (reader.readLine().also { line = it } != null) {
                     out.append(line).append('\n')
@@ -169,22 +241,49 @@ class AdvancedAccess(private val context: Context) {
                 }
             }
             try {
-                BufferedReader(InputStreamReader(process.errorStream)).use { it.readText() }
+                (getErr?.invoke(remote) as? java.io.InputStream)?.use {
+                    BufferedReader(InputStreamReader(it)).readText()
+                }
             } catch (_: Exception) {
             }
-            if (Build.VERSION.SDK_INT >= 26) {
-                process.waitFor(timeoutMs, TimeUnit.MILLISECONDS)
-            } else {
-                process.waitFor()
+            try {
+                waitFor?.invoke(remote)
+            } catch (_: Exception) {
             }
             try {
-                process.destroy()
+                destroy?.invoke(remote)
             } catch (_: Exception) {
             }
             out.toString().trim().ifEmpty { null }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.d(TAG, "service newProcess: ${e.message}")
             null
         }
+    }
+
+    private fun readProcess(process: java.lang.Process, timeoutMs: Long): String? {
+        val out = StringBuilder()
+        BufferedReader(InputStreamReader(process.inputStream)).use { reader ->
+            var line: String?
+            while (reader.readLine().also { line = it } != null) {
+                out.append(line).append('\n')
+                if (out.length > 512_000) break
+            }
+        }
+        try {
+            BufferedReader(InputStreamReader(process.errorStream)).use { it.readText() }
+        } catch (_: Exception) {
+        }
+        if (Build.VERSION.SDK_INT >= 26) {
+            process.waitFor(timeoutMs, TimeUnit.MILLISECONDS)
+        } else {
+            process.waitFor()
+        }
+        try {
+            process.destroy()
+        } catch (_: Exception) {
+        }
+        return out.toString().trim().ifEmpty { null }
     }
 
     private fun execRoot(command: String, timeoutMs: Long): String? {
@@ -223,5 +322,6 @@ class AdvancedAccess(private val context: Context) {
 
     companion object {
         const val REQ_SHIZUKU = 7711
+        private const val TAG = "FernAdvanced"
     }
 }

@@ -16,6 +16,7 @@ import rikka.shizuku.Shizuku
 import com.endroid.fern.monitor.AdvancedAccess
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
+import android.util.Log
 import com.endroid.fern.widget.BatteryWidgetProvider
 import com.endroid.fern.widget.RamWidgetProvider
 import com.endroid.fern.ui.theme.FernTheme
@@ -25,11 +26,22 @@ class MainActivity : ComponentActivity() {
     private val viewModel: FernViewModel by viewModels()
 
     private val shizukuPermissionListener =
-        Shizuku.OnRequestPermissionResultListener { requestCode, _ ->
+        Shizuku.OnRequestPermissionResultListener { requestCode, grantResult ->
+            Log.i(TAG, "Shizuku permission result code=$requestCode grant=$grantResult")
             if (requestCode == AdvancedAccess.REQ_SHIZUKU) {
                 viewModel.refreshElevatedStatus()
             }
         }
+
+    private val binderReceivedListener = Shizuku.OnBinderReceivedListener {
+        Log.i(TAG, "Shizuku binder received (ping=${runCatching { Shizuku.pingBinder() }.getOrDefault(false)})")
+        viewModel.refreshElevatedStatus()
+    }
+
+    private val binderDeadListener = Shizuku.OnBinderDeadListener {
+        Log.i(TAG, "Shizuku binder dead")
+        viewModel.refreshElevatedStatus()
+    }
 
     override fun onResume() {
         super.onResume()
@@ -61,8 +73,12 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         try {
+            // Sticky: fires immediately if binder is already available
+            Shizuku.addBinderReceivedListenerSticky(binderReceivedListener)
+            Shizuku.addBinderDeadListener(binderDeadListener)
             Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.e(TAG, "Shizuku listener register failed", e)
         }
         WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = true
         WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightNavigationBars = true
@@ -132,6 +148,7 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         viewModel.startSampling()
+        viewModel.refreshElevatedStatus()
     }
 
     override fun onStop() {
@@ -144,8 +161,14 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         try {
             Shizuku.removeRequestPermissionResultListener(shizukuPermissionListener)
+            Shizuku.removeBinderReceivedListener(binderReceivedListener)
+            Shizuku.removeBinderDeadListener(binderDeadListener)
         } catch (_: Exception) {
         }
         super.onDestroy()
+    }
+
+    companion object {
+        private const val TAG = "FernMain"
     }
 }

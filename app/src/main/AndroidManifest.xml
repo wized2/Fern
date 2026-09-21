@@ -4,20 +4,18 @@
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.VIBRATE" />
-    <!-- Optional: user grants Usage access in system settings for Active Apps only -->
     <uses-permission
         android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />
 
-    <!-- Android 11+ package visibility for launchable apps (no QUERY_ALL_PACKAGES) -->
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
-        <!-- Shizuku manager (Advanced mode) -->
         <package android:name="moe.shizuku.privileged.api" />
         <package android:name="moe.shizuku.manager" />
+        <package android:name="moe.shizuku.privileged" />
     </queries>
 
     <application
@@ -35,6 +33,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Required so Shizuku can deliver its binder to this app -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:enabled="true"
+            android:exported="true"
+            android:multiprocess="false"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 
         <receiver
             android:name=".widget.BatteryWidgetProvider"
