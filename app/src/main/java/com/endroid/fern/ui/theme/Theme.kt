@@ -2,7 +2,10 @@ package com.endroid.fern.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -56,9 +59,9 @@ private val DarkColors = darkColorScheme(
     onTertiary = Color(0xFF04363F),
     tertiaryContainer = Color(0xFF214C56),
     onTertiaryContainer = Color(0xFFBFE9F4),
-    background = Color(0xFF0B0F0C),
-    onBackground = Color(0xFFDEE5DB),
-    surface = Color(0xFF0B0F0C),
+    background = Color(0xFF080B09),
+    onBackground = Color(0xFFE2EAE3),
+    surface = Color(0xFF080B09),
     onSurface = Color(0xFFDEE5DB),
     surfaceVariant = Color(0xFF3E4A40),
     onSurfaceVariant = Color(0xFFBDCABF),
@@ -145,6 +148,13 @@ fun FernTheme(mode: ThemeMode, content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = if (dark) DarkColors else LightColors,
         typography = FernTypography,
+        shapes = Shapes(
+            extraSmall = RoundedCornerShape(8.dp),
+            small = RoundedCornerShape(10.dp),
+            medium = RoundedCornerShape(14.dp),
+            large = RoundedCornerShape(18.dp),
+            extraLarge = RoundedCornerShape(22.dp)
+        ),
         content = content
     )
 }

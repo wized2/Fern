@@ -150,13 +150,14 @@ fun FernApp(
     SideEffect {
         val window = (view.context as? Activity)?.window ?: return@SideEffect
         val controller = WindowCompat.getInsetsController(window, view)
-        // Light theme → dark status icons; dark theme → light icons (readable on tinted top bar)
+        // Match top app bar surface: dark bars need light icons and vice versa
         controller.isAppearanceLightStatusBars = !dark
         controller.isAppearanceLightNavigationBars = !dark
         @Suppress("DEPRECATION")
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         @Suppress("DEPRECATION")
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        if (android.os.Build.VERSION.SDK_INT >= 29) window.isStatusBarContrastEnforced = false
     }
 
     Scaffold(
@@ -181,9 +182,10 @@ fun FernApp(
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
                     scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    titleContentColor = MaterialTheme.colorScheme.primary
+                    titleContentColor = MaterialTheme.colorScheme.primary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                 ),
                 windowInsets = WindowInsets.statusBars
             )
@@ -266,8 +268,8 @@ private fun HomeContent(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = 18.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -275,8 +277,9 @@ private fun HomeContent(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "Live overview",
-                    style = MaterialTheme.typography.titleMedium,
+                    "Overview",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 val age = if (lastUpdatedMs > 0L) {
@@ -362,11 +365,11 @@ private fun HomeContent(
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
-                    "Live trends",
+                    "Trends",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1044,20 +1047,21 @@ private fun Gauge(
 ) {
     val a by animateFloatAsState(
         percent.coerceIn(0f, 100f) / 100f,
-        tween(700),
+        animationSpec = tween(900, easing = androidx.compose.animation.core.FastOutSlowInEasing),
         label = "g"
     )
-    val track = MaterialTheme.colorScheme.surfaceVariant
+    val track = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
     val arc = MaterialTheme.colorScheme.primary
     Card(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         ),
         shape = MaterialTheme.shapes.extraLarge,
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = modifier
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
@@ -1073,7 +1077,7 @@ private fun Gauge(
                 contentAlignment = Alignment.Center
             ) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
-                    val stroke = size.minDimension * 0.09f
+                    val stroke = size.minDimension * 0.11f
                     val d = size.minDimension - stroke
                     val tl = Offset((size.width - d) / 2f, (size.height - d) / 2f)
                     drawArc(
@@ -1105,7 +1109,7 @@ private fun Gauge(
 private fun Bar(icon: ImageVector, title: String, percent: Float, detail: String) {
     val a by animateFloatAsState(
         (percent / 100f).coerceIn(0f, 1f),
-        tween(700),
+        animationSpec = tween(900, easing = androidx.compose.animation.core.FastOutSlowInEasing),
         label = "b"
     )
     Card(
@@ -1113,13 +1117,14 @@ private fun Bar(icon: ImageVector, title: String, percent: Float, detail: String
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         ),
         shape = MaterialTheme.shapes.extraLarge,
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = Modifier
             .fillMaxWidth()
             .semantics { contentDescription = "$title $detail" }
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
@@ -1161,9 +1166,12 @@ private fun Spark(
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(44.dp)
-                .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.medium)
-                .padding(6.dp)
+                .height(52.dp)
+                .background(
+                    MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.65f),
+                    MaterialTheme.shapes.medium
+                )
+                .padding(8.dp)
         ) {
             if (values.size < 2) return@Canvas
             val vmin = values.minOrNull() ?: 0f

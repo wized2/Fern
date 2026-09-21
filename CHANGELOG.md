@@ -1,3 +1,8 @@
+## 1.5.33
+- UI: calmer Overview hierarchy, zero-elevation cards, smoother gauge/bar motion
+- UI: refined top bar + status bar contrast, roomier metric spacing
+- Theme: OLED-friendlier dark surfaces, consistent corner radii
+
 # Changelog
 
 All notable changes to Fern are listed here.
