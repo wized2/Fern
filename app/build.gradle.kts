@@ -12,13 +12,13 @@ android {
         applicationId = "com.endroid.fern"
         minSdk = 26
         targetSdk = 35
-        versionCode = 45
-        versionName = "1.5.33"
+        versionCode = 46
+        versionName = "1.5.34"
         resourceConfigurations += listOf("en")
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")
         }
-        buildConfigField("String", "VERSION_NAME", "\"1.5.33\"")
+        buildConfigField("String", "VERSION_NAME", "\"1.5.34\"")
     }
 
 

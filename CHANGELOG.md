@@ -1,3 +1,6 @@
+## 1.5.34
+- Details: clearer hardware section header and subtitle
+
 ## 1.5.33
 - UI: calmer Overview hierarchy, zero-elevation cards, smoother gauge/bar motion
 - UI: refined top bar + status bar contrast, roomier metric spacing
