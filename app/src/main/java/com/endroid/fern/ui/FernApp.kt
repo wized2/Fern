@@ -50,6 +50,7 @@ import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.DeviceThermostat
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -469,6 +470,10 @@ private fun HomeContent(
                 Modifier.weight(1f)
             )
         }
+        ThermalBar(
+            tempC = s.batteryTempC,
+            thermalLabel = s.thermalLabel
+        )
         Bar(
             Icons.Default.Folder,
             "Storage",
@@ -1894,6 +1899,117 @@ private fun Gauge(
             }
             Text(
                 subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+
+/** Battery / device thermal strip for Home.
+ *  < 40°C Normal · 40–50°C Overheating · 50°C+ Extreme
+ */
+private enum class ThermalLevel { Normal, Overheating, Extreme, Unknown }
+
+private fun classifyThermal(tempC: Float?): ThermalLevel {
+    if (tempC == null) return ThermalLevel.Unknown
+    return when {
+        tempC >= 50f -> ThermalLevel.Extreme
+        tempC >= 40f -> ThermalLevel.Overheating
+        else -> ThermalLevel.Normal
+    }
+}
+
+@Composable
+private fun ThermalBar(tempC: Float?, thermalLabel: String) {
+    val level = classifyThermal(tempC)
+    // Map ~25–60°C onto the progress track so the bar feels responsive
+    val progressTarget = when {
+        tempC == null -> 0f
+        else -> ((tempC - 25f) / 35f).coerceIn(0.05f, 1f)
+    }
+    val a by animateFloatAsState(
+        progressTarget,
+        animationSpec = tween(900, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+        label = "thermal"
+    )
+    val barColor = when (level) {
+        ThermalLevel.Normal -> MaterialTheme.colorScheme.primary
+        ThermalLevel.Overheating -> Color(0xFFE6A817) // amber
+        ThermalLevel.Extreme -> MaterialTheme.colorScheme.error
+        ThermalLevel.Unknown -> MaterialTheme.colorScheme.outline
+    }
+    val statusText = when (level) {
+        ThermalLevel.Normal -> "Normal"
+        ThermalLevel.Overheating -> "Overheating"
+        ThermalLevel.Extreme -> "Extreme"
+        ThermalLevel.Unknown -> "Unavailable"
+    }
+    val detail = buildString {
+        if (tempC != null) {
+            append(String.format("%.1f°C", tempC))
+            append(" · ")
+            append(statusText)
+        } else {
+            append(statusText)
+        }
+        val sys = thermalLabel.takeIf {
+            it.isNotBlank() && !it.equals("Unknown", true) &&
+                !it.equals("None", true) && it != "—"
+        }
+        if (sys != null) append(" · System $sys")
+    }
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ),
+        shape = MaterialTheme.shapes.extraLarge,
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics { contentDescription = "Thermal $detail" }
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    Icons.Default.DeviceThermostat,
+                    contentDescription = null,
+                    tint = barColor,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.size(8.dp))
+                Text(
+                    "Thermal",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    statusText,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = barColor,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+            LinearProgressIndicator(
+                progress = { a },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(7.dp)
+                    .clip(RoundedCornerShape(4.dp)),
+                color = barColor,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                strokeCap = StrokeCap.Round
+            )
+            Text(
+                detail,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

@@ -1,3 +1,8 @@
+## 1.6.2
+- Home: Thermal bar under CPU/RAM (battery °C)
+- < 40°C Normal · 40–50°C Overheating · 50°C+ Extreme
+- Color-coded progress + system thermal label when available
+
 ## 1.6.1
 - Icons: storage folder, battery full/charging (no more star/menu)
 - Tabs: always show labels; Details uses Memory icon
