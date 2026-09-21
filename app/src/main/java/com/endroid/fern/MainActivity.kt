@@ -34,17 +34,26 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         refreshWidgets()
+        viewModel.refreshElevatedStatus()
     }
 
     private fun refreshWidgets() {
         val mgr = AppWidgetManager.getInstance(this)
         val batteryIds = mgr.getAppWidgetIds(ComponentName(this, BatteryWidgetProvider::class.java))
         if (batteryIds.isNotEmpty()) {
-            sendBroadcast(Intent(this, BatteryWidgetProvider::class.java).setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE).putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, batteryIds))
+            sendBroadcast(
+                Intent(this, BatteryWidgetProvider::class.java)
+                    .setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE)
+                    .putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, batteryIds)
+            )
         }
         val ramIds = mgr.getAppWidgetIds(ComponentName(this, RamWidgetProvider::class.java))
         if (ramIds.isNotEmpty()) {
-            sendBroadcast(Intent(this, RamWidgetProvider::class.java).setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE).putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ramIds))
+            sendBroadcast(
+                Intent(this, RamWidgetProvider::class.java)
+                    .setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE)
+                    .putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ramIds)
+            )
         }
     }
 
@@ -55,7 +64,6 @@ class MainActivity : ComponentActivity() {
             Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
         } catch (_: Exception) {
         }
-        // Default: dark icons on light status bar (Compose SideEffect adjusts for theme)
         WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = true
         WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightNavigationBars = true
         setContent {
@@ -132,7 +140,6 @@ class MainActivity : ComponentActivity() {
         }
         super.onStop()
     }
-}
 
     override fun onDestroy() {
         try {
