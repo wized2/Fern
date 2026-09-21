@@ -30,4 +30,12 @@ class Prefs(context: Context) {
     var pauseInBackground: Boolean
         get() = p.getBoolean("pause_bg", true)
         set(v) = p.edit().putBoolean("pause_bg", v).apply()
+
+    /**
+     * Advanced mode: optional Shizuku or root for thermal zones,
+     * per-app memory, and force-stop. Off by default.
+     */
+    var advancedMode: Boolean
+        get() = p.getBoolean("advanced_mode", false)
+        set(v) = p.edit().putBoolean("advanced_mode", v).apply()
 }

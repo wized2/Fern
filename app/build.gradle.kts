@@ -12,8 +12,8 @@ android {
         applicationId = "com.endroid.fern"
         minSdk = 26
         targetSdk = 35
-        versionCode = 50
-        versionName = "1.6.2"
+        versionCode = 51
+        versionName = "1.7.0"
         resourceConfigurations += listOf("en")
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")
@@ -108,5 +108,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation("androidx.compose.material:material-icons-core")
     implementation(libs.androidx.material.icons.extended)
+    implementation(libs.shizuku.api)
+    implementation(libs.shizuku.provider)
     debugImplementation(libs.androidx.ui.tooling.preview)
 }

@@ -12,6 +12,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.endroid.fern.ui.FernApp
+import rikka.shizuku.Shizuku
+import com.endroid.fern.monitor.AdvancedAccess
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import com.endroid.fern.widget.BatteryWidgetProvider
@@ -19,7 +21,15 @@ import com.endroid.fern.widget.RamWidgetProvider
 import com.endroid.fern.ui.theme.FernTheme
 
 class MainActivity : ComponentActivity() {
+
     private val viewModel: FernViewModel by viewModels()
+
+    private val shizukuPermissionListener =
+        Shizuku.OnRequestPermissionResultListener { requestCode, _ ->
+            if (requestCode == AdvancedAccess.REQ_SHIZUKU) {
+                viewModel.refreshElevatedStatus()
+            }
+        }
 
     override fun onResume() {
         super.onResume()
@@ -41,6 +51,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        try {
+            Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
+        } catch (_: Exception) {
+        }
         // Default: dark icons on light status bar (Compose SideEffect adjusts for theme)
         WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = true
         WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightNavigationBars = true
@@ -68,6 +82,9 @@ class MainActivity : ComponentActivity() {
                 val peakCpu by viewModel.peakCpu.collectAsState()
                 val peakRam by viewModel.peakRam.collectAsState()
                 val peakNet by viewModel.peakNet.collectAsState()
+                val advancedMode by viewModel.advancedMode.collectAsState()
+                val elevatedStatus by viewModel.elevatedStatus.collectAsState()
+                val advancedSnap by viewModel.advancedSnapshot.collectAsState()
                 FernApp(
                     snapshot = snap,
                     cpuHistory = cpu,
@@ -91,7 +108,14 @@ class MainActivity : ComponentActivity() {
                     onPauseInBackground = viewModel::setPauseInBackground,
                     onClearHistory = viewModel::clearHistory,
                     onShareMetrics = viewModel::metricsShareText,
-                    onRefreshNow = viewModel::refreshNow
+                    onRefreshNow = viewModel::refreshNow,
+                    advancedMode = advancedMode,
+                    elevatedStatus = elevatedStatus,
+                    advancedSnapshot = advancedSnap,
+                    onAdvancedMode = viewModel::setAdvancedMode,
+                    onRequestShizuku = viewModel::requestShizukuPermission,
+                    onRefreshElevated = viewModel::refreshElevatedStatus,
+                    onForceStop = viewModel::forceStopPackage
                 )
             }
         }
@@ -107,5 +131,14 @@ class MainActivity : ComponentActivity() {
             viewModel.stopSampling()
         }
         super.onStop()
+    }
+}
+
+    override fun onDestroy() {
+        try {
+            Shizuku.removeRequestPermissionResultListener(shizukuPermissionListener)
+        } catch (_: Exception) {
+        }
+        super.onDestroy()
     }
 }

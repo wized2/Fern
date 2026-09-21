@@ -1,3 +1,8 @@
+## 1.7.0
+- Advanced mode (optional): Shizuku or root — off by default in Settings
+- When elevated: thermal zones for Home Thermal bar, per-app memory on Active Apps, force-stop
+- Honest status labels (Shizuku / Root / Unavailable)
+
 ## 1.6.2
 - Home: Thermal bar under CPU/RAM (battery °C)
 - < 40°C Normal · 40–50°C Overheating · 50°C+ Extreme

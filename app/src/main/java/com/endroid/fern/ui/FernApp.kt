@@ -82,6 +82,13 @@ import com.endroid.fern.monitor.ActiveApp
 import com.endroid.fern.monitor.ActiveAppsRepository
 import com.endroid.fern.monitor.ActiveWindow
 import com.endroid.fern.monitor.AppState
+import com.endroid.fern.monitor.AdvancedSnapshot
+import com.endroid.fern.monitor.ElevatedStatus
+import com.endroid.fern.monitor.ElevatedBackend
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.VerifiedUser
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.material3.Card
@@ -185,7 +192,16 @@ fun FernApp(
     onPauseInBackground: (Boolean) -> Unit,
     onClearHistory: () -> Unit,
     onShareMetrics: () -> String,
-    onRefreshNow: () -> Unit
+    onRefreshNow: () -> Unit,
+    advancedMode: Boolean = false,
+    elevatedStatus: ElevatedStatus = ElevatedStatus(
+        com.endroid.fern.monitor.ElevatedBackend.None, "Off", ""
+    ),
+    advancedSnapshot: AdvancedSnapshot = AdvancedSnapshot(emptyList(), null, emptyMap()),
+    onAdvancedMode: (Boolean) -> Unit = {},
+    onRequestShizuku: () -> Unit = {},
+    onRefreshElevated: () -> Unit = {},
+    onForceStop: suspend (String) -> Boolean = { false }
 ) {
     var tab by remember { mutableStateOf(Tab.Home) }
     var moreSub by remember { mutableStateOf(MoreSub.None) }
@@ -325,15 +341,22 @@ fun FernApp(
             when {
                 key == Tab.Home.name -> HomeContent(
                     snapshot, cpuHistory, ramHistory, batteryHistory, netHistory, storageHistory,
-                    lastUpdatedMs, haptics, onRefreshNow
+                    lastUpdatedMs, haptics, onRefreshNow, advancedSnapshot, advancedMode, elevatedStatus
                 )
                 key == Tab.Details.name -> DetailsContent(snapshot, peakCpu, peakRam, peakNet, onShareMetrics)
-                key == Tab.ActiveApps.name -> ActiveAppsContent(haptics = haptics)
+                key == Tab.ActiveApps.name -> ActiveAppsContent(
+                    haptics = haptics,
+                    advancedMode = advancedMode,
+                    elevated = elevatedStatus.backend != ElevatedBackend.None,
+                    rssByPackage = advancedSnapshot.rssKbByPackage,
+                    onForceStop = onForceStop
+                )
                 key == Tab.More.name || key == "more/None" -> MoreContent(onOpen = { openMore(it) })
                 key == "more/Tests" -> TestsContent()
                 key == "more/Settings" -> SettingsContent(
                     themeMode, refreshMs, keepScreenOn, haptics, pauseInBackground,
-                    onThemeMode, onRefreshMs, onKeepScreenOn, onHaptics, onPauseInBackground, onClearHistory
+                    onThemeMode, onRefreshMs, onKeepScreenOn, onHaptics, onPauseInBackground, onClearHistory,
+                    advancedMode, elevatedStatus, onAdvancedMode, onRequestShizuku, onRefreshElevated
                 )
                 key == "more/Sensors" -> SensorsContent()
                 key == "more/About" -> AboutContent()
@@ -353,7 +376,10 @@ private fun HomeContent(
     storageH: List<Float>,
     lastUpdatedMs: Long,
     haptics: Boolean,
-    onRefreshNow: () -> Unit
+    onRefreshNow: () -> Unit,
+    advancedSnapshot: AdvancedSnapshot = AdvancedSnapshot(emptyList(), null, emptyMap()),
+    advancedMode: Boolean = false,
+    elevatedStatus: ElevatedStatus = ElevatedStatus(ElevatedBackend.None, "Off", "")
 ) {
     var nowTick by remember { mutableStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
@@ -472,7 +498,9 @@ private fun HomeContent(
         }
         ThermalBar(
             tempC = s.batteryTempC,
-            thermalLabel = s.thermalLabel
+            thermalLabel = s.thermalLabel,
+            advancedTempC = advancedSnapshot.maxTempC,
+            advancedEnabled = advancedMode && elevatedStatus.backend != ElevatedBackend.None
         )
         Bar(
             Icons.Default.Folder,
@@ -787,7 +815,12 @@ private fun SettingsContent(
     onKeepScreenOn: (Boolean) -> Unit,
     onHaptics: (Boolean) -> Unit,
     onPauseInBackground: (Boolean) -> Unit,
-    onClearHistory: () -> Unit
+    onClearHistory: () -> Unit,
+    advancedMode: Boolean = false,
+    elevatedStatus: ElevatedStatus = ElevatedStatus(ElevatedBackend.None, "Off", ""),
+    onAdvancedMode: (Boolean) -> Unit = {},
+    onRequestShizuku: () -> Unit = {},
+    onRefreshElevated: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -965,6 +998,88 @@ private fun SettingsContent(
                 }
             }
         }
+
+        // --- Advanced mode (Shizuku / Root) ---
+        Card(
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            ),
+            shape = MaterialTheme.shapes.extraLarge,
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Advanced mode",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            "Optional Shizuku or root for thermal zones, per-app memory, force-stop",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(checked = advancedMode, onCheckedChange = onAdvancedMode)
+                }
+                if (advancedMode) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            if (elevatedStatus.backend != ElevatedBackend.None)
+                                Icons.Default.VerifiedUser else Icons.Default.Security,
+                            contentDescription = null,
+                            tint = if (elevatedStatus.backend != ElevatedBackend.None)
+                                MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.size(10.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                elevatedStatus.label,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                elevatedStatus.detail,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = onRequestShizuku,
+                            modifier = Modifier.weight(1f)
+                        ) { Text("Grant Shizuku") }
+                        OutlinedButton(
+                            onClick = onRefreshElevated,
+                            modifier = Modifier.weight(1f)
+                        ) { Text("Refresh") }
+                    }
+                    Text(
+                        "Shizuku is recommended (no full root). Install the Shizuku app, start it, then grant Fern. Root works if su is available. Fern never enables this without your switch above.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
+            }
+        }
+
+
     }
 }
 
@@ -1310,7 +1425,13 @@ private fun sensorTypeLabel(type: Int): String = when (type) {
 }
 
 @Composable
-private fun ActiveAppsContent(haptics: Boolean) {
+private fun ActiveAppsContent(
+    haptics: Boolean,
+    advancedMode: Boolean = false,
+    elevated: Boolean = false,
+    rssByPackage: Map<String, Long> = emptyMap(),
+    onForceStop: suspend (String) -> Boolean = { false }
+) {
     val context = LocalContext.current
     val repo = remember { ActiveAppsRepository(context) }
     var hasAccess by remember { mutableStateOf(repo.hasUsageAccess()) }
@@ -1460,18 +1581,33 @@ private fun ActiveAppsContent(haptics: Boolean) {
                 modifier = Modifier.weight(1f)
             ) {
                 items(apps, key = { it.packageName }) { app ->
-                    ActiveAppRow(app) {
-                        runCatching {
-                            val uri = Uri.parse("package:${app.packageName}")
-                            context.startActivity(
-                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, uri)
-                            )
+                    val rss = rssByPackage[app.packageName]
+                    ActiveAppRow(
+                        app = app,
+                        rssKb = if (advancedMode && elevated) rss else null,
+                        canForceStop = advancedMode && elevated,
+                        onOpenInfo = {
+                            runCatching {
+                                val uri = Uri.parse("package:${app.packageName}")
+                                context.startActivity(
+                                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, uri)
+                                )
+                            }
+                        },
+                        onForceStop = {
+                            scope.launch {
+                                val ok = onForceStop(app.packageName)
+                                if (ok) refresh()
+                            }
                         }
-                    }
+                    )
                 }
                 item {
                     Text(
-                        "Android doesn't allow apps to see other apps' CPU or RAM. This shows which apps were recently active.",
+                        if (advancedMode && elevated)
+                            "Advanced mode on — memory from elevated shell; force-stop available. CPU still not exposed by Android."
+                        else
+                            "Android doesn't allow normal apps to see other apps' CPU or RAM. This shows which apps were recently active. Enable Advanced mode (Shizuku/root) in Settings for more.",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.outline,
                         modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp)
@@ -1483,7 +1619,13 @@ private fun ActiveAppsContent(haptics: Boolean) {
 }
 
 @Composable
-private fun ActiveAppRow(app: ActiveApp, onClick: () -> Unit) {
+private fun ActiveAppRow(
+    app: ActiveApp,
+    rssKb: Long? = null,
+    canForceStop: Boolean = false,
+    onOpenInfo: () -> Unit,
+    onForceStop: () -> Unit = {}
+) {
     val context = LocalContext.current
     val iconPainter = remember(app.packageName) {
         try {
@@ -1497,6 +1639,9 @@ private fun ActiveAppRow(app: ActiveApp, onClick: () -> Unit) {
     val now = System.currentTimeMillis()
     val ago = relativeTime(now - app.lastUsedMs)
     val fg = formatDuration(app.foregroundTimeMs)
+    val memLabel = rssKb?.let {
+        if (it >= 1024) String.format("%.1f MB", it / 1024.0) else "$it KB"
+    }
 
     Card(
         colors = CardDefaults.cardColors(
@@ -1506,7 +1651,7 @@ private fun ActiveAppRow(app: ActiveApp, onClick: () -> Unit) {
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(onClick = onOpenInfo)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
@@ -1560,16 +1705,31 @@ private fun ActiveAppRow(app: ActiveApp, onClick: () -> Unit) {
                     }
                 }
                 Text(
-                    "Used $ago · Foreground $fg",
+                    buildString {
+                        append("Used $ago · Foreground $fg")
+                        if (memLabel != null) append(" · $memLabel")
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
+            if (canForceStop) {
+                Spacer(modifier = Modifier.size(4.dp))
+                Text(
+                    "Stop",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier
+                        .clickable(onClick = onForceStop)
+                        .padding(8.dp)
+                )
+            }
         }
     }
 }
+
 
 private fun relativeTime(deltaMs: Long): String {
     val s = (deltaMs / 1000).coerceAtLeast(0)
@@ -1922,12 +2082,21 @@ private fun classifyThermal(tempC: Float?): ThermalLevel {
 }
 
 @Composable
-private fun ThermalBar(tempC: Float?, thermalLabel: String) {
-    val level = classifyThermal(tempC)
-    // Map ~25–60°C onto the progress track so the bar feels responsive
+private fun ThermalBar(
+    tempC: Float?,
+    thermalLabel: String,
+    advancedTempC: Float? = null,
+    advancedEnabled: Boolean = false
+) {
+    // Prefer hottest thermal zone when Advanced mode is elevated
+    val effectiveTemp = when {
+        advancedEnabled && advancedTempC != null -> advancedTempC
+        else -> tempC
+    }
+    val level = classifyThermal(effectiveTemp)
     val progressTarget = when {
-        tempC == null -> 0f
-        else -> ((tempC - 25f) / 35f).coerceIn(0.05f, 1f)
+        effectiveTemp == null -> 0f
+        else -> ((effectiveTemp - 25f) / 35f).coerceIn(0.05f, 1f)
     }
     val a by animateFloatAsState(
         progressTarget,
@@ -1947,10 +2116,12 @@ private fun ThermalBar(tempC: Float?, thermalLabel: String) {
         ThermalLevel.Unknown -> "Unavailable"
     }
     val detail = buildString {
-        if (tempC != null) {
-            append(String.format("%.1f°C", tempC))
+        if (effectiveTemp != null) {
+            append(String.format("%.1f°C", effectiveTemp))
             append(" · ")
             append(statusText)
+            if (advancedEnabled && advancedTempC != null) append(" · zone")
+            else if (tempC != null) append(" · battery")
         } else {
             append(statusText)
         }

@@ -7,7 +7,7 @@ Material 3 · offline · no ads · small release APK (R8 + resource shrink).
 ![Min API 26](https://img.shields.io/badge/minSdk-26-green)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0-blue)
 ![Compose](https://img.shields.io/badge/Material%203-green)
-![Version](https://img.shields.io/badge/version-1.6.0-blue)
+![Version](https://img.shields.io/badge/version-1.7.0-blue)
 
 ## Features
 
@@ -39,6 +39,17 @@ Material 3 · offline · no ads · small release APK (R8 + resource shrink).
 | `PACKAGE_USAGE_STATS` | optional | Active Apps only — user grants Usage access in system settings; never leaves the device |
 
 No internet permission. No accounts. No tracking.
+
+### Advanced mode (optional)
+
+Off by default. In **More → Settings**, enable **Advanced mode** to use **Shizuku** (recommended) or **root**:
+
+- Real thermal zones for the Home Thermal bar  
+- Per-app memory on Active Apps  
+- Force-stop from the app list  
+
+Shizuku never runs until you install it, start it, and grant Fern. Root is only used if `su` is present and Advanced mode is on.
+
 
 ### UX
 

@@ -7,6 +7,10 @@ import com.endroid.fern.data.Prefs
 import com.endroid.fern.data.ThemeMode
 import com.endroid.fern.monitor.SystemMetrics
 import com.endroid.fern.monitor.SystemSnapshot
+import com.endroid.fern.monitor.AdvancedAccess
+import com.endroid.fern.monitor.AdvancedMetrics
+import com.endroid.fern.monitor.AdvancedSnapshot
+import com.endroid.fern.monitor.ElevatedStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -54,6 +58,18 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
     private val _pauseInBackground = MutableStateFlow(prefs.pauseInBackground)
     val pauseInBackground: StateFlow<Boolean> = _pauseInBackground.asStateFlow()
 
+    private val advancedAccess = AdvancedAccess(app)
+    private val advancedMetrics = AdvancedMetrics(advancedAccess)
+
+    private val _advancedMode = MutableStateFlow(prefs.advancedMode)
+    val advancedMode: StateFlow<Boolean> = _advancedMode.asStateFlow()
+
+    private val _elevatedStatus = MutableStateFlow(advancedAccess.status(prefs.advancedMode))
+    val elevatedStatus: StateFlow<ElevatedStatus> = _elevatedStatus.asStateFlow()
+
+    private val _advancedSnapshot = MutableStateFlow(AdvancedSnapshot(emptyList(), null, emptyMap()))
+    val advancedSnapshot: StateFlow<AdvancedSnapshot> = _advancedSnapshot.asStateFlow()
+
     private val _peakCpu = MutableStateFlow(0f)
     val peakCpu: StateFlow<Float> = _peakCpu.asStateFlow()
     private val _peakRam = MutableStateFlow(0f)
@@ -91,6 +107,34 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
     fun setPauseInBackground(on: Boolean) {
         prefs.pauseInBackground = on
         _pauseInBackground.value = on
+    }
+
+    fun setAdvancedMode(on: Boolean) {
+        prefs.advancedMode = on
+        _advancedMode.value = on
+        refreshElevatedStatus()
+        if (on) {
+            viewModelScope.launch {
+                advancedMetrics.collect(true).let { _advancedSnapshot.value = it }
+            }
+        } else {
+            _advancedSnapshot.value = AdvancedSnapshot(emptyList(), null, emptyMap())
+        }
+    }
+
+    fun refreshElevatedStatus() {
+        _elevatedStatus.value = advancedAccess.status(_advancedMode.value)
+    }
+
+    fun requestShizukuPermission() {
+        advancedAccess.requestShizukuPermission()
+        refreshElevatedStatus()
+    }
+
+    fun advancedAccess(): AdvancedAccess = advancedAccess
+
+    suspend fun forceStopPackage(pkg: String): Boolean {
+        return advancedMetrics.forceStop(pkg, _advancedMode.value)
     }
 
     fun clearHistory() {
@@ -184,6 +228,13 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
                     SystemMetrics.capture(getApplication())
                 }
                 applySnapshot(snap)
+                if (_advancedMode.value) {
+                    val adv = withContext(Dispatchers.IO) {
+                        advancedMetrics.collect(true)
+                    }
+                    _advancedSnapshot.value = adv
+                    refreshElevatedStatus()
+                }
                 delay(_refreshMs.value.toLong())
             }
         }
