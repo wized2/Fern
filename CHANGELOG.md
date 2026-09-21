@@ -1,3 +1,10 @@
+## 1.6.1
+- Icons: storage folder, battery full/charging (no more star/menu)
+- Tabs: always show labels; Details uses Memory icon
+- Details: section icons, peak chips, cleaner SpecRows
+- Tests: removed duplicate sensors list (use More → Sensors)
+- More: dedicated About screen; About removed from Settings
+
 ## 1.6.0
 - Navigation: Home · Details · Active Apps · More
 - Active Apps: optional Usage access — recent foreground apps, time windows, system filter

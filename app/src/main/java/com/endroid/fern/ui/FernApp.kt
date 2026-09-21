@@ -43,6 +43,13 @@ import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Sensors
+import androidx.compose.material.icons.filled.BatteryFull
+import androidx.compose.material.icons.filled.BatteryChargingFull
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -149,7 +156,7 @@ import com.endroid.fern.R
 private enum class Tab { Home, Details, ActiveApps, More }
 
 /** Nested destinations opened from the More tab. */
-private enum class MoreSub { None, Tests, Settings, Sensors }
+private enum class MoreSub { None, Tests, Settings, Sensors, About }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -215,6 +222,7 @@ fun FernApp(
         onMoreChild && moreSub == MoreSub.Tests -> "Tests"
         onMoreChild && moreSub == MoreSub.Settings -> "Settings"
         onMoreChild && moreSub == MoreSub.Sensors -> "Sensors"
+        onMoreChild && moreSub == MoreSub.About -> "About"
         else -> null
     }
 
@@ -277,28 +285,28 @@ fun FernApp(
                     onClick = { selectTab(Tab.Home) },
                     icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
                     label = { Text("Home", style = MaterialTheme.typography.labelMedium) },
-                    alwaysShowLabel = false
+                    alwaysShowLabel = true
                 )
                 NavigationBarItem(
                     selected = tab == Tab.Details,
                     onClick = { selectTab(Tab.Details) },
-                    icon = { Icon(Icons.Default.Info, contentDescription = "Details") },
+                    icon = { Icon(Icons.Default.Memory, contentDescription = "Details") },
                     label = { Text("Details", style = MaterialTheme.typography.labelMedium) },
-                    alwaysShowLabel = false
+                    alwaysShowLabel = true
                 )
                 NavigationBarItem(
                     selected = tab == Tab.ActiveApps,
                     onClick = { selectTab(Tab.ActiveApps) },
                     icon = { Icon(Icons.Default.Apps, contentDescription = "Active Apps") },
                     label = { Text("Apps", style = MaterialTheme.typography.labelMedium) },
-                    alwaysShowLabel = false
+                    alwaysShowLabel = true
                 )
                 NavigationBarItem(
                     selected = tab == Tab.More,
                     onClick = { selectTab(Tab.More) },
                     icon = { Icon(Icons.Default.MoreHoriz, contentDescription = "More") },
                     label = { Text("More", style = MaterialTheme.typography.labelMedium) },
-                    alwaysShowLabel = false
+                    alwaysShowLabel = true
                 )
             }
         }
@@ -326,6 +334,7 @@ fun FernApp(
                     onThemeMode, onRefreshMs, onKeepScreenOn, onHaptics, onPauseInBackground, onClearHistory
                 )
                 key == "more/Sensors" -> SensorsContent()
+                key == "more/About" -> AboutContent()
                 else -> MoreContent(onOpen = { openMore(it) })
             }
         }
@@ -460,13 +469,13 @@ private fun HomeContent(
             )
         }
         Bar(
-            Icons.Default.Menu,
+            Icons.Default.Folder,
             "Storage",
             s.storagePercent,
             String.format("%.1f / %.1f GB", s.storageUsedGb, s.storageTotalGb)
         )
         Bar(
-            if (s.batteryCharging) Icons.Default.Favorite else Icons.Default.Star,
+            if (s.batteryCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
             "Battery",
             s.batteryPercent.toFloat().coerceAtLeast(0f),
             buildString {
@@ -524,92 +533,113 @@ private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, p
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            .padding(horizontal = 18.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(
-            "Hardware & system",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Text(
-            "Readable snapshot of this device",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                "Hardware & system",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                "Readable snapshot of this device",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         if (s == null) {
-            Text("Waiting…")
+            Text("Waiting…", color = MaterialTheme.colorScheme.onSurfaceVariant)
             return
         }
-        Detail("Processor") {
-            Line("Cores", "${s.cpuCores}")
-            Line("Chip", s.cpuHardware)
-            Line("Board", s.cpuBoard)
-            Line("ABI", s.cpuAbi)
-            s.cpuCurMhz?.let { Line("Clock now", formatMhz(it)) }
-            if (s.cpuCoreMhz.isNotEmpty()) {
-                val cores = s.cpuCoreMhz
-                val label = cores.mapIndexed { i, mhz -> "CPU$i ${formatMhz(mhz)}" }.joinToString(" · ")
-                Line("Per-core", label.take(140) + if (label.length > 140) "…" else "")
-            }
-            s.cpuMaxMhz?.let { Line("Max clock", formatMhz(it)) }
-            Line("Governor", s.cpuGovernor)
-            Line(
+
+        // Quick peaks strip
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            PeakChip("Peak CPU", String.format("%.0f%%", peakCpu), Modifier.weight(1f))
+            PeakChip("Peak RAM", String.format("%.0f%%", peakRam), Modifier.weight(1f))
+            val peakNetLabel = if (peakNet >= 1024f) String.format("%.1f MB/s", peakNet / 1024f)
+            else String.format("%.0f KB/s", peakNet)
+            PeakChip("Peak net", peakNetLabel, Modifier.weight(1f))
+        }
+
+        DetailSection(icon = Icons.Default.Memory, title = "Processor") {
+            SpecRow("Cores", "${s.cpuCores}")
+            SpecRow("Chip", s.cpuHardware)
+            SpecRow("Board", s.cpuBoard)
+            SpecRow("ABI", s.cpuAbi)
+            s.cpuCurMhz?.let { SpecRow("Clock now", formatMhz(it)) }
+            s.cpuMaxMhz?.let { SpecRow("Max clock", formatMhz(it)) }
+            SpecRow("Governor", s.cpuGovernor.ifBlank { "—" })
+            SpecRow(
                 "CPU",
                 if (s.cpuAvailable) String.format("%.1f%%", s.cpuPercent)
                 else String.format("~%.1f%% (est.)", s.cpuPercent)
             )
             s.loadAvg1?.let {
-                Line(
-                    "Load 1/5/15",
-                    String.format("%.2f / %.2f / %.2f", it, s.loadAvg5 ?: 0f, s.loadAvg15 ?: 0f)
+                SpecRow(
+                    "Load 1 / 5 / 15",
+                    String.format("%.2f  ·  %.2f  ·  %.2f", it, s.loadAvg5 ?: 0f, s.loadAvg15 ?: 0f)
                 )
             }
-            Line("Thermal", s.thermalLabel)
+            SpecRow("Thermal", s.thermalLabel.ifBlank { "—" })
+            if (s.cpuCoreMhz.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    "Per-core clock",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    s.cpuCoreMhz.mapIndexed { i, mhz -> "CPU$i ${formatMhz(mhz)}" }.joinToString("  ·  "),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
-        Detail("Memory") {
-            Line("Used", formatMb(s.ramUsedMb))
-            Line("Free", formatMb(s.freeRamMb))
-            Line("Total", formatMb(s.ramTotalMb))
-            Line("App heap", "${formatMb(s.appHeapUsedMb)} / ${formatMb(s.appHeapMaxMb)}")
+
+        DetailSection(icon = Icons.Default.Folder, title = "Memory & storage") {
+            SpecRow("RAM used", formatMb(s.ramUsedMb))
+            SpecRow("RAM free", formatMb(s.freeRamMb))
+            SpecRow("RAM total", formatMb(s.ramTotalMb))
+            SpecRow("App heap", "${formatMb(s.appHeapUsedMb)} / ${formatMb(s.appHeapMaxMb)}")
+            SpecRow("Storage", String.format("%.1f / %.1f GB", s.storageUsedGb, s.storageTotalGb))
             val extFree = s.externalStorageFreeGb
             val extTotal = s.externalStorageTotalGb
             if (extFree != null && extTotal != null) {
-                Line(
-                    "External",
-                    String.format("%.1f / %.1f GB free", extFree, extTotal)
-                )
+                SpecRow("External", String.format("%.1f / %.1f GB free", extFree, extTotal))
             }
         }
-        Detail("Power") {
-            Line("Level", "${s.batteryPercent}%")
-            Line("Status", if (s.batteryCharging) "Charging" else "Discharging")
-            Line("Health", s.batteryHealth)
-            Line("Technology", s.batteryTechnology)
-            s.batteryTempC?.let { Line("Temp", String.format("%.1f °C", it)) }
-            s.batteryVoltageMv?.let { Line("Voltage", String.format("%.2f V", it / 1000f)) }
+
+        DetailSection(icon = Icons.Default.BatteryFull, title = "Power") {
+            SpecRow("Level", "${s.batteryPercent}%")
+            SpecRow("Status", if (s.batteryCharging) "Charging" else "Discharging")
+            SpecRow("Health", s.batteryHealth.ifBlank { "—" })
+            SpecRow("Technology", s.batteryTechnology.ifBlank { "—" })
+            s.batteryTempC?.let { SpecRow("Temperature", String.format("%.1f °C", it)) }
+            s.batteryVoltageMv?.let { SpecRow("Voltage", String.format("%.2f V", it / 1000f)) }
             s.batteryCurrentUa?.let {
-                val ma = it / 1000f
-                Line("Current", String.format("%+.0f mA", ma))
+                SpecRow("Current", String.format("%+.0f mA", it / 1000f))
             }
         }
-        Detail("Display") {
-            Line("Resolution", "${s.displayWidthPx} × ${s.displayHeightPx}")
-            Line("Density", "${s.displayDensityDpi} dpi · ${String.format("%.1f", s.displayDensityDpi / 160f)}x")
-            Line("Refresh", String.format("%.0f Hz", s.displayRefreshHz))
-        }
-        Detail("Device") {
-            Line("Model", s.deviceModel)
-            Line("Android", "${s.androidVersion} (API ${s.sdkInt})")
-            Line("Security patch", s.securityPatch)
-            Line("Kernel", s.kernelVersion)
-            Line("Network", s.networkLabel)
-            Line("Network speed", formatRate(s.networkKBps) + " · " + s.networkLabel)
-            Line("Locale", s.localeTag)
-            Line("Time zone", s.timeZoneId)
-            Line("Sensors", "${s.sensorCount}")
-            Line(
+
+        DetailSection(icon = Icons.Default.PhoneAndroid, title = "Display & device") {
+            SpecRow("Resolution", "${s.displayWidthPx} × ${s.displayHeightPx}")
+            SpecRow("Density", "${s.displayDensityDpi} dpi · ${String.format("%.1f", s.displayDensityDpi / 160f)}×")
+            SpecRow("Refresh", String.format("%.0f Hz", s.displayRefreshHz))
+            SpecRow("Model", s.deviceModel)
+            SpecRow("Android", "${s.androidVersion} (API ${s.sdkInt})")
+            SpecRow("Security patch", s.securityPatch.ifBlank { "—" })
+            SpecRow("Kernel", s.kernelVersion)
+            SpecRow("Network", s.networkLabel)
+            SpecRow("Throughput", formatRate(s.networkKBps))
+            SpecRow("Locale", s.localeTag)
+            SpecRow("Time zone", s.timeZoneId)
+            SpecRow("Sensors", "${s.sensorCount}")
+            SpecRow(
                 "Uptime",
                 run {
                     val h = s.uptimeHours
@@ -619,24 +649,122 @@ private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, p
                     else String.format("%dh %02dm", hours, mins)
                 }
             )
-            Line("Peak CPU", String.format("%.1f%%", peakCpu))
-            Line("Peak RAM", String.format("%.1f%%", peakRam))
-            Line("Peak net", if (peakNet >= 1024f) String.format("%.2f MB/s", peakNet / 1024f) else String.format("%.1f KB/s", peakNet))
         }
+
         val context = LocalContext.current
-        androidx.compose.material3.Button(
+        OutlinedButton(
             onClick = {
-                val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                val send = Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"
-                    putExtra(android.content.Intent.EXTRA_TEXT, onShareMetrics())
-                    putExtra(android.content.Intent.EXTRA_SUBJECT, "Fern metrics")
+                    putExtra(Intent.EXTRA_TEXT, onShareMetrics())
+                    putExtra(Intent.EXTRA_SUBJECT, "Fern metrics")
                 }
-                context.startActivity(android.content.Intent.createChooser(send, "Share metrics"))
+                context.startActivity(Intent.createChooser(send, "Share metrics"))
             },
             modifier = Modifier.fillMaxWidth()
         ) {
+            Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.size(8.dp))
             Text("Share snapshot")
         }
+        Spacer(modifier = Modifier.height(8.dp))
+    }
+}
+
+@Composable
+private fun PeakChip(label: String, value: String, modifier: Modifier = Modifier) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ),
+        shape = MaterialTheme.shapes.large,
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                value,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1
+            )
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+@Composable
+private fun DetailSection(
+    icon: ImageVector,
+    title: String,
+    content: @Composable () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ),
+        shape = MaterialTheme.shapes.extraLarge,
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.size(8.dp))
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            Spacer(modifier = Modifier.height(2.dp))
+            content()
+        }
+    }
+}
+
+@Composable
+private fun SpecRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(0.42f)
+        )
+        Text(
+            value.ifBlank { "—" },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(0.58f),
+            textAlign = androidx.compose.ui.text.style.TextAlign.End
+        )
     }
 }
 
@@ -831,75 +959,103 @@ private fun SettingsContent(
                 }
             }
         }
+    }
+}
 
+
+
+
+
+@Composable
+private fun AboutContent() {
+    val ctx = LocalContext.current
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 18.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
         Card(
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow
             ),
             shape = MaterialTheme.shapes.extraLarge,
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Image(
-                        painter = painterResource(R.drawable.ic_launcher_foreground),
-                        contentDescription = "Fern logo",
-                        modifier = Modifier
-                            .size(48.dp)
-                            .background(
-                                MaterialTheme.colorScheme.surfaceContainerHighest,
-                                shape = MaterialTheme.shapes.medium
-                            )
-                    )
-                    Spacer(modifier = Modifier.size(12.dp))
-                    Column {
-                        Text(
-                            "Fern",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.primary
+                Image(
+                    painter = painterResource(R.drawable.ic_launcher_foreground),
+                    contentDescription = "Fern logo",
+                    modifier = Modifier
+                        .size(72.dp)
+                        .background(
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+                            shape = MaterialTheme.shapes.extraLarge
                         )
-                        Text(
-                            "v${BuildConfig.VERSION_NAME}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                        .padding(10.dp)
+                )
                 Text(
-                    "Material 3 system monitor. Live CPU, RAM, storage, battery & thermal. Fully offline, no ads, no accounts.",
+                    "Fern",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    "v${BuildConfig.VERSION_NAME}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                val ctx = LocalContext.current
+                Text(
+                    "Live system pulse — CPU, RAM, storage, battery, thermal, active apps, and hardware tests. Fully offline, no ads, no accounts.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+        Card(
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            ),
+            shape = MaterialTheme.shapes.extraLarge,
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Source", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                 Text(
                     "github.com/wized2/Fern",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.clickable {
                         runCatching {
                             ctx.startActivity(
-                                Intent(
-                                    Intent.ACTION_VIEW,
-                                    Uri.parse("https://github.com/wized2/Fern")
-                                )
+                                Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/wized2/Fern"))
                             )
                         }
                     }
                 )
+                Text("License", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                 Text(
                     "MIT · endroid",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    "Permissions: network state for throughput, vibrate for tests/haptics, and optional Usage access for Active Apps. Nothing leaves the device.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
     }
 }
-
-
 
 
 private data class MoreItem(
@@ -913,8 +1069,9 @@ private data class MoreItem(
 private fun MoreContent(onOpen: (MoreSub) -> Unit) {
     val items = listOf(
         MoreItem("Tests", "Run device tests", Icons.Default.Science, MoreSub.Tests),
+        MoreItem("Sensors", "Sensors available on this device", Icons.Default.Sensors, MoreSub.Sensors),
         MoreItem("Settings", "Theme, refresh rate, screen", Icons.Default.Settings, MoreSub.Settings),
-        MoreItem("Sensors", "Sensors available on this device", Icons.Default.Sensors, MoreSub.Sensors)
+        MoreItem("About", "Version, license, source", Icons.Default.Info, MoreSub.About)
     )
     Column(
         modifier = Modifier
@@ -1437,11 +1594,9 @@ private fun TestsContent() {
     var gyro by remember { mutableStateOf("—") }
     var light by remember { mutableStateOf("—") }
     var mag by remember { mutableStateOf("—") }
-    var sensorNames by remember { mutableStateOf<List<String>>(emptyList()) }
 
     DisposableEffect(Unit) {
         val sm = context.getSystemService(android.content.Context.SENSOR_SERVICE) as? SensorManager
-        sensorNames = sm?.getSensorList(Sensor.TYPE_ALL)?.map { it.name }?.sorted()?.take(40) ?: emptyList()
         val listener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent?) {
                 if (event == null) return
@@ -1584,16 +1739,6 @@ private fun TestsContent() {
             }
             OutlinedButton(onClick = { touchHits = 0 }, modifier = Modifier.fillMaxWidth()) {
                 Text("Reset taps")
-            }
-        }
-
-        Detail("Sensors on device (${sensorNames.size})") {
-            if (sensorNames.isEmpty()) {
-                Text("No sensors reported", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            } else {
-                sensorNames.forEach { name ->
-                    Text(name, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface)
-                }
             }
         }
     }
