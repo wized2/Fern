@@ -12,6 +12,7 @@ import rikka.shizuku.ShizukuBinderWrapper
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 enum class ElevatedBackend { None, Shizuku, Root }
@@ -24,11 +25,48 @@ data class ElevatedStatus(
 
 /**
  * Optional elevated shell for Advanced mode.
- * Prefer Shizuku (user-controlled); fall back to root `su` when present.
+ * Prefer Shizuku; fall back to root `su`.
+ *
+ * Permission is tracked both via Shizuku.checkSelfPermission() and a local cache
+ * updated from OnRequestPermissionResultListener (authorizing in the Shizuku app
+ * only takes effect after a binder-connected check / requestPermission sync).
  */
 class AdvancedAccess(private val context: Context) {
 
     private val lastBackend = AtomicReference(ElevatedBackend.None)
+    private val permissionCache = AtomicBoolean(false)
+    private val binderReady = AtomicBoolean(false)
+
+    fun onBinderReceived() {
+        binderReady.set(true)
+        // If already allowed in Shizuku manager, requestPermission returns granted immediately.
+        try {
+            if (!Shizuku.isPreV11() && Shizuku.pingBinder()) {
+                val granted = Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
+                permissionCache.set(granted)
+                if (!granted) {
+                    Log.i(TAG, "binder up, permission not yet granted — syncing via requestPermission")
+                    Shizuku.requestPermission(REQ_SHIZUKU)
+                } else {
+                    Log.i(TAG, "binder up, permission already granted")
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "onBinderReceived: ${e.message}")
+        }
+    }
+
+    fun onBinderDead() {
+        binderReady.set(false)
+        permissionCache.set(false)
+    }
+
+    fun onPermissionResult(requestCode: Int, grantResult: Int) {
+        if (requestCode != REQ_SHIZUKU) return
+        val granted = grantResult == PackageManager.PERMISSION_GRANTED
+        permissionCache.set(granted)
+        Log.i(TAG, "permission result granted=$granted")
+    }
 
     fun isShizukuInstalled(): Boolean {
         val pm = context.packageManager
@@ -53,19 +91,24 @@ class AdvancedAccess(private val context: Context) {
     }
 
     fun isShizukuRunning(): Boolean = try {
-        Shizuku.pingBinder()
+        val ok = Shizuku.pingBinder()
+        if (ok) binderReady.set(true)
+        ok
     } catch (e: Exception) {
-        Log.d(TAG, "pingBinder failed: ${e.message}")
+        Log.d(TAG, "pingBinder: ${e.message}")
         false
     }
 
     fun hasShizukuPermission(): Boolean {
+        if (permissionCache.get() && isShizukuRunning()) return true
         return try {
             if (!isShizukuRunning()) return false
-            // Pre-v11: binder presence implies access
-            if (Shizuku.isPreV11()) return true
+            if (Shizuku.isPreV11()) {
+                permissionCache.set(true)
+                return true
+            }
             val granted = Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
-            Log.d(TAG, "checkSelfPermission granted=$granted uid=${Shizuku.getUid()}")
+            if (granted) permissionCache.set(true)
             granted
         } catch (e: Exception) {
             Log.w(TAG, "hasShizukuPermission: ${e.message}")
@@ -79,10 +122,12 @@ class AdvancedAccess(private val context: Context) {
                 Log.w(TAG, "requestPermission: binder not ready")
                 return
             }
-            if (Shizuku.isPreV11()) return
-            if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
-                Shizuku.requestPermission(requestCode)
+            if (Shizuku.isPreV11()) {
+                permissionCache.set(true)
+                return
             }
+            // Always request — if already allowed in manager, result fires granted=true immediately
+            Shizuku.requestPermission(requestCode)
         } catch (e: Exception) {
             Log.e(TAG, "requestShizukuPermission", e)
         }
@@ -97,6 +142,25 @@ class AdvancedAccess(private val context: Context) {
         execRoot("id", 2500)?.contains("uid=0") == true
     }
 
+    fun packageNameForShizuku(): String = context.packageName
+
+    fun diagnostic(): String {
+        val running = isShizukuRunning()
+        val ver = try {
+            if (running) Shizuku.getVersion().toString() else "—"
+        } catch (_: Exception) {
+            "—"
+        }
+        val perm = try {
+            if (running && !Shizuku.isPreV11()) {
+                if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) "yes" else "no"
+            } else if (permissionCache.get()) "yes(cache)" else "no"
+        } catch (e: Exception) {
+            "err:${e.javaClass.simpleName}"
+        }
+        return "pkg=${context.packageName} · binder=${if (running) "up" else "down"} · v$ver · perm=$perm"
+    }
+
     fun status(advancedEnabled: Boolean): ElevatedStatus {
         if (!advancedEnabled) {
             lastBackend.set(ElevatedBackend.None)
@@ -109,30 +173,30 @@ class AdvancedAccess(private val context: Context) {
 
         val running = isShizukuRunning()
         val granted = hasShizukuPermission()
-        Log.i(TAG, "status advanced=true running=$running granted=$granted installed=${isShizukuInstalled()}")
+        Log.i(TAG, "status ${diagnostic()}")
 
         if (running && granted) {
             lastBackend.set(ElevatedBackend.Shizuku)
             return ElevatedStatus(
                 ElevatedBackend.Shizuku,
                 "Shizuku connected",
-                "Thermal zones, per-app memory, and force-stop are available"
+                "Elevated shell ready · ${diagnostic()}"
             )
         }
         if (running && !granted) {
             lastBackend.set(ElevatedBackend.None)
             return ElevatedStatus(
                 ElevatedBackend.None,
-                "Shizuku running — permission needed",
-                "Tap “Grant Shizuku”, or open the Shizuku app and allow Fern"
+                "Shizuku running — grant needed",
+                "Tap Grant Shizuku (or allow ${context.packageName} in Shizuku). ${diagnostic()}"
             )
         }
         if (isShizukuInstalled()) {
             lastBackend.set(ElevatedBackend.None)
             return ElevatedStatus(
                 ElevatedBackend.None,
-                "Shizuku installed — not connected",
-                "Open Shizuku and start the service, then return here and tap Refresh"
+                "Shizuku installed — service not connected",
+                "Open Shizuku → Start, then return and tap Refresh. ${diagnostic()}"
             )
         }
         if (isRootAvailable()) {
@@ -140,14 +204,14 @@ class AdvancedAccess(private val context: Context) {
             return ElevatedStatus(
                 ElevatedBackend.Root,
                 "Root (su)",
-                "su found — elevated shell available"
+                "su binary found — elevated shell available"
             )
         }
         lastBackend.set(ElevatedBackend.None)
         return ElevatedStatus(
             ElevatedBackend.None,
             "Unavailable",
-            "Install Shizuku from GitHub/Play, start it, then grant Fern"
+            "Install Shizuku, start it, allow ${context.packageName}"
         )
     }
 
@@ -168,11 +232,9 @@ class AdvancedAccess(private val context: Context) {
         }
 
     private fun execShizuku(command: String, timeoutMs: Long): String? {
-        // 1) Reflection on Shizuku.newProcess (present on some API builds)
         tryReflectNewProcess(command, timeoutMs)?.let { return it }
-        // 2) IShizukuService.newProcess via binder
         tryServiceNewProcess(command, timeoutMs)?.let { return it }
-        Log.w(TAG, "execShizuku: no working newProcess path")
+        Log.w(TAG, "execShizuku: no working newProcess")
         return null
     }
 
@@ -203,35 +265,20 @@ class AdvancedAccess(private val context: Context) {
             val binder = Shizuku.getBinder() ?: return null
             val serviceClass = Class.forName("moe.shizuku.server.IShizukuService\$Stub")
             val asInterface = serviceClass.getMethod("asInterface", IBinder::class.java)
-            val wrapped = ShizukuBinderWrapper(binder)
-            val service = asInterface.invoke(null, wrapped) ?: return null
-            val newProcess = service.javaClass.getMethod(
-                "newProcess",
-                Array<String>::class.java,
-                Array<String>::class.java,
-                String::class.java
-            )
+            val service = asInterface.invoke(null, ShizukuBinderWrapper(binder)) ?: return null
+            val newProcess = service.javaClass.methods.firstOrNull { m ->
+                m.name == "newProcess" && m.parameterTypes.size == 3
+            } ?: return null
             val remote = newProcess.invoke(
                 service,
                 arrayOf("sh", "-c", command),
                 null,
                 null
             ) ?: return null
-            // RemoteProcess: getInputStream()
             val getIn = remote.javaClass.methods.firstOrNull {
                 it.name == "getInputStream" && it.parameterTypes.isEmpty()
-            }
-            val getErr = remote.javaClass.methods.firstOrNull {
-                it.name == "getErrorStream" && it.parameterTypes.isEmpty()
-            }
-            val waitFor = remote.javaClass.methods.firstOrNull {
-                it.name == "waitFor" && it.parameterTypes.isEmpty()
-            }
-            val destroy = remote.javaClass.methods.firstOrNull {
-                it.name == "destroy" && it.parameterTypes.isEmpty()
-            }
-            val input = getIn?.invoke(remote) as? java.io.InputStream
-                ?: return null
+            } ?: return null
+            val input = getIn.invoke(remote) as? java.io.InputStream ?: return null
             val out = StringBuilder()
             BufferedReader(InputStreamReader(input)).use { reader ->
                 var line: String?
@@ -241,17 +288,15 @@ class AdvancedAccess(private val context: Context) {
                 }
             }
             try {
-                (getErr?.invoke(remote) as? java.io.InputStream)?.use {
-                    BufferedReader(InputStreamReader(it)).readText()
-                }
+                remote.javaClass.methods.firstOrNull {
+                    it.name == "waitFor" && it.parameterTypes.isEmpty()
+                }?.invoke(remote)
             } catch (_: Exception) {
             }
             try {
-                waitFor?.invoke(remote)
-            } catch (_: Exception) {
-            }
-            try {
-                destroy?.invoke(remote)
+                remote.javaClass.methods.firstOrNull {
+                    it.name == "destroy" && it.parameterTypes.isEmpty()
+                }?.invoke(remote)
             } catch (_: Exception) {
             }
             out.toString().trim().ifEmpty { null }

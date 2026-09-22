@@ -107,9 +107,9 @@ jobs:
           body: |
             ## Fern ${{ github.ref_name }}
 
-            Live system pulse for Android — Material 3 resource monitor.
+            Live system pulse — Material 3 resource monitor with optional Shizuku/root Advanced mode.
 
-            **Fern-release.apk** — minified + resource-shrunk
+            **Fern-release.apk** — R8 + resource-shrunk
 
             Min SDK 26 · offline · no ads · MIT
         env:
@@ -127,12 +127,19 @@ jobs:
           body: |
             ## Fern ${{ steps.ver.outputs.name }}
 
-            Live system pulse for Android — Material 3 resource monitor.
+            Live system pulse — Material 3 resource monitor.
 
-            **Fern-release.apk** — minified + resource-shrunk (from `main`)
+            **Fern-release.apk** — R8 + resource-shrunk (from `main`)
 
-            Debug APK is attached as a workflow artifact on this run.
+            ### What's new
+            - **Advanced mode** (optional): Shizuku or root for thermal zones, per-app RAM/CPU, force-stop
+            - Active Apps, Sensors, Hardware details, thermal bar on Home
+            - OLED-friendly dark theme · offline · no ads
 
-            Min SDK 26 · offline · no ads · MIT
+            **Important (Shizuku):** start Shizuku → allow package `com.endroid.fern` → open Fern → Advanced ON → Grant / Refresh.
+
+            Debug APK is a workflow artifact on this run.
+
+            Min SDK 26 · MIT
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

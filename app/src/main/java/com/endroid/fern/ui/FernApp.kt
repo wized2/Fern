@@ -349,6 +349,7 @@ fun FernApp(
                     advancedMode = advancedMode,
                     elevated = elevatedStatus.backend != ElevatedBackend.None,
                     rssByPackage = advancedSnapshot.rssKbByPackage,
+                    cpuByPackage = advancedSnapshot.cpuTop.associate { it.first to it.second },
                     onForceStop = onForceStop
                 )
                 key == Tab.More.name || key == "more/None" -> MoreContent(onOpen = { openMore(it) })
@@ -1430,6 +1431,7 @@ private fun ActiveAppsContent(
     advancedMode: Boolean = false,
     elevated: Boolean = false,
     rssByPackage: Map<String, Long> = emptyMap(),
+    cpuByPackage: Map<String, Float> = emptyMap(),
     onForceStop: suspend (String) -> Boolean = { false }
 ) {
     val context = LocalContext.current
@@ -1582,9 +1584,11 @@ private fun ActiveAppsContent(
             ) {
                 items(apps, key = { it.packageName }) { app ->
                     val rss = rssByPackage[app.packageName]
+                    val cpuPct = cpuByPackage[app.packageName]
                     ActiveAppRow(
                         app = app,
                         rssKb = if (advancedMode && elevated) rss else null,
+                        cpuPercent = if (advancedMode && elevated) cpuPct else null,
                         canForceStop = advancedMode && elevated,
                         onOpenInfo = {
                             runCatching {
@@ -1605,7 +1609,7 @@ private fun ActiveAppsContent(
                 item {
                     Text(
                         if (advancedMode && elevated)
-                            "Advanced mode on — memory from elevated shell; force-stop available. CPU still not exposed by Android."
+                            "Advanced mode on — per-app RAM + CPU from elevated shell; force-stop available."
                         else
                             "Android doesn't allow normal apps to see other apps' CPU or RAM. This shows which apps were recently active. Enable Advanced mode (Shizuku/root) in Settings for more.",
                         style = MaterialTheme.typography.labelSmall,
@@ -1622,6 +1626,7 @@ private fun ActiveAppsContent(
 private fun ActiveAppRow(
     app: ActiveApp,
     rssKb: Long? = null,
+    cpuPercent: Float? = null,
     canForceStop: Boolean = false,
     onOpenInfo: () -> Unit,
     onForceStop: () -> Unit = {}
@@ -1642,6 +1647,7 @@ private fun ActiveAppRow(
     val memLabel = rssKb?.let {
         if (it >= 1024) String.format("%.1f MB", it / 1024.0) else "$it KB"
     }
+    val cpuLabel = cpuPercent?.let { String.format("%.1f%% CPU", it) }
 
     Card(
         colors = CardDefaults.cardColors(
@@ -1708,6 +1714,7 @@ private fun ActiveAppRow(
                     buildString {
                         append("Used $ago · Foreground $fg")
                         if (memLabel != null) append(" · $memLabel")
+                        if (cpuLabel != null) append(" · $cpuLabel")
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

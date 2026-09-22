@@ -3,55 +3,44 @@ package com.endroid.fern.monitor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-data class ThermalZone(
-    val name: String,
-    val tempC: Float
-)
+data class ThermalZone(val name: String, val tempC: Float)
 
 data class AdvancedSnapshot(
-    val zones: List<ThermalZone>,
-    /** Hottest zone temperature, if any. */
+    val thermalZones: List<ThermalZone>,
     val maxTempC: Float?,
-    /** packageName → RSS KB from elevated `ps` / dumpsys. */
-    val rssKbByPackage: Map<String, Long>
+    val rssKbByPackage: Map<String, Long>,
+    val cpuTop: List<Pair<String, Float>> = emptyList()
 )
 
 /**
- * Elevated-only metrics. Safe no-ops when [AdvancedAccess] cannot run a shell.
+ * Elevated-only metrics via Shizuku/root shell.
  */
 class AdvancedMetrics(private val access: AdvancedAccess) {
 
-    suspend fun collect(advancedEnabled: Boolean): AdvancedSnapshot =
-        withContext(Dispatchers.IO) {
-            if (!access.isElevated(advancedEnabled)) {
-                return@withContext AdvancedSnapshot(emptyList(), null, emptyMap())
-            }
-            val zones = readThermalZones()
-            val rss = readPackageRss()
-            AdvancedSnapshot(
-                zones = zones,
-                maxTempC = zones.maxOfOrNull { it.tempC },
-                rssKbByPackage = rss
-            )
+    suspend fun collect(advancedEnabled: Boolean): AdvancedSnapshot = withContext(Dispatchers.IO) {
+        if (!access.isElevated(advancedEnabled)) {
+            return@withContext AdvancedSnapshot(emptyList(), null, emptyMap())
         }
+        val zones = readThermalZones()
+        val maxT = zones.maxOfOrNull { it.tempC }
+        val rss = readPackageRss()
+        val cpu = readCpuTop()
+        AdvancedSnapshot(zones, maxT, rss, cpu)
+    }
 
     private suspend fun readThermalZones(): List<ThermalZone> {
-        // One shell: type + temp for each zone (millidegree integers)
-        val script = """
-            for z in /sys/class/thermal/thermal_zone*; do
-              [ -f "${'$'}z/temp" ] || continue
-              t=${'$'}(cat "${'$'}z/temp" 2>/dev/null) || continue
-              n=${'$'}(cat "${'$'}z/type" 2>/dev/null || basename "${'$'}z")
-              echo "${'$'}n|${'$'}t"
-            done
-        """.trimIndent().replace("\n", " ")
-        val out = access.exec(script, 4_000) ?: return emptyList()
+        val out = access.exec(
+            "for z in /sys/class/thermal/thermal_zone*; do " +
+                "n=\$(cat \"\$z/type\" 2>/dev/null); " +
+                "t=\$(cat \"\$z/temp\" 2>/dev/null); " +
+                "[ -n \"\$t\" ] && echo \"\$n|\$t\"; done",
+            4_000
+        ) ?: return emptyList()
         val list = ArrayList<ThermalZone>()
         for (line in out.lineSequence()) {
             val parts = line.split('|', limit = 2)
             if (parts.size < 2) continue
             val milli = parts[1].trim().toLongOrNull() ?: continue
-            // Some kernels report already in °C (small integers); most use milli-°C
             val c = if (milli > 200) milli / 1000f else milli.toFloat()
             if (c < -50f || c > 120f) continue
             list.add(ThermalZone(parts[0].trim().ifEmpty { "zone" }, c))
@@ -60,18 +49,32 @@ class AdvancedMetrics(private val access: AdvancedAccess) {
     }
 
     private suspend fun readPackageRss(): Map<String, Long> {
-        // Prefer dumpsys meminfo summary; fall back to ps
-        val dumpsys = access.exec("dumpsys meminfo -s 2>/dev/null | head -n 80", 5_000)
+        val dumpsys = access.exec("dumpsys meminfo -s 2>/dev/null | head -n 100", 5_000)
         val fromDump = parseDumpsysMeminfo(dumpsys)
         if (fromDump.isNotEmpty()) return fromDump
-        val ps = access.exec("ps -A -o NAME,RSS 2>/dev/null | head -n 200", 4_000)
+        val ps = access.exec("ps -A -o NAME,RSS 2>/dev/null | head -n 250", 4_000)
         return parsePsRss(ps)
+    }
+
+    private suspend fun readCpuTop(): List<Pair<String, Float>> {
+        // dumpsys cpuinfo first lines: "  12% 1234/com.example: 10% user + 2% kernel"
+        val raw = access.exec("dumpsys cpuinfo 2>/dev/null | head -n 40", 5_000) ?: return emptyList()
+        val list = ArrayList<Pair<String, Float>>()
+        val re = Regex("""^\s*([\d.]+)%\s+\d+/(?:[\w.]+:)?([a-zA-Z0-9._]+)""")
+        for (line in raw.lineSequence()) {
+            val m = re.find(line) ?: continue
+            val pct = m.groupValues[1].toFloatOrNull() ?: continue
+            val name = m.groupValues[2]
+            if (!name.contains('.')) continue
+            list.add(name to pct)
+            if (list.size >= 15) break
+        }
+        return list
     }
 
     private fun parseDumpsysMeminfo(raw: String?): Map<String, Long> {
         if (raw.isNullOrBlank()) return emptyMap()
         val map = HashMap<String, Long>()
-        // Lines often look like: "    12,345 kB: com.example.app (pid 1234 / activities)"
         val re = Regex("""([\d,]+)\s*kB:\s*([a-zA-Z0-9._]+)""")
         for (line in raw.lineSequence()) {
             val m = re.find(line) ?: continue

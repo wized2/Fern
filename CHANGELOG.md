@@ -1,3 +1,9 @@
+## 1.7.2
+- Shizuku: permission cache + auto-sync on binder (Grant works after allow in Shizuku)
+- Diagnostic line shows package / binder / version / perm
+- Active Apps: per-app CPU % and RAM when elevated
+- Clearer Advanced status when service is up but not yet granted
+
 ## 1.7.1
 - Fix Shizuku: register ShizukuProvider so the binder is delivered
 - Binder received/dead listeners + sticky refresh

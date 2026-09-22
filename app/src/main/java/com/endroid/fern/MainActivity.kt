@@ -28,18 +28,19 @@ class MainActivity : ComponentActivity() {
     private val shizukuPermissionListener =
         Shizuku.OnRequestPermissionResultListener { requestCode, grantResult ->
             Log.i(TAG, "Shizuku permission result code=$requestCode grant=$grantResult")
-            if (requestCode == AdvancedAccess.REQ_SHIZUKU) {
-                viewModel.refreshElevatedStatus()
-            }
+            viewModel.advancedAccess().onPermissionResult(requestCode, grantResult)
+            viewModel.refreshElevatedStatus()
         }
 
     private val binderReceivedListener = Shizuku.OnBinderReceivedListener {
         Log.i(TAG, "Shizuku binder received (ping=${runCatching { Shizuku.pingBinder() }.getOrDefault(false)})")
+        viewModel.advancedAccess().onBinderReceived()
         viewModel.refreshElevatedStatus()
     }
 
     private val binderDeadListener = Shizuku.OnBinderDeadListener {
         Log.i(TAG, "Shizuku binder dead")
+        viewModel.advancedAccess().onBinderDead()
         viewModel.refreshElevatedStatus()
     }
 
