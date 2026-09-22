@@ -11,25 +11,25 @@ class Prefs(context: Context) {
         get() = runCatching {
             ThemeMode.valueOf(p.getString("theme", ThemeMode.AUTO.name)!!)
         }.getOrDefault(ThemeMode.AUTO)
-        set(v) = p.edit().putString("theme", v.name).apply()
+        set(v) = p.edit().putString("theme", v.name).commit()
 
     var refreshMs: Int
         get() = p.getInt("refresh_ms", 1500).coerceIn(500, 10_000)
-        set(v) = p.edit().putInt("refresh_ms", v.coerceIn(500, 10_000)).apply()
+        set(v) = p.edit().putInt("refresh_ms", v.coerceIn(500, 10_000)).commit()
 
     var keepScreenOn: Boolean
         get() = p.getBoolean("keep_screen_on", false)
-        set(v) = p.edit().putBoolean("keep_screen_on", v).apply()
+        set(v) = p.edit().putBoolean("keep_screen_on", v).commit()
 
     /** Haptic feedback on manual refresh. */
     var haptics: Boolean
         get() = p.getBoolean("haptics", true)
-        set(v) = p.edit().putBoolean("haptics", v).apply()
+        set(v) = p.edit().putBoolean("haptics", v).commit()
 
     /** Pause live sampling while app is in background (saves battery). */
     var pauseInBackground: Boolean
         get() = p.getBoolean("pause_bg", true)
-        set(v) = p.edit().putBoolean("pause_bg", v).apply()
+        set(v) = p.edit().putBoolean("pause_bg", v).commit()
 
     /**
      * Advanced mode: optional Shizuku or root for thermal zones,
@@ -37,5 +37,5 @@ class Prefs(context: Context) {
      */
     var advancedMode: Boolean
         get() = p.getBoolean("advanced_mode", false)
-        set(v) = p.edit().putBoolean("advanced_mode", v).apply()
+        set(v) = p.edit().putBoolean("advanced_mode", v).commit()
 }

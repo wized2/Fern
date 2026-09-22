@@ -1,6 +1,7 @@
 package com.endroid.fern
 
 import android.app.Application
+import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.endroid.fern.data.Prefs
@@ -89,8 +90,9 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setRefreshMs(ms: Int) {
-        prefs.refreshMs = ms
-        _refreshMs.value = prefs.refreshMs
+        val clamped = ms.coerceIn(500, 10_000)
+        prefs.refreshMs = clamped
+        _refreshMs.value = clamped
         if (running) restartLoop()
     }
 
@@ -127,8 +129,19 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun requestShizukuPermission() {
-        advancedAccess.requestShizukuPermission()
+        val msg = advancedAccess.requestShizukuPermission()
+        Toast.makeText(getApplication(), msg, Toast.LENGTH_LONG).show()
         refreshElevatedStatus()
+        viewModelScope.launch {
+            delay(600)
+            refreshElevatedStatus()
+            if (advancedAccess.hasShizukuPermission()) {
+                val adv = withContext(Dispatchers.IO) {
+                    advancedMetrics.collect(true)
+                }
+                _advancedSnapshot.value = adv
+            }
+        }
     }
 
     fun advancedAccess(): AdvancedAccess = advancedAccess
@@ -224,18 +237,22 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
             }
             delay(250)
             while (isActive && running) {
-                val snap = withContext(Dispatchers.IO) {
+                var snap = withContext(Dispatchers.IO) {
                     SystemMetrics.capture(getApplication())
                 }
-                applySnapshot(snap)
                 if (_advancedMode.value) {
                     val adv = withContext(Dispatchers.IO) {
                         advancedMetrics.collect(true)
                     }
                     _advancedSnapshot.value = adv
                     refreshElevatedStatus()
+                    // Prefer elevated /proc/stat CPU over frequency estimate
+                    adv.accurateCpuPercent?.let { cpu ->
+                        snap = snap.copy(cpuPercent = cpu, cpuAvailable = true)
+                    }
                 }
-                delay(_refreshMs.value.toLong())
+                applySnapshot(snap)
+                delay(_refreshMs.value.toLong().coerceIn(400L, 15_000L))
             }
         }
     }

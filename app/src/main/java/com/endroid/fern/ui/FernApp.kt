@@ -1064,8 +1064,14 @@ private fun SettingsContent(
                     ) {
                         OutlinedButton(
                             onClick = onRequestShizuku,
+                            enabled = elevatedStatus.backend == ElevatedBackend.None,
                             modifier = Modifier.weight(1f)
-                        ) { Text("Grant Shizuku") }
+                        ) {
+                            Text(
+                                if (elevatedStatus.backend != ElevatedBackend.None) "Granted"
+                                else "Grant Shizuku"
+                            )
+                        }
                         OutlinedButton(
                             onClick = onRefreshElevated,
                             modifier = Modifier.weight(1f)

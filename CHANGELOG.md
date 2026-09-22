@@ -1,3 +1,9 @@
+## 1.7.3
+- Fix Advanced/Shizuku for real: binder newProcess shell + IActivityManager force-stop
+- Grant button shows Toast feedback; opens Shizuku if service is down
+- When elevated: accurate CPU (no est.), per-app RAM/CPU, working Stop
+- Settings (refresh rate etc.) persist with commit and re-apply immediately
+
 ## 1.7.2
 - Shizuku: permission cache + auto-sync on binder (Grant works after allow in Shizuku)
 - Diagnostic line shows package / binder / version / perm
