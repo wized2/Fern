@@ -4,17 +4,18 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
-import android.os.Parcel
+import android.os.Looper
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
 import rikka.shizuku.ShizukuBinderWrapper
-import rikka.shizuku.ShizukuRemoteProcess
 import rikka.shizuku.SystemServiceHelper
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.lang.reflect.Method
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -27,15 +28,27 @@ data class ElevatedStatus(
     val detail: String
 )
 
-/**
- * Shizuku / root elevated access.
- * Shell uses IShizukuService.newProcess (transaction 14) → ShizukuRemoteProcess.
- * Force-stop uses IActivityManager via ShizukuBinderWrapper.
- */
 class AdvancedAccess(private val context: Context) {
 
     private val lastBackend = AtomicReference(ElevatedBackend.None)
     private val permissionCache = AtomicBoolean(false)
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    private val newProcessMethod: Method? by lazy {
+        try {
+            val m = Shizuku::class.java.getDeclaredMethod(
+                "newProcess",
+                Array<String>::class.java,
+                Array<String>::class.java,
+                String::class.java
+            )
+            m.isAccessible = true
+            m
+        } catch (e: Exception) {
+            Log.w(TAG, "Shizuku.newProcess not found: ${e.message}")
+            null
+        }
+    }
 
     fun onBinderReceived() {
         try {
@@ -47,8 +60,13 @@ class AdvancedAccess(private val context: Context) {
             val granted = Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
             permissionCache.set(granted)
             if (!granted) {
-                // Sync with Shizuku manager allow-list (instant grant if already allowed)
-                Shizuku.requestPermission(REQ_SHIZUKU)
+                mainHandler.post {
+                    try {
+                        Shizuku.requestPermission(REQ_SHIZUKU)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "auto requestPermission: ${e.message}")
+                    }
+                }
             }
         } catch (e: Exception) {
             Log.w(TAG, "onBinderReceived: ${e.message}")
@@ -66,8 +84,7 @@ class AdvancedAccess(private val context: Context) {
     }
 
     fun isShizukuInstalled(): Boolean {
-        val pkgs = listOf("moe.shizuku.privileged.api", "moe.shizuku.manager")
-        for (pkg in pkgs) {
+        for (pkg in listOf("moe.shizuku.privileged.api", "moe.shizuku.manager")) {
             try {
                 if (Build.VERSION.SDK_INT >= 33) {
                     context.packageManager.getPackageInfo(pkg, PackageManager.PackageInfoFlags.of(0))
@@ -105,14 +122,11 @@ class AdvancedAccess(private val context: Context) {
         }
     }
 
-    /**
-     * @return human message for Toast
-     */
     fun requestShizukuPermission(): String {
         return try {
             if (!isShizukuRunning()) {
                 openShizukuManager()
-                return "Shizuku is not running — opened Shizuku app. Start it, then tap Grant again."
+                return "Shizuku not running — opened Shizuku. Start the service, then tap Grant again."
             }
             if (Shizuku.isPreV11()) {
                 permissionCache.set(true)
@@ -120,24 +134,30 @@ class AdvancedAccess(private val context: Context) {
             }
             if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
                 permissionCache.set(true)
-                return "Already granted"
+                return "Already granted — status should show Connected"
             }
             if (Shizuku.shouldShowRequestPermissionRationale()) {
                 openShizukuManager()
-                return "Permission denied earlier — allow ${context.packageName} in Shizuku, then Refresh"
+                return "Denied earlier. In Shizuku, allow ${context.packageName}, then Refresh."
             }
-            Shizuku.requestPermission(REQ_SHIZUKU)
-            "Permission request sent — accept the Shizuku prompt"
+            // Must run on main thread
+            mainHandler.post {
+                try {
+                    Shizuku.requestPermission(REQ_SHIZUKU)
+                } catch (e: Exception) {
+                    Log.e(TAG, "requestPermission", e)
+                }
+            }
+            "Permission dialog requested — accept it for ${context.packageName}"
         } catch (e: Exception) {
             Log.e(TAG, "requestShizukuPermission", e)
             openShizukuManager()
-            "Could not request permission (${e.message}). Opened Shizuku."
+            "Error: ${e.message}. Opened Shizuku."
         }
     }
 
     fun openShizukuManager() {
-        val pkgs = listOf("moe.shizuku.privileged.api", "moe.shizuku.manager")
-        for (pkg in pkgs) {
+        for (pkg in listOf("moe.shizuku.privileged.api", "moe.shizuku.manager")) {
             val launch = context.packageManager.getLaunchIntentForPackage(pkg) ?: continue
             launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             try {
@@ -171,22 +191,18 @@ class AdvancedAccess(private val context: Context) {
     fun status(advancedEnabled: Boolean): ElevatedStatus {
         if (!advancedEnabled) {
             lastBackend.set(ElevatedBackend.None)
-            return ElevatedStatus(ElevatedBackend.None, "Off", "Enable Advanced mode for Shizuku or root")
+            return ElevatedStatus(ElevatedBackend.None, "Off", "Enable Advanced mode")
         }
         if (isShizukuRunning() && hasShizukuPermission()) {
             lastBackend.set(ElevatedBackend.Shizuku)
-            return ElevatedStatus(
-                ElevatedBackend.Shizuku,
-                "Shizuku connected",
-                diagnostic()
-            )
+            return ElevatedStatus(ElevatedBackend.Shizuku, "Shizuku connected", diagnostic())
         }
         if (isShizukuRunning()) {
             lastBackend.set(ElevatedBackend.None)
             return ElevatedStatus(
                 ElevatedBackend.None,
                 "Shizuku running — tap Grant",
-                "Allow ${context.packageName} when prompted. ${diagnostic()}"
+                "Allow ${context.packageName}. ${diagnostic()}"
             )
         }
         if (isShizukuInstalled()) {
@@ -194,34 +210,27 @@ class AdvancedAccess(private val context: Context) {
             return ElevatedStatus(
                 ElevatedBackend.None,
                 "Start Shizuku first",
-                "Open Shizuku and start the service. ${diagnostic()}"
+                "Open Shizuku → Start. ${diagnostic()}"
             )
         }
         if (isRootAvailable()) {
             lastBackend.set(ElevatedBackend.Root)
-            return ElevatedStatus(ElevatedBackend.Root, "Root (su)", "su binary present")
+            return ElevatedStatus(ElevatedBackend.Root, "Root (su)", "su found")
         }
         lastBackend.set(ElevatedBackend.None)
         return ElevatedStatus(
             ElevatedBackend.None,
             "Unavailable",
-            "Install Shizuku, start it, allow ${context.packageName}"
+            "Install Shizuku and allow ${context.packageName}"
         )
     }
 
-    fun isElevated(advancedEnabled: Boolean): Boolean {
-        if (!advancedEnabled) return false
-        return hasShizukuPermission() || (isRootAvailable() && lastBackend.get() == ElevatedBackend.Root) ||
-            (isRootAvailable() && !isShizukuInstalled())
-    }
-
-    /** Prefer Shizuku when permitted; else root. */
     fun isElevatedLive(advancedEnabled: Boolean): Boolean {
         if (!advancedEnabled) return false
         return hasShizukuPermission() || isRootAvailable()
     }
 
-    suspend fun exec(command: String, timeoutMs: Long = 5_000): String? =
+    suspend fun exec(command: String, timeoutMs: Long = 4_000): String? =
         withContext(Dispatchers.IO) {
             if (hasShizukuPermission()) {
                 execShizuku(command, timeoutMs)?.let { return@withContext it }
@@ -232,97 +241,56 @@ class AdvancedAccess(private val context: Context) {
             null
         }
 
-    /**
-     * Official path: binder transact newProcess (code 14) → ShizukuRemoteProcess.
-     */
     private fun execShizuku(command: String, timeoutMs: Long): String? {
-        val binder = try {
-            Shizuku.getBinder()
-        } catch (_: Exception) {
-            null
-        } ?: return null
-
-        val data = Parcel.obtain()
-        val reply = Parcel.obtain()
+        // Preferred: private Shizuku.newProcess (exists in API 13.1.5)
         try {
-            data.writeInterfaceToken(SHIZUKU_DESCRIPTOR)
-            data.writeStringArray(arrayOf("sh", "-c", command))
-            data.writeStringArray(null)
-            data.writeString(null)
-            // AIDL transaction id for newProcess = 14
-            val ok = binder.transact(14, data, reply, 0)
-            if (!ok) {
-                Log.w(TAG, "newProcess transact returned false")
-                return null
+            val m = newProcessMethod
+            if (m != null) {
+                val process = m.invoke(
+                    null,
+                    arrayOf("sh", "-c", command),
+                    null,
+                    null
+                ) as? java.lang.Process
+                if (process != null) {
+                    return readProcess(process, timeoutMs)
+                }
             }
-            reply.readException()
-            val process = if (reply.readInt() != 0) {
-                ShizukuRemoteProcess.CREATOR.createFromParcel(reply)
-            } else {
-                null
-            } ?: return null
-            return readProcess(process, timeoutMs)
         } catch (e: Exception) {
-            Log.w(TAG, "execShizuku transact: ${e.message}")
-            // Fallback: try service stub reflection
-            return tryServiceStub(command, timeoutMs)
-        } finally {
-            data.recycle()
-            reply.recycle()
+            Log.w(TAG, "newProcess reflect: ${e.message}")
         }
-    }
-
-    private fun tryServiceStub(command: String, timeoutMs: Long): String? {
-        return try {
-            val binder = Shizuku.getBinder() ?: return null
-            val stub = Class.forName("moe.shizuku.server.IShizukuService\$Stub")
-            val asInterface = stub.getMethod("asInterface", IBinder::class.java)
-            val service = asInterface.invoke(null, binder) ?: return null
-            val newProcess = service.javaClass.methods.firstOrNull {
-                it.name == "newProcess" && it.parameterTypes.size == 3
-            } ?: return null
-            val remote = newProcess.invoke(
-                service,
-                arrayOf("sh", "-c", command),
-                null,
-                null
-            ) as? java.lang.Process ?: return null
-            readProcess(remote, timeoutMs)
-        } catch (e: Exception) {
-            Log.d(TAG, "tryServiceStub: ${e.message}")
-            null
-        }
+        return null
     }
 
     private fun readProcess(process: java.lang.Process, timeoutMs: Long): String? {
         val out = StringBuilder()
-        try {
-            BufferedReader(InputStreamReader(process.inputStream)).use { reader ->
-                var line: String?
-                while (reader.readLine().also { line = it } != null) {
-                    out.append(line).append('\n')
-                    if (out.length > 512_000) break
+        val reader = Thread {
+            try {
+                BufferedReader(InputStreamReader(process.inputStream)).use { br ->
+                    var line: String?
+                    while (br.readLine().also { line = it } != null) {
+                        out.append(line).append('\n')
+                        if (out.length > 400_000) break
+                    }
                 }
+            } catch (_: Exception) {
             }
-        } catch (e: Exception) {
-            Log.d(TAG, "read stdout: ${e.message}")
         }
+        reader.start()
         try {
-            process.errorStream?.let { BufferedReader(InputStreamReader(it)).use { r -> r.readText() } }
-        } catch (_: Exception) {
-        }
-        try {
-            if (process is ShizukuRemoteProcess) {
-                process.waitForTimeout(timeoutMs, TimeUnit.MILLISECONDS)
-            } else if (Build.VERSION.SDK_INT >= 26) {
+            if (Build.VERSION.SDK_INT >= 26) {
                 process.waitFor(timeoutMs, TimeUnit.MILLISECONDS)
             } else {
-                process.waitFor()
+                reader.join(timeoutMs)
             }
         } catch (_: Exception) {
         }
         try {
             process.destroy()
+        } catch (_: Exception) {
+        }
+        try {
+            reader.join(300)
         } catch (_: Exception) {
         }
         return out.toString().trim().ifEmpty { null }
@@ -337,53 +305,42 @@ class AdvancedAccess(private val context: Context) {
         }
     }
 
-    /** Force-stop via IActivityManager (no shell required). */
     fun forceStopPackage(packageName: String): Boolean {
         if (packageName.isBlank() || packageName.contains(' ')) return false
-        if (hasShizukuPermission()) {
-            if (forceStopViaAm(packageName)) return true
-        }
-        // Shell fallback
-        return false // caller may use exec
-    }
-
-    private fun forceStopViaAm(packageName: String): Boolean {
+        if (!hasShizukuPermission()) return false
         return try {
             val raw = SystemServiceHelper.getSystemService("activity") ?: return false
             val binder = ShizukuBinderWrapper(raw)
             val stub = Class.forName("android.app.IActivityManager\$Stub")
             val am = stub.getMethod("asInterface", IBinder::class.java).invoke(null, binder)
                 ?: return false
-            val methods = am.javaClass.methods.filter { it.name == "forceStopPackage" }
-            for (m in methods) {
+            for (m in am.javaClass.methods.filter { it.name == "forceStopPackage" }) {
                 try {
                     when (m.parameterTypes.size) {
                         1 -> m.invoke(am, packageName)
                         2 -> m.invoke(am, packageName, 0)
-                        3 -> m.invoke(am, packageName, 0, 0)
                         else -> continue
                     }
-                    Log.i(TAG, "forceStopPackage ok via AM: $packageName")
+                    Log.i(TAG, "forceStop ok: $packageName")
                     return true
                 } catch (e: Exception) {
-                    Log.d(TAG, "forceStop try ${m.parameterTypes.size}: ${e.message}")
+                    Log.d(TAG, "forceStop arity ${m.parameterTypes.size}: ${e.message}")
                 }
             }
             false
         } catch (e: Exception) {
-            Log.w(TAG, "forceStopViaAm: ${e.message}")
+            Log.w(TAG, "forceStop: ${e.message}")
             false
         }
     }
 
-    /** Accurate CPU% from /proc/stat via elevated shell (two samples). */
     suspend fun readCpuPercent(): Pair<Float, Boolean>? = withContext(Dispatchers.IO) {
-        val a = parseProcStat(exec("cat /proc/stat", 2_000)) ?: return@withContext null
+        val a = parseProcStat(exec("cat /proc/stat", 1_500)) ?: return@withContext null
         try {
-            Thread.sleep(280)
+            Thread.sleep(200)
         } catch (_: InterruptedException) {
         }
-        val b = parseProcStat(exec("cat /proc/stat", 2_000)) ?: return@withContext null
+        val b = parseProcStat(exec("cat /proc/stat", 1_500)) ?: return@withContext null
         val dTotal = b.first - a.first
         val dIdle = b.second - a.second
         if (dTotal <= 0L) return@withContext null
@@ -398,7 +355,7 @@ class AdvancedAccess(private val context: Context) {
         if (parts.size < 5) return null
         val nums = parts.drop(1).mapNotNull { it.toLongOrNull() }
         if (nums.size < 4) return null
-        val idle = nums[3] + nums.getOrElse(4) { 0L } // idle + iowait
+        val idle = nums[3] + nums.getOrElse(4) { 0L }
         val total = nums.sum()
         return total to idle
     }
@@ -406,6 +363,5 @@ class AdvancedAccess(private val context: Context) {
     companion object {
         const val REQ_SHIZUKU = 7711
         private const val TAG = "FernAdvanced"
-        private const val SHIZUKU_DESCRIPTOR = "moe.shizuku.server.IShizukuService"
     }
 }

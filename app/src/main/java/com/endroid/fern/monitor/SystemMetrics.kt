@@ -271,7 +271,7 @@ object SystemMetrics {
                 prevIdle = idle2
                 prevTotal = total2
                 try {
-                    Thread.sleep(320)
+                    Thread.sleep(180)
                 } catch (_: InterruptedException) { }
                 val second = readProcStat()
                 if (second != null) {
@@ -317,29 +317,10 @@ object SystemMetrics {
         }
     }
 
-    private fun readCpuFromDumpsys(): Float? {
-        return try {
-            val proc = Runtime.getRuntime().exec(arrayOf("dumpsys", "cpuinfo"))
-            try {
-                val text = proc.inputStream.bufferedReader().use { it.readText() }
-                Regex("(\\d+(?:\\.\\d+)?)%\\s*TOTAL", RegexOption.IGNORE_CASE)
-                    .find(text)
-                    ?.groupValues
-                    ?.getOrNull(1)
-                    ?.toFloatOrNull()
-                    ?.coerceIn(0f, 100f)
-                    ?: Regex("TOTAL:\\s*(\\d+(?:\\.\\d+)?)%", RegexOption.IGNORE_CASE)
-                        .find(text)
-                        ?.groupValues
-                        ?.getOrNull(1)
-                        ?.toFloatOrNull()
-                        ?.coerceIn(0f, 100f)
-            } finally {
-                proc.destroy()
-            }
-        } catch (_: Exception) {
-            null
-        }
+    fun readCpuFromDumpsys(): Float? {
+        // Intentionally skipped: dumpsys can block for seconds without DUMP permission
+        // and freezes the refresh interval. Elevated path uses /proc/stat via Shizuku.
+        return null
     }
 
     private fun readLoadAvg(): FloatArray? {

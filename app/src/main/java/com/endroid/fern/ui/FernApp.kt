@@ -913,11 +913,13 @@ private fun SettingsContent(
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
+                var slider by remember(refreshMs) { mutableStateOf(refreshMs.toFloat()) }
                 Slider(
-                    value = refreshMs.toFloat(),
-                    onValueChange = { onRefreshMs(it.toInt()) },
+                    value = slider,
+                    onValueChange = { slider = it },
+                    onValueChangeFinished = { onRefreshMs(slider.toInt()) },
                     valueRange = 500f..5000f,
-                    steps = 8
+                    steps = 9
                 )
             }
         }

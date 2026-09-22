@@ -25,49 +25,37 @@ import kotlinx.coroutines.withContext
 class FernViewModel(app: Application) : AndroidViewModel(app) {
 
     private val prefs = Prefs(app)
+    private val advancedAccess = AdvancedAccess(app)
+    private val advancedMetrics = AdvancedMetrics(advancedAccess)
 
     private val _snapshot = MutableStateFlow<SystemSnapshot?>(null)
     val snapshot: StateFlow<SystemSnapshot?> = _snapshot.asStateFlow()
 
     private val _historyCpu = MutableStateFlow<List<Float>>(emptyList())
     val historyCpu: StateFlow<List<Float>> = _historyCpu.asStateFlow()
-
     private val _historyRam = MutableStateFlow<List<Float>>(emptyList())
     val historyRam: StateFlow<List<Float>> = _historyRam.asStateFlow()
-
     private val _historyBattery = MutableStateFlow<List<Float>>(emptyList())
     val historyBattery: StateFlow<List<Float>> = _historyBattery.asStateFlow()
-
     private val _historyNet = MutableStateFlow<List<Float>>(emptyList())
     val historyNet: StateFlow<List<Float>> = _historyNet.asStateFlow()
-
     private val _historyStorage = MutableStateFlow<List<Float>>(emptyList())
     val historyStorage: StateFlow<List<Float>> = _historyStorage.asStateFlow()
 
     private val _themeMode = MutableStateFlow(prefs.themeMode)
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
-
     private val _refreshMs = MutableStateFlow(prefs.refreshMs)
     val refreshMs: StateFlow<Int> = _refreshMs.asStateFlow()
-
     private val _keepScreenOn = MutableStateFlow(prefs.keepScreenOn)
     val keepScreenOn: StateFlow<Boolean> = _keepScreenOn.asStateFlow()
-
     private val _haptics = MutableStateFlow(prefs.haptics)
     val haptics: StateFlow<Boolean> = _haptics.asStateFlow()
-
     private val _pauseInBackground = MutableStateFlow(prefs.pauseInBackground)
     val pauseInBackground: StateFlow<Boolean> = _pauseInBackground.asStateFlow()
-
-    private val advancedAccess = AdvancedAccess(app)
-    private val advancedMetrics = AdvancedMetrics(advancedAccess)
-
     private val _advancedMode = MutableStateFlow(prefs.advancedMode)
     val advancedMode: StateFlow<Boolean> = _advancedMode.asStateFlow()
-
     private val _elevatedStatus = MutableStateFlow(advancedAccess.status(prefs.advancedMode))
     val elevatedStatus: StateFlow<ElevatedStatus> = _elevatedStatus.asStateFlow()
-
     private val _advancedSnapshot = MutableStateFlow(AdvancedSnapshot(emptyList(), null, emptyMap()))
     val advancedSnapshot: StateFlow<AdvancedSnapshot> = _advancedSnapshot.asStateFlow()
 
@@ -77,12 +65,15 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
     val peakRam: StateFlow<Float> = _peakRam.asStateFlow()
     private val _peakNet = MutableStateFlow(0f)
     val peakNet: StateFlow<Float> = _peakNet.asStateFlow()
-
     private val _lastUpdatedMs = MutableStateFlow(0L)
     val lastUpdatedMs: StateFlow<Long> = _lastUpdatedMs.asStateFlow()
 
     private var loop: Job? = null
+    private var elevatedLoop: Job? = null
     private var running = false
+
+    /** Last accurate CPU from elevated shell (null if unavailable). */
+    @Volatile private var elevatedCpu: Float? = null
 
     fun setThemeMode(mode: ThemeMode) {
         prefs.themeMode = mode
@@ -93,7 +84,15 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
         val clamped = ms.coerceIn(500, 10_000)
         prefs.refreshMs = clamped
         _refreshMs.value = clamped
-        if (running) restartLoop()
+        // Always restart sampling so the new interval applies immediately
+        if (running) {
+            restartLoop()
+        }
+        Toast.makeText(
+            getApplication(),
+            "Refresh every ${"%.1f".format(clamped / 1000f)}s",
+            Toast.LENGTH_SHORT
+        ).show()
     }
 
     fun setKeepScreenOn(on: Boolean) {
@@ -116,10 +115,11 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
         _advancedMode.value = on
         refreshElevatedStatus()
         if (on) {
-            viewModelScope.launch {
-                advancedMetrics.collect(true).let { _advancedSnapshot.value = it }
-            }
+            restartElevatedLoop()
         } else {
+            elevatedLoop?.cancel()
+            elevatedLoop = null
+            elevatedCpu = null
             _advancedSnapshot.value = AdvancedSnapshot(emptyList(), null, emptyMap())
         }
     }
@@ -133,13 +133,12 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
         Toast.makeText(getApplication(), msg, Toast.LENGTH_LONG).show()
         refreshElevatedStatus()
         viewModelScope.launch {
-            delay(600)
+            delay(400)
+            refreshElevatedStatus()
+            delay(800)
             refreshElevatedStatus()
             if (advancedAccess.hasShizukuPermission()) {
-                val adv = withContext(Dispatchers.IO) {
-                    advancedMetrics.collect(true)
-                }
-                _advancedSnapshot.value = adv
+                restartElevatedLoop()
             }
         }
     }
@@ -163,14 +162,16 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
 
     fun startSampling() {
         running = true
-        if (loop?.isActive == true) return
-        restartLoop()
+        if (loop?.isActive != true) restartLoop()
+        if (_advancedMode.value && elevatedLoop?.isActive != true) restartElevatedLoop()
     }
 
     fun stopSampling() {
         running = false
         loop?.cancel()
         loop = null
+        elevatedLoop?.cancel()
+        elevatedLoop = null
     }
 
     fun refreshNow() {
@@ -178,14 +179,18 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
             val snap = withContext(Dispatchers.IO) {
                 SystemMetrics.capture(getApplication())
             }
-            applySnapshot(snap)
+            applySnapshot(applyElevatedCpu(snap))
         }
+    }
+
+    private fun applyElevatedCpu(snap: SystemSnapshot): SystemSnapshot {
+        val cpu = elevatedCpu ?: return snap
+        return snap.copy(cpuPercent = cpu, cpuAvailable = true)
     }
 
     private fun applySnapshot(snap: SystemSnapshot) {
         _snapshot.value = snap
         _lastUpdatedMs.value = System.currentTimeMillis()
-        // Always append — even small changes should appear on the sparkline
         _historyCpu.value = (_historyCpu.value + snap.cpuPercent).takeLast(36)
         _historyRam.value = (_historyRam.value + snap.ramPercent).takeLast(36)
         if (snap.batteryPercent >= 0) {
@@ -211,48 +216,47 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
                 "RAM: ${s.ramUsedMb}/${s.ramTotalMb} MB (${"%.1f".format(s.ramPercent)}%, peak ${"%.1f".format(_peakRam.value)}%)"
             )
             appendLine(
-                "Battery: ${s.batteryPercent}% ${if (s.batteryCharging) "charging" else "discharging"} · ${s.batteryHealth}" +
-                    (s.batteryVoltageMv?.let { " · ${it} mV" } ?: "") +
-                    (s.batteryCurrentUa?.let { " · ${"%.0f".format(it / 1000f)} mA" } ?: "")
-            )
-            appendLine("Display: ${s.displayWidthPx}x${s.displayHeightPx} @ ${"%.0f".format(s.displayRefreshHz)} Hz · ${s.displayDensityDpi} dpi")
-            appendLine("Security patch: ${s.securityPatch}")
-            appendLine("Kernel: ${s.kernelVersion}")
-            appendLine(
-                "Storage: ${"%.1f".format(s.storageUsedGb)}/${"%.1f".format(s.storageTotalGb)} GB"
-            )
-            appendLine(
-                "Network: ${s.networkLabel} · ${"%.1f".format(s.networkKBps)} KB/s (peak ${"%.1f".format(_peakNet.value)})"
+                "Battery: ${s.batteryPercent}% ${if (s.batteryCharging) "charging" else "discharging"} · ${s.batteryHealth}"
             )
             appendLine("Thermal: ${s.thermalLabel} · Uptime ${"%.1f".format(s.uptimeHours)} h")
+            appendLine("Refresh: ${_refreshMs.value} ms · Advanced: ${_advancedMode.value} · ${_elevatedStatus.value.label}")
         }
     }
 
+    /** Fast loop — only lightweight SystemMetrics, respects refreshMs. */
     private fun restartLoop() {
         loop?.cancel()
         loop = viewModelScope.launch {
-            // Seed network baseline (first TrafficStats delta needs a prior point)
             withContext(Dispatchers.IO) {
                 SystemMetrics.capture(getApplication())
             }
-            delay(250)
+            delay(150)
             while (isActive && running) {
-                var snap = withContext(Dispatchers.IO) {
+                val snap = withContext(Dispatchers.IO) {
                     SystemMetrics.capture(getApplication())
                 }
-                if (_advancedMode.value) {
+                applySnapshot(applyElevatedCpu(snap))
+                val wait = _refreshMs.value.toLong().coerceIn(500L, 10_000L)
+                delay(wait)
+            }
+        }
+    }
+
+    /** Slow loop — elevated shell (Shizuku/root). Never blocks the main refresh. */
+    private fun restartElevatedLoop() {
+        elevatedLoop?.cancel()
+        if (!_advancedMode.value) return
+        elevatedLoop = viewModelScope.launch {
+            while (isActive && running && _advancedMode.value) {
+                refreshElevatedStatus()
+                if (advancedAccess.isElevatedLive(true)) {
                     val adv = withContext(Dispatchers.IO) {
                         advancedMetrics.collect(true)
                     }
                     _advancedSnapshot.value = adv
-                    refreshElevatedStatus()
-                    // Prefer elevated /proc/stat CPU over frequency estimate
-                    adv.accurateCpuPercent?.let { cpu ->
-                        snap = snap.copy(cpuPercent = cpu, cpuAvailable = true)
-                    }
+                    adv.accurateCpuPercent?.let { elevatedCpu = it }
                 }
-                applySnapshot(snap)
-                delay(_refreshMs.value.toLong().coerceIn(400L, 15_000L))
+                delay(3_000)
             }
         }
     }

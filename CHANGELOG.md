@@ -1,3 +1,11 @@
+## 1.7.4
+- CRITICAL: 1.7.3 never shipped (Prefs compile error) — fixed
+- Refresh rate now applies immediately (fast loop; elevated metrics on separate 3s loop)
+- Toast confirms refresh interval when changed
+- Skip blocking dumpsys cpuinfo that forced ~5s updates
+- Shizuku: private newProcess reflection + main-thread Grant + Toast feedback
+- Force-stop via IActivityManager; per-app RAM/CPU when elevated shell works
+
 ## 1.7.3
 - Fix Advanced/Shizuku for real: binder newProcess shell + IActivityManager force-stop
 - Grant button shows Toast feedback; opens Shizuku if service is down
