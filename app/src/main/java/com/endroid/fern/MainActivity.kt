@@ -140,6 +140,7 @@ class MainActivity : ComponentActivity() {
                     onAdvancedMode = viewModel::setAdvancedMode,
                     onRequestShizuku = viewModel::requestShizukuPermission,
                     onRefreshElevated = viewModel::refreshElevatedStatus,
+                    onRefreshElevatedMetrics = viewModel::refreshElevatedMetrics,
                     onForceStop = viewModel::forceStopPackage
                 )
             }

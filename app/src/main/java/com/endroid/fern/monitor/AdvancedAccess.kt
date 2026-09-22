@@ -1,17 +1,19 @@
 package com.endroid.fern.monitor
 
-import android.app.ActivityManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.Build
-import android.os.Debug
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
-import android.os.Process
 import android.util.Log
+import com.endroid.fern.shell.IShellService
+import com.endroid.fern.shell.ShellUserService
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
 import rikka.shizuku.ShizukuBinderWrapper
@@ -19,6 +21,7 @@ import rikka.shizuku.SystemServiceHelper
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.lang.reflect.Method
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -38,23 +41,48 @@ class AdvancedAccess(private val context: Context) {
     private val shellWorks = AtomicBoolean(false)
     private val mainHandler = Handler(Looper.getMainLooper())
 
+    private val shellService = AtomicReference<IShellService?>(null)
+    private val bindLatch = AtomicReference<CountDownLatch?>(null)
+
+    private val userServiceArgs by lazy {
+        Shizuku.UserServiceArgs(
+            ComponentName(context.packageName, ShellUserService::class.java.name)
+        )
+            .daemon(false)
+            .processNameSuffix("shell")
+            .debuggable(false)
+            .version(BuildConfigVersion)
+    }
+
+    private val userServiceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
+            if (binder != null && binder.pingBinder()) {
+                shellService.set(IShellService.Stub.asInterface(binder))
+                Log.i(TAG, "UserService connected")
+            }
+            bindLatch.get()?.countDown()
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            shellService.set(null)
+            shellWorks.set(false)
+            Log.w(TAG, "UserService disconnected")
+        }
+    }
+
     private val newProcessMethod: Method? by lazy { resolveNewProcess() }
 
     private fun resolveNewProcess(): Method? {
-        try {
+        return try {
             for (m in Shizuku::class.java.declaredMethods) {
-                if (m.name != "newProcess") continue
-                if (m.parameterTypes.size != 3) continue
+                if (m.name != "newProcess" || m.parameterTypes.size != 3) continue
                 m.isAccessible = true
-                Log.i(TAG, "newProcess found: ${m.returnType.name}")
                 return m
             }
-            Log.e(TAG, "newProcess missing; methods=" +
-                Shizuku::class.java.declaredMethods.joinToString { it.name })
-        } catch (e: Exception) {
-            Log.e(TAG, "resolveNewProcess", e)
+            null
+        } catch (_: Exception) {
+            null
         }
-        return null
     }
 
     fun onBinderReceived() {
@@ -62,16 +90,18 @@ class AdvancedAccess(private val context: Context) {
             if (!Shizuku.pingBinder()) return
             if (Shizuku.isPreV11()) {
                 permissionCache.set(true)
-                return
-            }
-            val granted = Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
-            permissionCache.set(granted)
-            if (!granted) {
-                mainHandler.post {
-                    try {
-                        Shizuku.requestPermission(REQ_SHIZUKU)
-                    } catch (_: Exception) {
+            } else {
+                val granted = Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
+                permissionCache.set(granted)
+                if (!granted) {
+                    mainHandler.post {
+                        try {
+                            Shizuku.requestPermission(REQ_SHIZUKU)
+                        } catch (_: Exception) {
+                        }
                     }
+                } else {
+                    ensureUserService()
                 }
             }
         } catch (e: Exception) {
@@ -82,11 +112,38 @@ class AdvancedAccess(private val context: Context) {
     fun onBinderDead() {
         permissionCache.set(false)
         shellWorks.set(false)
+        shellService.set(null)
     }
 
     fun onPermissionResult(requestCode: Int, grantResult: Int) {
         if (requestCode != REQ_SHIZUKU) return
-        permissionCache.set(grantResult == PackageManager.PERMISSION_GRANTED)
+        val ok = grantResult == PackageManager.PERMISSION_GRANTED
+        permissionCache.set(ok)
+        if (ok) ensureUserService()
+    }
+
+    /** Bind privileged UserService (best shell path). */
+    fun ensureUserService() {
+        if (!hasShizukuPermission()) return
+        if (shellService.get() != null) return
+        try {
+            val latch = CountDownLatch(1)
+            bindLatch.set(latch)
+            Shizuku.bindUserService(userServiceArgs, userServiceConnection)
+            // Don't block UI; wait happens in exec
+        } catch (e: Exception) {
+            Log.e(TAG, "bindUserService", e)
+        }
+    }
+
+    private fun awaitShellService(timeoutMs: Long = 4_000): IShellService? {
+        shellService.get()?.let { return it }
+        ensureUserService()
+        try {
+            bindLatch.get()?.await(timeoutMs, TimeUnit.MILLISECONDS)
+        } catch (_: Exception) {
+        }
+        return shellService.get()
     }
 
     fun isShizukuInstalled(): Boolean {
@@ -135,11 +192,13 @@ class AdvancedAccess(private val context: Context) {
             }
             if (Shizuku.isPreV11()) {
                 permissionCache.set(true)
+                ensureUserService()
                 return "Connected (legacy)"
             }
             if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
                 permissionCache.set(true)
-                return "Already granted"
+                ensureUserService()
+                return "Already granted — binding elevated service"
             }
             if (Shizuku.shouldShowRequestPermissionRationale()) {
                 openShizukuManager()
@@ -175,8 +234,6 @@ class AdvancedAccess(private val context: Context) {
         return paths.any { java.io.File(it).exists() }
     }
 
-    fun shellHealthy(): Boolean = shellWorks.get()
-
     fun diagnostic(): String {
         val running = isShizukuRunning()
         val ver = try {
@@ -185,9 +242,12 @@ class AdvancedAccess(private val context: Context) {
             "—"
         }
         val perm = if (hasShizukuPermission()) "yes" else if (running) "no" else "n/a"
-        val np = if (newProcessMethod != null) "np=yes" else "np=NO"
-        val sh = if (shellWorks.get()) "shell=ok" else "shell=?"
-        return "pkg=${context.packageName} · binder=${if (running) "up" else "down"} · $ver · perm=$perm · $np · $sh"
+        val svc = if (shellService.get() != null) "svc=up" else "svc=down"
+        val sh = when {
+            shellWorks.get() -> "shell=ok"
+            else -> "shell=?"
+        }
+        return "perm=$perm · $svc · $sh · $ver"
     }
 
     fun status(advancedEnabled: Boolean): ElevatedStatus {
@@ -220,10 +280,25 @@ class AdvancedAccess(private val context: Context) {
         return hasShizukuPermission() || isRootAvailable()
     }
 
-    suspend fun exec(command: String, timeoutMs: Long = 4_000): String? =
+    suspend fun exec(command: String, timeoutMs: Long = 5_000): String? =
         withContext(Dispatchers.IO) {
             if (hasShizukuPermission()) {
-                execShizuku(command, timeoutMs)?.let {
+                // 1) UserService (most reliable)
+                try {
+                    val svc = awaitShellService(timeoutMs.coerceAtMost(5_000))
+                    if (svc != null) {
+                        val result = svc.exec(command)
+                        if (result != null && !result.startsWith("ERR:")) {
+                            shellWorks.set(true)
+                            return@withContext result.ifBlank { null }
+                        }
+                        Log.w(TAG, "UserService exec: ${result?.take(80)}")
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "UserService: ${e.message}")
+                }
+                // 2) private newProcess reflection
+                execShizukuNewProcess(command, timeoutMs)?.let {
                     shellWorks.set(true)
                     return@withContext it
                 }
@@ -237,40 +312,33 @@ class AdvancedAccess(private val context: Context) {
             null
         }
 
-    /** Probe shell once (id). */
     suspend fun probeShell(): Boolean = withContext(Dispatchers.IO) {
-        val out = exec("id", 2_000)
-        val ok = out != null && (out.contains("uid=") || out.isNotBlank())
+        if (hasShizukuPermission()) ensureUserService()
+        val out = exec("echo FERN_OK; id", 3_000)
+        val ok = out != null && (out.contains("FERN_OK") || out.contains("uid="))
         shellWorks.set(ok)
-        Log.i(TAG, "probeShell ok=$ok out=${out?.take(80)}")
+        Log.i(TAG, "probeShell ok=$ok out=${out?.take(100)}")
         ok
     }
 
-    private fun execShizuku(command: String, timeoutMs: Long): String? {
+    private fun execShizukuNewProcess(command: String, timeoutMs: Long): String? {
         val m = newProcessMethod ?: return null
-        val cmds = listOf(
-            arrayOf("sh", "-c", command),
-            arrayOf("/system/bin/sh", "-c", command)
-        )
-        for (cmd in cmds) {
-            try {
-                val process = m.invoke(null, cmd, null, null) ?: continue
-                if (process !is java.lang.Process) {
-                    Log.w(TAG, "newProcess type=${process.javaClass.name}")
-                    continue
-                }
-                val result = readProcess(process, timeoutMs)
-                if (result != null) return result
-            } catch (e: Exception) {
-                Log.w(TAG, "execShizuku: ${e.message}")
-            }
+        return try {
+            val process = m.invoke(
+                null,
+                arrayOf("sh", "-c", command),
+                null,
+                null
+            ) as? java.lang.Process ?: return null
+            readProcess(process, timeoutMs)
+        } catch (e: Exception) {
+            Log.w(TAG, "newProcess: ${e.message}")
+            null
         }
-        return null
     }
 
     private fun readProcess(process: java.lang.Process, timeoutMs: Long): String? {
         val out = StringBuilder()
-        val err = StringBuilder()
         val tOut = Thread {
             try {
                 BufferedReader(InputStreamReader(process.inputStream)).use { br ->
@@ -283,20 +351,7 @@ class AdvancedAccess(private val context: Context) {
             } catch (_: Exception) {
             }
         }
-        val tErr = Thread {
-            try {
-                BufferedReader(InputStreamReader(process.errorStream)).use { br ->
-                    var line: String?
-                    while (br.readLine().also { line = it } != null) {
-                        err.append(line).append('\n')
-                        if (err.length > 8_000) break
-                    }
-                }
-            } catch (_: Exception) {
-            }
-        }
         tOut.start()
-        tErr.start()
         try {
             if (Build.VERSION.SDK_INT >= 26) {
                 process.waitFor(timeoutMs, TimeUnit.MILLISECONDS)
@@ -311,14 +366,9 @@ class AdvancedAccess(private val context: Context) {
         }
         try {
             tOut.join(400)
-            tErr.join(200)
         } catch (_: Exception) {
         }
-        val text = out.toString().trim()
-        if (text.isEmpty() && err.isNotEmpty()) {
-            Log.w(TAG, "shell stderr: ${err.take(200)}")
-        }
-        return text.ifEmpty { null }
+        return out.toString().trim().ifEmpty { null }
     }
 
     private fun execRoot(command: String, timeoutMs: Long): String? {
@@ -330,8 +380,6 @@ class AdvancedAccess(private val context: Context) {
         }
     }
 
-    // ---------- Binder-based (no shell) ----------
-
     private fun activityManager(): Any? {
         return try {
             val raw = SystemServiceHelper.getSystemService("activity") ?: return null
@@ -339,7 +387,7 @@ class AdvancedAccess(private val context: Context) {
             val stub = Class.forName("android.app.IActivityManager\$Stub")
             stub.getMethod("asInterface", IBinder::class.java).invoke(null, binder)
         } catch (e: Exception) {
-            Log.w(TAG, "activityManager: ${e.message}")
+            Log.w(TAG, "AM: ${e.message}")
             null
         }
     }
@@ -352,15 +400,13 @@ class AdvancedAccess(private val context: Context) {
             try {
                 when (m.parameterTypes.size) {
                     1 -> m.invoke(am, packageName)
-                    2 -> {
-                        if (m.parameterTypes[1] == Int::class.javaPrimitiveType) {
-                            m.invoke(am, packageName, 0)
-                        } else continue
-                    }
+                    2 -> if (m.parameterTypes[1] == Int::class.javaPrimitiveType) {
+                        m.invoke(am, packageName, 0)
+                    } else continue
                     3 -> m.invoke(am, packageName, 0, 0)
                     else -> continue
                 }
-                Log.i(TAG, "forceStop ok via ${m.name}: $packageName")
+                Log.i(TAG, "forceStop ok: $packageName via ${m.name}")
                 return true
             } catch (e: Exception) {
                 Log.d(TAG, "forceStop ${m.name}: ${e.message}")
@@ -369,87 +415,15 @@ class AdvancedAccess(private val context: Context) {
         return false
     }
 
-    /**
-     * Per-app PSS (KB) via IActivityManager — works without shell on many devices.
-     */
     fun runningAppPssKb(): Map<String, Long> {
-        if (!hasShizukuPermission()) return emptyMap()
-        val am = activityManager() ?: return emptyMap()
-        return try {
-            val getProcs = am.javaClass.methods.firstOrNull {
-                it.name == "getRunningAppProcesses" && it.parameterTypes.isEmpty()
-            } ?: return emptyMap()
-            @Suppress("UNCHECKED_CAST")
-            val list = getProcs.invoke(am) as? List<Any?> ?: return emptyMap()
-            val pidToPkgs = HashMap<Int, List<String>>()
-            val pids = ArrayList<Int>()
-            for (item in list) {
-                if (item == null) continue
-                val cls = item.javaClass
-                val pid = cls.getField("pid").getInt(item)
-                @Suppress("UNCHECKED_CAST")
-                val pkgs = (cls.getField("pkgList").get(item) as? Array<String>)?.toList()
-                    ?: listOfNotNull(cls.getField("processName").get(item) as? String)
-                if (pkgs.isEmpty()) continue
-                pidToPkgs[pid] = pkgs
-                pids.add(pid)
-            }
-            if (pids.isEmpty()) return emptyMap()
-            // Prefer elevated getProcessMemoryInfo
-            val getMem = am.javaClass.methods.firstOrNull {
-                it.name == "getProcessMemoryInfo" && it.parameterTypes.size == 1
-            }
-            val map = HashMap<String, Long>()
-            if (getMem != null) {
-                val infos = getMem.invoke(am, pids.toIntArray()) as? Array<*>
-                if (infos != null) {
-                    for (i in infos.indices) {
-                        val info = infos[i] ?: continue
-                        val pss = try {
-                            (info as Debug.MemoryInfo).totalPss.toLong()
-                        } catch (_: Exception) {
-                            try {
-                                info.javaClass.getMethod("getTotalPss").invoke(info) as? Int
-                            } catch (_: Exception) {
-                                null
-                            }?.toLong()
-                        } ?: continue
-                        val pkgs = pidToPkgs[pids[i]] ?: continue
-                        for (pkg in pkgs) {
-                            if (!pkg.contains('.')) continue
-                            map[pkg] = maxOf(map[pkg] ?: 0L, pss)
-                        }
-                    }
-                }
-            }
-            // Fallback: ActivityManager from context (limited)
-            if (map.isEmpty()) {
-                val ctxAm = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-                val mem = ctxAm.getProcessMemoryInfo(pids.toIntArray())
-                for (i in mem.indices) {
-                    val pss = mem[i].totalPss.toLong()
-                    val pkgs = pidToPkgs[pids[i]] ?: continue
-                    for (pkg in pkgs) {
-                        if (!pkg.contains('.')) continue
-                        map[pkg] = maxOf(map[pkg] ?: 0L, pss)
-                    }
-                }
-            }
-            Log.i(TAG, "runningAppPssKb size=${map.size}")
-            map
-        } catch (e: Exception) {
-            Log.w(TAG, "runningAppPssKb: ${e.message}")
-            emptyMap()
-        }
+        // Prefer shell dumpsys when available — more complete than getRunningAppProcesses
+        return emptyMap() // filled by AdvancedMetrics via shell
     }
 
     suspend fun readCpuPercent(): Pair<Float, Boolean>? = withContext(Dispatchers.IO) {
-        val a = parseProcStat(exec("cat /proc/stat", 1_500)) ?: return@withContext null
-        try {
-            Thread.sleep(200)
-        } catch (_: InterruptedException) {
-        }
-        val b = parseProcStat(exec("cat /proc/stat", 1_500)) ?: return@withContext null
+        val a = parseProcStat(exec("cat /proc/stat", 2_000)) ?: return@withContext null
+        delay(220)
+        val b = parseProcStat(exec("cat /proc/stat", 2_000)) ?: return@withContext null
         val dTotal = b.first - a.first
         val dIdle = b.second - a.second
         if (dTotal <= 0L) return@withContext null
@@ -472,5 +446,7 @@ class AdvancedAccess(private val context: Context) {
     companion object {
         const val REQ_SHIZUKU = 7711
         private const val TAG = "FernAdvanced"
+        // Increment when ShellUserService API changes
+        private const val BuildConfigVersion = 2
     }
 }

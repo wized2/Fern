@@ -22,3 +22,7 @@
 -keep class rikka.shizuku.SystemServiceHelper { *; }
 -keep class moe.shizuku.server.** { *; }
 -keepclassmembers class moe.shizuku.server.** { *; }
+
+# Shizuku UserService shell
+-keep class com.endroid.fern.shell.** { *; }
+-keep interface com.endroid.fern.shell.** { *; }

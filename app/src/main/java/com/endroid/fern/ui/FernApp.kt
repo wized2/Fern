@@ -1,5 +1,6 @@
 package com.endroid.fern.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.draw.clip
 import androidx.compose.material3.TopAppBarDefaults
@@ -201,6 +202,7 @@ fun FernApp(
     onAdvancedMode: (Boolean) -> Unit = {},
     onRequestShizuku: () -> Unit = {},
     onRefreshElevated: () -> Unit = {},
+    onRefreshElevatedMetrics: () -> Unit = {},
     onForceStop: suspend (String) -> Boolean = { false }
 ) {
     var tab by remember { mutableStateOf(Tab.Home) }
@@ -236,6 +238,9 @@ fun FernApp(
     }
 
     val onMoreChild = tab == Tab.More && moreSub != MoreSub.None
+    BackHandler(enabled = onMoreChild) {
+        backFromMore()
+    }
     val topTitle = when {
         onMoreChild && moreSub == MoreSub.Tests -> "Tests"
         onMoreChild && moreSub == MoreSub.Settings -> "Settings"
@@ -1440,7 +1445,8 @@ private fun ActiveAppsContent(
     elevated: Boolean = false,
     rssByPackage: Map<String, Long> = emptyMap(),
     cpuByPackage: Map<String, Float> = emptyMap(),
-    onForceStop: suspend (String) -> Boolean = { false }
+    onForceStop: suspend (String) -> Boolean = { false },
+    onRefreshElevated: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val repo = remember { ActiveAppsRepository(context) }
@@ -1491,18 +1497,31 @@ private fun ActiveAppsContent(
             .fillMaxSize()
             .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
-        Text(
-            "Active Apps",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Text(
-            "Recently in the foreground",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Active Apps",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    "Recently in the foreground",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (advancedMode && elevated) {
+                TextButton(onClick = onRefreshElevated) {
+                    Text("Refresh")
+                }
+            }
+        }
+        Spacer(modifier = Modifier.size(12.dp))
 
         if (!hasAccess) {
             Card(
@@ -1617,7 +1636,7 @@ private fun ActiveAppsContent(
                 item {
                     Text(
                         if (advancedMode && elevated)
-                            "Elevated: RAM on ${rssByPackage.size} apps · CPU on ${cpuByPackage.size} apps. Pull to refresh list. Stop uses Shizuku."
+                            "Elevated: RAM on ${rssByPackage.size} apps · CPU on ${cpuByPackage.size} apps. Tap Refresh for latest. Stop uses Shizuku."
                         else
                             "Android doesn't allow normal apps to see other apps' CPU or RAM. Enable Advanced mode (Shizuku) in Settings.",
                         style = MaterialTheme.typography.labelSmall,

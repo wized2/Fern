@@ -1,3 +1,9 @@
+## 1.7.7
+- Shizuku UserService shell (real elevated exec — not stripped newProcess alone)
+- System back on Settings/Tests/Sensors/About returns to More (does not exit app)
+- Active Apps: real Refresh button when elevated
+- Status shows svc=/shell=; probe uses echo FERN_OK
+
 ## 1.7.6
 - Fix CI: add missing lookupLong/lookupFloat used by Active Apps
 

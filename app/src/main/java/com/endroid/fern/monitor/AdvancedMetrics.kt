@@ -22,21 +22,17 @@ class AdvancedMetrics(private val access: AdvancedAccess) {
             return@withContext AdvancedSnapshot(emptyList(), null, emptyMap())
         }
 
-        // Binder path first (no shell) — most reliable for RAM
-        var rss = access.runningAppPssKb()
-
-        // Shell path for dumpsys / ps / thermal / cpu
+        access.ensureUserService()
         val shellOk = access.probeShell()
-        if (rss.isEmpty() && shellOk) {
-            rss = readPackageRss()
-        }
+
+        val rss = if (shellOk) readPackageRss() else emptyMap()
         val zones = if (shellOk) readThermalZones() else emptyList()
         val cpu = if (shellOk) readCpuTop() else emptyList()
         val accurate = if (shellOk) access.readCpuPercent()?.first else null
 
         Log.i(
             "FernAdvanced",
-            "collect rss=${rss.size} cpuTop=${cpu.size} zones=${zones.size} shell=$shellOk accurate=$accurate"
+            "collect shell=$shellOk rss=${rss.size} cpu=${cpu.size} zones=${zones.size} acc=$accurate"
         )
 
         AdvancedSnapshot(
@@ -55,7 +51,7 @@ class AdvancedMetrics(private val access: AdvancedAccess) {
                 "n=\$(cat \"\$z/type\" 2>/dev/null); " +
                 "t=\$(cat \"\$z/temp\" 2>/dev/null); " +
                 "[ -n \"\$t\" ] && echo \"\$n|\$t\"; done",
-            2_500
+            3_000
         ) ?: return emptyList()
         val list = ArrayList<ThermalZone>()
         for (line in out.lineSequence()) {
@@ -70,15 +66,15 @@ class AdvancedMetrics(private val access: AdvancedAccess) {
     }
 
     private suspend fun readPackageRss(): Map<String, Long> {
-        val dumpsys = access.exec("dumpsys meminfo -s 2>/dev/null | head -n 100", 3_500)
+        val dumpsys = access.exec("dumpsys meminfo -s 2>/dev/null | head -n 120", 5_000)
         val fromDump = parseDumpsysMeminfo(dumpsys)
         if (fromDump.isNotEmpty()) return fromDump
-        val ps = access.exec("ps -A -o NAME,RSS 2>/dev/null | head -n 250", 2_500)
+        val ps = access.exec("ps -A -o NAME,RSS 2>/dev/null | head -n 300", 3_000)
         return parsePsRss(ps)
     }
 
     private suspend fun readCpuTop(): List<Pair<String, Float>> {
-        val raw = access.exec("dumpsys cpuinfo 2>/dev/null | head -n 50", 3_500) ?: return emptyList()
+        val raw = access.exec("dumpsys cpuinfo 2>/dev/null | head -n 50", 5_000) ?: return emptyList()
         val list = ArrayList<Pair<String, Float>>()
         val re = Regex("""^\s*([\d.]+)%\s+\d+/(?:[\w.]+:)?([a-zA-Z0-9._]+)""")
         for (line in raw.lineSequence()) {
@@ -87,7 +83,7 @@ class AdvancedMetrics(private val access: AdvancedAccess) {
             val name = m.groupValues[2]
             if (!name.contains('.')) continue
             list.add(name to pct)
-            if (list.size >= 20) break
+            if (list.size >= 25) break
         }
         return list
     }
@@ -124,7 +120,7 @@ class AdvancedMetrics(private val access: AdvancedAccess) {
         if (!access.isElevatedLive(advancedEnabled)) return false
         if (packageName.isBlank() || packageName.contains(' ')) return false
         if (access.forceStopPackage(packageName)) return true
-        val out = access.exec("am force-stop ${packageName.trim()}; echo DONE", 3_000)
-        return out != null && out.contains("DONE")
+        val out = access.exec("am force-stop ${packageName.trim()}; echo FERN_STOPPED", 4_000)
+        return out != null && out.contains("FERN_STOPPED")
     }
 }

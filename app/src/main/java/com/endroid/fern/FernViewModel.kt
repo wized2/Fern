@@ -115,6 +115,7 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
         _advancedMode.value = on
         refreshElevatedStatus()
         if (on) {
+            advancedAccess.ensureUserService()
             restartElevatedLoop()
         } else {
             elevatedLoop?.cancel()
@@ -127,6 +128,28 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
     fun refreshElevatedStatus() {
         _elevatedStatus.value = advancedAccess.status(_advancedMode.value)
     }
+
+    fun refreshElevatedMetrics() {
+        if (!_advancedMode.value) return
+        viewModelScope.launch {
+            advancedAccess.ensureUserService()
+            refreshElevatedStatus()
+            val adv = withContext(Dispatchers.IO) {
+                advancedMetrics.collect(true)
+            }
+            _advancedSnapshot.value = adv
+            adv.accurateCpuPercent?.let { elevatedCpu = it }
+            Toast.makeText(
+                getApplication(),
+                if (adv.shellOk)
+                    "Elevated: RAM ${adv.rssKbByPackage.size} · CPU ${adv.cpuTop.size}"
+                else
+                    "Shell not ready — wait and tap Refresh again",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
 
     fun requestShizukuPermission() {
         val msg = advancedAccess.requestShizukuPermission()
