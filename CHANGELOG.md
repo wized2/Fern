@@ -1,3 +1,9 @@
+## 1.7.5
+- Per-app RAM via IActivityManager (works when shell is blocked by R8)
+- Keep rules so Shizuku.newProcess is not stripped in release
+- Stronger shell probe; package name fuzzy match for RAM/CPU rows
+- Force-stop toast; status shows np=/shell=
+
 ## 1.7.4
 - CRITICAL: 1.7.3 never shipped (Prefs compile error) — fixed
 - Refresh rate now applies immediately (fast loop; elevated metrics on separate 3s loop)

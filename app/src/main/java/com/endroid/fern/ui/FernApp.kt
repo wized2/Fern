@@ -1591,8 +1591,8 @@ private fun ActiveAppsContent(
                 modifier = Modifier.weight(1f)
             ) {
                 items(apps, key = { it.packageName }) { app ->
-                    val rss = rssByPackage[app.packageName]
-                    val cpuPct = cpuByPackage[app.packageName]
+                    val rss = lookupLong(rssByPackage, app.packageName)
+                    val cpuPct = lookupFloat(cpuByPackage, app.packageName)
                     ActiveAppRow(
                         app = app,
                         rssKb = if (advancedMode && elevated) rss else null,
@@ -1617,9 +1617,9 @@ private fun ActiveAppsContent(
                 item {
                     Text(
                         if (advancedMode && elevated)
-                            "Advanced mode on — per-app RAM + CPU from elevated shell; force-stop available."
+                            "Elevated: RAM on ${rssByPackage.size} apps · CPU on ${cpuByPackage.size} apps. Pull to refresh list. Stop uses Shizuku."
                         else
-                            "Android doesn't allow normal apps to see other apps' CPU or RAM. This shows which apps were recently active. Enable Advanced mode (Shizuku/root) in Settings for more.",
+                            "Android doesn't allow normal apps to see other apps' CPU or RAM. Enable Advanced mode (Shizuku) in Settings.",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.outline,
                         modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp)

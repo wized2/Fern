@@ -146,7 +146,15 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
     fun advancedAccess(): AdvancedAccess = advancedAccess
 
     suspend fun forceStopPackage(pkg: String): Boolean {
-        return advancedMetrics.forceStop(pkg, _advancedMode.value)
+        val ok = advancedMetrics.forceStop(pkg, _advancedMode.value)
+        withContext(Dispatchers.Main) {
+            Toast.makeText(
+                getApplication(),
+                if (ok) "Stopped $pkg" else "Could not stop $pkg",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+        return ok
     }
 
     fun clearHistory() {
