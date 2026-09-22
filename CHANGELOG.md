@@ -1,3 +1,6 @@
+## 1.7.6
+- Fix CI: add missing lookupLong/lookupFloat used by Active Apps
+
 ## 1.7.5
 - Per-app RAM via IActivityManager (works when shell is blocked by R8)
 - Keep rules so Shizuku.newProcess is not stripped in release

@@ -1630,6 +1630,29 @@ private fun ActiveAppsContent(
     }
 }
 
+
+private fun lookupLong(map: Map<String, Long>, pkg: String): Long? {
+    map[pkg]?.let { return it }
+    var best: Long? = null
+    for ((k, v) in map) {
+        if (k == pkg || k.startsWith("$pkg:")) {
+            best = maxOf(best ?: 0L, v)
+        }
+    }
+    return best
+}
+
+private fun lookupFloat(map: Map<String, Float>, pkg: String): Float? {
+    map[pkg]?.let { return it }
+    var best: Float? = null
+    for ((k, v) in map) {
+        if (k == pkg || k.startsWith("$pkg:")) {
+            best = maxOf(best ?: 0f, v)
+        }
+    }
+    return best
+}
+
 @Composable
 private fun ActiveAppRow(
     app: ActiveApp,
