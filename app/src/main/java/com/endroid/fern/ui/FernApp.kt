@@ -2361,14 +2361,13 @@ private fun Spark(
 }
 
 
+
 @Composable
 private fun AdditionalContent() {
     val context = LocalContext.current
     val prefs = remember { com.endroid.fern.data.Prefs(context) }
     var overlayOn by remember { mutableStateOf(prefs.overlayEnabled) }
-    var canDraw by remember {
-        mutableStateOf(Settings.canDrawOverlays(context))
-    }
+    var canDraw by remember { mutableStateOf(Settings.canDrawOverlays(context)) }
     var widthDp by remember { mutableFloatStateOf(prefs.overlayWidthDp.toFloat()) }
     var heightDp by remember { mutableFloatStateOf(prefs.overlayHeightDp.toFloat()) }
     var opacity by remember { mutableFloatStateOf(prefs.overlayOpacity) }
@@ -2400,7 +2399,7 @@ private fun AdditionalContent() {
     }
 
     Column(
-        modifier = Modifier
+        Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 18.dp, vertical = 14.dp),
@@ -2412,21 +2411,19 @@ private fun AdditionalContent() {
             color = MaterialTheme.colorScheme.primary
         )
         Text(
-            "A draggable overlay showing live CPU, RAM, and GPU usage over other apps. Requires “Display over other apps”.",
+            "A draggable overlay showing live CPU, RAM, and GPU usage over other apps. Requires Display over other apps.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        ElevatedCard(
+        Card(
+            Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer
-            ),
-            modifier = Modifier.fillMaxWidth()
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
         ) {
             Column(Modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -2442,11 +2439,12 @@ private fun AdditionalContent() {
                         checked = overlayOn && canDraw,
                         onCheckedChange = { on ->
                             if (on && !canDraw) {
-                                val intent = Intent(
-                                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                    Uri.parse("package:${context.packageName}")
+                                context.startActivity(
+                                    Intent(
+                                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                        Uri.parse("package:${context.packageName}")
+                                    )
                                 )
-                                context.startActivity(intent)
                                 return@Switch
                             }
                             overlayOn = on
@@ -2455,35 +2453,31 @@ private fun AdditionalContent() {
                         }
                     )
                 }
-
                 if (!canDraw) {
                     FilledTonalButton(
                         onClick = {
-                            val intent = Intent(
-                                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                Uri.parse("package:${context.packageName}")
+                            context.startActivity(
+                                Intent(
+                                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                    Uri.parse("package:${context.packageName}")
+                                )
                             )
-                            context.startActivity(intent)
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(Icons.Default.OpenInNew, contentDescription = null)
-                        Spacer(Modifier = Modifier.size(8.dp))
                         Text("Grant display over apps")
                     }
                 }
             }
         }
 
-        ElevatedCard(
+        Card(
+            Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer
-            ),
-            modifier = Modifier.fillMaxWidth()
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
         ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Size & look", style = MaterialTheme.typography.titleSmall)
+            Column(Modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Size and look", style = MaterialTheme.typography.titleSmall)
                 Text("Width  ${widthDp.toInt()} dp", style = MaterialTheme.typography.labelMedium)
                 Slider(
                     value = widthDp,
@@ -2508,29 +2502,39 @@ private fun AdditionalContent() {
             }
         }
 
-        ElevatedCard(
+        Card(
+            Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer
-            ),
-            modifier = Modifier.fillMaxWidth()
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("Metrics", style = MaterialTheme.typography.titleSmall)
-                Row(Modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text("CPU")
                     Switch(checked = showCpu, onCheckedChange = { showCpu = it; applySize() })
                 }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text("RAM")
                     Switch(checked = showRam, onCheckedChange = { showRam = it; applySize() })
                 }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text("GPU")
                     Switch(checked = showGpu, onCheckedChange = { showGpu = it; applySize() })
                 }
                 Text(
-                    "GPU needs kernel sysfs access; shows “n/a” when blocked. Drag the island to move it.",
+                    "GPU needs kernel sysfs access; shows n/a when blocked. Drag the island to move it.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
