@@ -44,4 +44,59 @@ class Prefs(context: Context) {
         set(v) {
             p.edit().putBoolean("advanced_mode", v).commit()
         }
+
+    // Floating island overlay
+    var overlayEnabled: Boolean
+        get() = p.getBoolean("overlay_enabled", false)
+        set(v) {
+            p.edit().putBoolean("overlay_enabled", v).commit()
+        }
+
+    var overlayWidthDp: Int
+        get() = p.getInt("overlay_w_dp", 180).coerceIn(120, 420)
+        set(v) {
+            p.edit().putInt("overlay_w_dp", v.coerceIn(120, 420)).commit()
+        }
+
+    var overlayHeightDp: Int
+        get() = p.getInt("overlay_h_dp", 120).coerceIn(80, 280)
+        set(v) {
+            p.edit().putInt("overlay_h_dp", v.coerceIn(80, 280)).commit()
+        }
+
+    var overlayOpacity: Float
+        get() = p.getFloat("overlay_opacity", 0.92f).coerceIn(0.35f, 1f)
+        set(v) {
+            p.edit().putFloat("overlay_opacity", v.coerceIn(0.35f, 1f)).commit()
+        }
+
+    var overlayX: Int
+        get() = p.getInt("overlay_x", 40)
+        set(v) {
+            p.edit().putInt("overlay_x", v).commit()
+        }
+
+    var overlayY: Int
+        get() = p.getInt("overlay_y", 200)
+        set(v) {
+            p.edit().putInt("overlay_y", v).commit()
+        }
+
+    var overlayShowGpu: Boolean
+        get() = p.getBoolean("overlay_show_gpu", true)
+        set(v) {
+            p.edit().putBoolean("overlay_show_gpu", v).commit()
+        }
+
+    var overlayShowRam: Boolean
+        get() = p.getBoolean("overlay_show_ram", true)
+        set(v) {
+            p.edit().putBoolean("overlay_show_ram", v).commit()
+        }
+
+    var overlayShowCpu: Boolean
+        get() = p.getBoolean("overlay_show_cpu", true)
+        set(v) {
+            p.edit().putBoolean("overlay_show_cpu", v).commit()
+        }
 }
