@@ -26,3 +26,7 @@
 # Shizuku UserService shell
 -keep class com.endroid.fern.shell.** { *; }
 -keep interface com.endroid.fern.shell.** { *; }
+
+# Floating overlay service
+-keep class com.endroid.fern.overlay.** { *; }
+
