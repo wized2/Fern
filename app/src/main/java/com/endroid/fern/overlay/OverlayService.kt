@@ -18,8 +18,9 @@ import android.os.IBinder
 import android.os.Looper
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.View
 import android.view.WindowManager
-import android.widget.FrameLayout
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
 import com.endroid.fern.MainActivity
@@ -29,15 +30,16 @@ import com.endroid.fern.monitor.SystemMetrics
 import kotlin.math.roundToInt
 
 /**
- * Notch-style Dynamic Island pill:  temp° · RAM%
- * Size and position driven by Prefs (Additional screen sliders).
+ * Notch-style Dynamic Island: temp · RAM with adjustable gap and optional labels.
  */
 class OverlayService : Service() {
 
     private lateinit var prefs: Prefs
     private lateinit var windowManager: WindowManager
-    private var island: FrameLayout? = null
-    private var label: TextView? = null
+    private var island: LinearLayout? = null
+    private var tempTv: TextView? = null
+    private var gapView: View? = null
+    private var ramTv: TextView? = null
     private val handler = Handler(Looper.getMainLooper())
     private var params: WindowManager.LayoutParams? = null
 
@@ -55,7 +57,7 @@ class OverlayService : Service() {
         super.onCreate()
         prefs = Prefs(this)
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-        startAsForeground()
+        startAsForegroundQuiet()
         attachIsland()
         handler.post(tick)
     }
@@ -66,10 +68,7 @@ class OverlayService : Service() {
                 stopSelf()
                 return START_NOT_STICKY
             }
-            ACTION_RELOAD -> {
-                // Re-read prefs and re-apply size + position
-                applyLayoutFromPrefs()
-            }
+            ACTION_RELOAD -> applyLayoutFromPrefs()
         }
         return START_STICKY
     }
@@ -81,29 +80,45 @@ class OverlayService : Service() {
         super.onDestroy()
     }
 
-    private fun startAsForeground() {
-        val channelId = "fern_overlay"
+    /**
+     * Android requires a FGS notification — keep it as invisible as the platform allows
+     * (MIN importance, silent, no badge, secret visibility).
+     */
+    private fun startAsForegroundQuiet() {
+        val channelId = "fern_overlay_quiet"
         val nm = getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(
-            NotificationChannel(channelId, "Fern island", NotificationManager.IMPORTANCE_LOW)
-        )
+        val ch = NotificationChannel(
+            channelId,
+            "Background",
+            NotificationManager.IMPORTANCE_MIN
+        ).apply {
+            description = "Required by Android for overlay"
+            setShowBadge(false)
+            enableLights(false)
+            enableVibration(false)
+            setSound(null, null)
+            lockscreenVisibility = Notification.VISIBILITY_SECRET
+        }
+        nm.createNotificationChannel(ch)
+
         val open = PendingIntent.getActivity(
             this, 0, Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        val stop = PendingIntent.getService(
-            this, 1,
-            Intent(this, OverlayService::class.java).setAction(ACTION_STOP),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
         val notif: Notification = NotificationCompat.Builder(this, channelId)
-            .setContentTitle("Fern island")
-            .setContentText("Temp · RAM notch island")
+            .setContentTitle(" ")
+            .setContentText(" ")
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(open)
-            .addAction(0, "Stop", stop)
             .setOngoing(true)
+            .setSilent(true)
+            .setPriority(NotificationCompat.PRIORITY_MIN)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setVisibility(NotificationCompat.VISIBILITY_SECRET)
+            .setShowWhen(false)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .build()
+
         if (Build.VERSION.SDK_INT >= 34) {
             startForeground(NOTIF_ID, notif, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         } else {
@@ -115,7 +130,16 @@ class OverlayService : Service() {
         TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v, resources.displayMetrics).roundToInt()
 
     private fun screenWidth(): Int = resources.displayMetrics.widthPixels
-    private fun screenHeight(): Int = resources.displayMetrics.heightPixels
+
+    private fun makeLabel(): TextView = TextView(this).apply {
+        setTextColor(Color.parseColor("#E8F5E9"))
+        typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+        textSize = 11.5f
+        letterSpacing = 0.01f
+        gravity = Gravity.CENTER_VERTICAL
+        maxLines = 1
+        isSingleLine = true
+    }
 
     private fun attachIsland() {
         if (island != null) return
@@ -123,35 +147,51 @@ class OverlayService : Service() {
         val wPx = dp(prefs.overlayWidthDp.toFloat())
         val hPx = dp(prefs.overlayHeightDp.toFloat())
         val alpha = (prefs.overlayOpacity * 255).toInt().coerceIn(160, 255)
+        val gapPx = dp(prefs.overlayGapDp.toFloat())
 
         val pill = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
-            cornerRadius = (hPx / 2f)
+            cornerRadius = hPx / 2f
             setColor(Color.argb(alpha, 0x1B, 0x5E, 0x20))
             setStroke(dp(1f), Color.argb(alpha, 0x66, 0xBB, 0x6A))
         }
 
-        val root = FrameLayout(this).apply {
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
             background = pill
+            setPadding(dp(12f), 0, dp(12f), 0)
             elevation = dp(6f).toFloat()
         }
-        val tv = TextView(this).apply {
-            setTextColor(Color.parseColor("#E8F5E9"))
-            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
-            textSize = 11.5f
-            letterSpacing = 0.02f
-            gravity = android.view.Gravity.CENTER
-            text = "—  ·  —"
-            contentDescription = "Temperature and RAM"
+
+        val tTv = makeLabel()
+        val gap = View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(gapPx, 1)
         }
-        root.addView(
-            tv,
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-        )
-        label = tv
+        val mid = TextView(this).apply {
+            text = "·"
+            setTextColor(Color.parseColor("#A5D6A7"))
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+            textSize = 12f
+            gravity = Gravity.CENTER
+            setPadding(dp(2f), 0, dp(2f), 0)
+        }
+        val gap2 = View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(gapPx, 1)
+        }
+        val rTv = makeLabel()
+
+        root.addView(tTv, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
+        root.addView(gap)
+        root.addView(mid, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.MATCH_PARENT))
+        root.addView(gap2)
+        root.addView(rTv, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
+
+        tempTv = tTv
+        gapView = gap
+        ramTv = rTv
+        // store second gap via tag for applyLayout
+        root.tag = gap2
 
         val lp = WindowManager.LayoutParams(
             wPx,
@@ -163,7 +203,7 @@ class OverlayService : Service() {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            val (x, y) = computeXy(wPx, hPx)
+            val (x, y) = computeXy(wPx)
             this.x = x
             this.y = y
         }
@@ -178,14 +218,13 @@ class OverlayService : Service() {
         }
     }
 
-    private fun computeXy(wPx: Int, hPx: Int): Pair<Int, Int> {
+    private fun computeXy(wPx: Int): Pair<Int, Int> {
         val sw = screenWidth()
         val x = ((prefs.overlayXPercent / 100f) * (sw - wPx)).roundToInt().coerceAtLeast(0)
         val y = dp(prefs.overlayYDp.toFloat()).coerceAtLeast(0)
         return x to y
     }
 
-    /** Apply latest width / height / opacity / position from prefs without full service restart. */
     private fun applyLayoutFromPrefs() {
         val root = island
         val lp = params
@@ -197,27 +236,32 @@ class OverlayService : Service() {
         val wPx = dp(prefs.overlayWidthDp.toFloat())
         val hPx = dp(prefs.overlayHeightDp.toFloat())
         val alpha = (prefs.overlayOpacity * 255).toInt().coerceIn(160, 255)
+        val gapPx = dp(prefs.overlayGapDp.toFloat())
 
         val pill = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
-            cornerRadius = (hPx / 2f)
+            cornerRadius = hPx / 2f
             setColor(Color.argb(alpha, 0x1B, 0x5E, 0x20))
             setStroke(dp(1f), Color.argb(alpha, 0x66, 0xBB, 0x6A))
         }
         root.background = pill
 
+        gapView?.layoutParams = LinearLayout.LayoutParams(gapPx, 1)
+        (root.tag as? View)?.layoutParams = LinearLayout.LayoutParams(gapPx, 1)
+
         lp.width = wPx
         lp.height = hPx
-        val (x, y) = computeXy(wPx, hPx)
+        val (x, y) = computeXy(wPx)
         lp.x = x
         lp.y = y
-        lp.gravity = Gravity.TOP or Gravity.START
         try {
             windowManager.updateViewLayout(root, lp)
         } catch (_: Exception) {
             detachIsland()
             attachIsland()
+            return
         }
+        refreshStats()
     }
 
     private fun detachIsland() {
@@ -227,7 +271,9 @@ class OverlayService : Service() {
             } catch (_: Exception) { }
         }
         island = null
-        label = null
+        tempTv = null
+        gapView = null
+        ramTv = null
         params = null
     }
 
@@ -239,10 +285,22 @@ class OverlayService : Service() {
         }
         val temp = snap?.batteryTempC
         val ram = snap?.ramPercent
-        val tempStr = if (temp != null) "${temp.roundToInt()}°" else "—"
-        val ramStr = if (ram != null) "${ram.roundToInt()}%" else "—"
-        label?.text = "$tempStr  ·  $ramStr"
-        label?.contentDescription = "Temperature $tempStr, RAM $ramStr"
+        val labels = prefs.overlayShowLabels
+        val tempStr = when {
+            temp == null -> if (labels) "Temp —" else "—"
+            labels -> "Temp ${temp.roundToInt()}°"
+            else -> "${temp.roundToInt()}°"
+        }
+        val ramStr = when {
+            ram == null -> if (labels) "RAM —" else "—"
+            labels -> "RAM ${ram.roundToInt()}%"
+            else -> "${ram.roundToInt()}%"
+        }
+        tempTv?.text = tempStr
+        ramTv?.text = ramStr
+        tempTv?.gravity = Gravity.CENTER_VERTICAL or Gravity.END
+        ramTv?.gravity = Gravity.CENTER_VERTICAL or Gravity.START
+        island?.contentDescription = "$tempStr, $ramStr"
     }
 
     companion object {

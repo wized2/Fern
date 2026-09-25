@@ -53,9 +53,9 @@ class Prefs(context: Context) {
         }
 
     var overlayWidthDp: Int
-        get() = p.getInt("overlay_w_dp", 168).coerceIn(120, 280)
+        get() = p.getInt("overlay_w_dp", 168).coerceIn(120, 320)
         set(v) {
-            p.edit().putInt("overlay_w_dp", v.coerceIn(120, 280)).commit()
+            p.edit().putInt("overlay_w_dp", v.coerceIn(120, 320)).commit()
         }
 
     var overlayHeightDp: Int
@@ -82,6 +82,20 @@ class Prefs(context: Context) {
         get() = p.getInt("overlay_y_dp", 6).coerceIn(0, 120)
         set(v) {
             p.edit().putInt("overlay_y_dp", v.coerceIn(0, 120)).commit()
+        }
+
+    /** Extra space between temp and RAM (dp), 0–48. */
+    var overlayGapDp: Int
+        get() = p.getInt("overlay_gap_dp", 12).coerceIn(0, 48)
+        set(v) {
+            p.edit().putInt("overlay_gap_dp", v.coerceIn(0, 48)).commit()
+        }
+
+    /** When true: "Temp 37° · RAM 81%" instead of "37° · 81%". */
+    var overlayShowLabels: Boolean
+        get() = p.getBoolean("overlay_labels", false)
+        set(v) {
+            p.edit().putBoolean("overlay_labels", v).commit()
         }
 
     var overlayShowGpu: Boolean

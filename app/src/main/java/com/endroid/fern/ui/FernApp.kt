@@ -2359,6 +2359,7 @@ private fun Spark(
 }
 
 
+
 @Composable
 private fun AdditionalContent() {
     val context = LocalContext.current
@@ -2370,6 +2371,8 @@ private fun AdditionalContent() {
     var opacity by remember { mutableFloatStateOf(prefs.overlayOpacity) }
     var xPercent by remember { mutableFloatStateOf(prefs.overlayXPercent.toFloat()) }
     var yDp by remember { mutableFloatStateOf(prefs.overlayYDp.toFloat()) }
+    var gapDp by remember { mutableFloatStateOf(prefs.overlayGapDp.toFloat()) }
+    var showLabels by remember { mutableStateOf(prefs.overlayShowLabels) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -2388,6 +2391,8 @@ private fun AdditionalContent() {
         prefs.overlayOpacity = opacity
         prefs.overlayXPercent = xPercent.toInt()
         prefs.overlayYDp = yDp.toInt()
+        prefs.overlayGapDp = gapDp.toInt()
+        prefs.overlayShowLabels = showLabels
         if (overlayOn && canDraw) OverlayService.reload(context)
     }
 
@@ -2404,7 +2409,7 @@ private fun AdditionalContent() {
             color = MaterialTheme.colorScheme.primary
         )
         Text(
-            "Green M3 pill near the camera: temp° · RAM%. Adjust size and position with the sliders.",
+            "Green pill near the camera. Tune size, gap, labels, and position. Overlay runs quietly (Android still requires a minimal silent service entry).",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -2472,6 +2477,27 @@ private fun AdditionalContent() {
                         Text("Grant display over apps")
                     }
                 }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Show labels", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            if (showLabels) "Temp 37° · RAM 81%" else "37° · 81%",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = showLabels,
+                        onCheckedChange = {
+                            showLabels = it
+                            applyLayout()
+                        }
+                    )
+                }
             }
         }
 
@@ -2492,7 +2518,7 @@ private fun AdditionalContent() {
                 Slider(
                     value = widthDp,
                     onValueChange = { widthDp = it },
-                    valueRange = 120f..280f,
+                    valueRange = 120f..320f,
                     onValueChangeFinished = { applyLayout() }
                 )
                 Text("Height  " + heightDp.toInt() + " dp", style = MaterialTheme.typography.labelMedium)
@@ -2500,6 +2526,16 @@ private fun AdditionalContent() {
                     value = heightDp,
                     onValueChange = { heightDp = it },
                     valueRange = 28f..56f,
+                    onValueChangeFinished = { applyLayout() }
+                )
+                Text(
+                    "Gap between temp and RAM  " + gapDp.toInt() + " dp",
+                    style = MaterialTheme.typography.labelMedium
+                )
+                Slider(
+                    value = gapDp,
+                    onValueChange = { gapDp = it },
+                    valueRange = 0f..48f,
                     onValueChangeFinished = { applyLayout() }
                 )
                 Text("Opacity  " + (opacity * 100).toInt() + "%", style = MaterialTheme.typography.labelMedium)
@@ -2546,7 +2582,7 @@ private fun AdditionalContent() {
                     onValueChangeFinished = { applyLayout() }
                 )
                 Text(
-                    "Tip: for a camera-notch look, try Horizontal ~50% and Vertical ~4–12 dp.",
+                    "Tip: wider gap + labels works best when Width is ~200–280 dp.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
