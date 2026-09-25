@@ -18,9 +18,8 @@ import android.os.IBinder
 import android.os.Looper
 import android.util.TypedValue
 import android.view.Gravity
-import android.view.MotionEvent
 import android.view.WindowManager
-import android.widget.LinearLayout
+import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
 import com.endroid.fern.MainActivity
@@ -30,14 +29,14 @@ import com.endroid.fern.monitor.SystemMetrics
 import kotlin.math.roundToInt
 
 /**
- * Notch-style Dynamic Island pill (temp · RAM) near the front camera.
- * Green M3 rounded bar. Requires SYSTEM_ALERT_WINDOW.
+ * Notch-style Dynamic Island pill:  temp° · RAM%
+ * Size and position driven by Prefs (Additional screen sliders).
  */
 class OverlayService : Service() {
 
     private lateinit var prefs: Prefs
     private lateinit var windowManager: WindowManager
-    private var island: LinearLayout? = null
+    private var island: FrameLayout? = null
     private var label: TextView? = null
     private val handler = Handler(Looper.getMainLooper())
     private var params: WindowManager.LayoutParams? = null
@@ -68,8 +67,8 @@ class OverlayService : Service() {
                 return START_NOT_STICKY
             }
             ACTION_RELOAD -> {
-                detachIsland()
-                attachIsland()
+                // Re-read prefs and re-apply size + position
+                applyLayoutFromPrefs()
             }
         }
         return START_STICKY
@@ -115,98 +114,60 @@ class OverlayService : Service() {
     private fun dp(v: Float): Int =
         TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v, resources.displayMetrics).roundToInt()
 
+    private fun screenWidth(): Int = resources.displayMetrics.widthPixels
+    private fun screenHeight(): Int = resources.displayMetrics.heightPixels
+
     private fun attachIsland() {
         if (island != null) return
 
-        // Compact Dynamic Island defaults (user can still resize in Additional)
-        val widthDp = prefs.overlayWidthDp.coerceIn(140, 280)
-        val heightDp = prefs.overlayHeightDp.coerceIn(28, 48)
+        val wPx = dp(prefs.overlayWidthDp.toFloat())
+        val hPx = dp(prefs.overlayHeightDp.toFloat())
         val alpha = (prefs.overlayOpacity * 255).toInt().coerceIn(160, 255)
 
-        // Fern green M3 pill
         val pill = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
-            cornerRadius = dp(heightDp / 2f).toFloat()
-            setColor(Color.argb(alpha, 0x1B, 0x5E, 0x20)) // deep green
+            cornerRadius = (hPx / 2f)
+            setColor(Color.argb(alpha, 0x1B, 0x5E, 0x20))
             setStroke(dp(1f), Color.argb(alpha, 0x66, 0xBB, 0x6A))
         }
 
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
+        val root = FrameLayout(this).apply {
             background = pill
-            setPadding(dp(14f), dp(4f), dp(14f), dp(4f))
             elevation = dp(6f).toFloat()
         }
-
         val tv = TextView(this).apply {
             setTextColor(Color.parseColor("#E8F5E9"))
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
             textSize = 11.5f
             letterSpacing = 0.02f
-            gravity = Gravity.CENTER
+            gravity = android.view.Gravity.CENTER
             text = "—  ·  —"
-            importantForAccessibility = android.view.View.IMPORTANT_FOR_ACCESSIBILITY_YES
             contentDescription = "Temperature and RAM"
         }
         root.addView(
             tv,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
             )
         )
         label = tv
 
-        val type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        val flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
         val lp = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            dp(heightDp.toFloat()),
-            type,
-            flags,
+            wPx,
+            hPx,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            // Sit under status bar / near camera cutout
-            y = if (prefs.overlayY > 0 && prefs.overlayY < 200) prefs.overlayY else dp(6f)
-            x = prefs.overlayX
+            gravity = Gravity.TOP or Gravity.START
+            val (x, y) = computeXy(wPx, hPx)
+            this.x = x
+            this.y = y
         }
         params = lp
-
-        var lastX = 0
-        var lastY = 0
-        root.setOnTouchListener { _, e ->
-            when (e.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    lastX = e.rawX.toInt()
-                    lastY = e.rawY.toInt()
-                    true
-                }
-                MotionEvent.ACTION_MOVE -> {
-                    val dx = e.rawX.toInt() - lastX
-                    val dy = e.rawY.toInt() - lastY
-                    lastX = e.rawX.toInt()
-                    lastY = e.rawY.toInt()
-                    // Switch to free positioning once user drags
-                    lp.gravity = Gravity.TOP or Gravity.START
-                    lp.x += dx
-                    lp.y += dy
-                    try {
-                        windowManager.updateViewLayout(root, lp)
-                    } catch (_: Exception) { }
-                    true
-                }
-                MotionEvent.ACTION_UP -> {
-                    prefs.overlayX = lp.x
-                    prefs.overlayY = lp.y
-                    true
-                }
-                else -> false
-            }
-        }
 
         try {
             windowManager.addView(root, lp)
@@ -214,6 +175,48 @@ class OverlayService : Service() {
             refreshStats()
         } catch (_: Exception) {
             stopSelf()
+        }
+    }
+
+    private fun computeXy(wPx: Int, hPx: Int): Pair<Int, Int> {
+        val sw = screenWidth()
+        val x = ((prefs.overlayXPercent / 100f) * (sw - wPx)).roundToInt().coerceAtLeast(0)
+        val y = dp(prefs.overlayYDp.toFloat()).coerceAtLeast(0)
+        return x to y
+    }
+
+    /** Apply latest width / height / opacity / position from prefs without full service restart. */
+    private fun applyLayoutFromPrefs() {
+        val root = island
+        val lp = params
+        if (root == null || lp == null) {
+            detachIsland()
+            attachIsland()
+            return
+        }
+        val wPx = dp(prefs.overlayWidthDp.toFloat())
+        val hPx = dp(prefs.overlayHeightDp.toFloat())
+        val alpha = (prefs.overlayOpacity * 255).toInt().coerceIn(160, 255)
+
+        val pill = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = (hPx / 2f)
+            setColor(Color.argb(alpha, 0x1B, 0x5E, 0x20))
+            setStroke(dp(1f), Color.argb(alpha, 0x66, 0xBB, 0x6A))
+        }
+        root.background = pill
+
+        lp.width = wPx
+        lp.height = hPx
+        val (x, y) = computeXy(wPx, hPx)
+        lp.x = x
+        lp.y = y
+        lp.gravity = Gravity.TOP or Gravity.START
+        try {
+            windowManager.updateViewLayout(root, lp)
+        } catch (_: Exception) {
+            detachIsland()
+            attachIsland()
         }
     }
 
@@ -225,6 +228,7 @@ class OverlayService : Service() {
         }
         island = null
         label = null
+        params = null
     }
 
     private fun refreshStats() {
@@ -235,10 +239,8 @@ class OverlayService : Service() {
         }
         val temp = snap?.batteryTempC
         val ram = snap?.ramPercent
-
         val tempStr = if (temp != null) "${temp.roundToInt()}°" else "—"
         val ramStr = if (ram != null) "${ram.roundToInt()}%" else "—"
-        // Center dot stands in for the camera hole (Dynamic Island style)
         label?.text = "$tempStr  ·  $ramStr"
         label?.contentDescription = "Temperature $tempStr, RAM $ramStr"
     }

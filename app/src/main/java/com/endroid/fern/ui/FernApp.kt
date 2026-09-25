@@ -2358,6 +2358,7 @@ private fun Spark(
     }
 }
 
+
 @Composable
 private fun AdditionalContent() {
     val context = LocalContext.current
@@ -2367,9 +2368,8 @@ private fun AdditionalContent() {
     var widthDp by remember { mutableFloatStateOf(prefs.overlayWidthDp.toFloat()) }
     var heightDp by remember { mutableFloatStateOf(prefs.overlayHeightDp.toFloat()) }
     var opacity by remember { mutableFloatStateOf(prefs.overlayOpacity) }
-    var showCpu by remember { mutableStateOf(prefs.overlayShowCpu) }
-    var showRam by remember { mutableStateOf(prefs.overlayShowRam) }
-    var showGpu by remember { mutableStateOf(prefs.overlayShowGpu) }
+    var xPercent by remember { mutableFloatStateOf(prefs.overlayXPercent.toFloat()) }
+    var yDp by remember { mutableFloatStateOf(prefs.overlayYDp.toFloat()) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -2382,13 +2382,12 @@ private fun AdditionalContent() {
         onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
     }
 
-    fun applySize() {
+    fun applyLayout() {
         prefs.overlayWidthDp = widthDp.toInt()
         prefs.overlayHeightDp = heightDp.toInt()
         prefs.overlayOpacity = opacity
-        prefs.overlayShowCpu = showCpu
-        prefs.overlayShowRam = showRam
-        prefs.overlayShowGpu = showGpu
+        prefs.overlayXPercent = xPercent.toInt()
+        prefs.overlayYDp = yDp.toInt()
         if (overlayOn && canDraw) OverlayService.reload(context)
     }
 
@@ -2405,7 +2404,7 @@ private fun AdditionalContent() {
             color = MaterialTheme.colorScheme.primary
         )
         Text(
-            "Dynamic Island–style green pill near the camera. Shows temp · RAM. Needs Display over other apps.",
+            "Green M3 pill near the camera: temp° · RAM%. Adjust size and position with the sliders.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -2449,7 +2448,12 @@ private fun AdditionalContent() {
                             }
                             overlayOn = on
                             prefs.overlayEnabled = on
-                            if (on) OverlayService.start(context) else OverlayService.stop(context)
+                            if (on) {
+                                applyLayout()
+                                OverlayService.start(context)
+                            } else {
+                                OverlayService.stop(context)
+                            }
                         }
                     )
                 }
@@ -2483,27 +2487,27 @@ private fun AdditionalContent() {
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("Size and look", style = MaterialTheme.typography.titleSmall)
+                Text("Size", style = MaterialTheme.typography.titleSmall)
                 Text("Width  " + widthDp.toInt() + " dp", style = MaterialTheme.typography.labelMedium)
                 Slider(
                     value = widthDp,
                     onValueChange = { widthDp = it },
                     valueRange = 120f..280f,
-                    onValueChangeFinished = { applySize() }
+                    onValueChangeFinished = { applyLayout() }
                 )
                 Text("Height  " + heightDp.toInt() + " dp", style = MaterialTheme.typography.labelMedium)
                 Slider(
                     value = heightDp,
                     onValueChange = { heightDp = it },
                     valueRange = 28f..56f,
-                    onValueChangeFinished = { applySize() }
+                    onValueChangeFinished = { applyLayout() }
                 )
                 Text("Opacity  " + (opacity * 100).toInt() + "%", style = MaterialTheme.typography.labelMedium)
                 Slider(
                     value = opacity,
                     onValueChange = { opacity = it },
                     valueRange = 0.35f..1f,
-                    onValueChangeFinished = { applySize() }
+                    onValueChangeFinished = { applyLayout() }
                 )
             }
         }
@@ -2518,11 +2522,31 @@ private fun AdditionalContent() {
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("About this island", style = MaterialTheme.typography.titleSmall)
+                Text("Position", style = MaterialTheme.typography.titleSmall)
                 Text(
-                    "Format:  temp°  ·  RAM%   — the center dot sits like a camera cutout. Green M3 pill. Drag to move.",
+                    "Horizontal  " + xPercent.toInt() + "%  (0 left · 50 center · 100 right)",
+                    style = MaterialTheme.typography.labelMedium
+                )
+                Slider(
+                    value = xPercent,
+                    onValueChange = { xPercent = it },
+                    valueRange = 0f..100f,
+                    onValueChangeFinished = { applyLayout() }
+                )
+                Text(
+                    "Vertical  " + yDp.toInt() + " dp from top",
+                    style = MaterialTheme.typography.labelMedium
+                )
+                Slider(
+                    value = yDp,
+                    onValueChange = { yDp = it },
+                    valueRange = 0f..120f,
+                    onValueChangeFinished = { applyLayout() }
+                )
+                Text(
+                    "Tip: for a camera-notch look, try Horizontal ~50% and Vertical ~4–12 dp.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

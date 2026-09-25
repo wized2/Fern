@@ -70,16 +70,18 @@ class Prefs(context: Context) {
             p.edit().putFloat("overlay_opacity", v.coerceIn(0.35f, 1f)).commit()
         }
 
-    var overlayX: Int
-        get() = p.getInt("overlay_x", 40)
+    /** Horizontal position 0–100 (% of screen width; 50 = center). */
+    var overlayXPercent: Int
+        get() = p.getInt("overlay_x_pct", 50).coerceIn(0, 100)
         set(v) {
-            p.edit().putInt("overlay_x", v).commit()
+            p.edit().putInt("overlay_x_pct", v.coerceIn(0, 100)).commit()
         }
 
-    var overlayY: Int
-        get() = p.getInt("overlay_y", 200)
+    /** Vertical offset from top of screen in dp (0–120). */
+    var overlayYDp: Int
+        get() = p.getInt("overlay_y_dp", 6).coerceIn(0, 120)
         set(v) {
-            p.edit().putInt("overlay_y", v).commit()
+            p.edit().putInt("overlay_y_dp", v.coerceIn(0, 120)).commit()
         }
 
     var overlayShowGpu: Boolean
