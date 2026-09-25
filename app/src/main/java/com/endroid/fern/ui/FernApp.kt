@@ -1212,7 +1212,7 @@ private fun MoreContent(onOpen: (MoreSub) -> Unit) {
         MoreItem("Tests", "Run device tests", Icons.Default.Science, MoreSub.Tests),
         MoreItem("Sensors", "Sensors available on this device", Icons.Default.Sensors, MoreSub.Sensors),
         MoreItem("Settings", "Theme, refresh rate, screen", Icons.Default.Settings, MoreSub.Settings),
-        MoreItem("Additional", "Floating island · CPU · RAM · GPU", Icons.Default.Layers, MoreSub.Additional),
+        MoreItem("Additional", "Notch island · temp · RAM", Icons.Default.Layers, MoreSub.Additional),
         MoreItem("About", "Version, license, source", Icons.Default.Info, MoreSub.About)
     )
     Column(
@@ -2400,12 +2400,12 @@ private fun AdditionalContent() {
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Text(
-            "Floating island",
+            "Notch island",
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.primary
         )
         Text(
-            "Draggable overlay for live CPU, RAM, and GPU. Needs Display over other apps.",
+            "Dynamic Island–style green pill near the camera. Shows temp · RAM. Needs Display over other apps.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -2488,14 +2488,14 @@ private fun AdditionalContent() {
                 Slider(
                     value = widthDp,
                     onValueChange = { widthDp = it },
-                    valueRange = 120f..420f,
+                    valueRange = 120f..280f,
                     onValueChangeFinished = { applySize() }
                 )
                 Text("Height  " + heightDp.toInt() + " dp", style = MaterialTheme.typography.labelMedium)
                 Slider(
                     value = heightDp,
                     onValueChange = { heightDp = it },
-                    valueRange = 80f..280f,
+                    valueRange = 28f..56f,
                     onValueChangeFinished = { applySize() }
                 )
                 Text("Opacity  " + (opacity * 100).toInt() + "%", style = MaterialTheme.typography.labelMedium)
@@ -2520,33 +2520,9 @@ private fun AdditionalContent() {
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text("Metrics", style = MaterialTheme.typography.titleSmall)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("CPU")
-                    Switch(checked = showCpu, onCheckedChange = { showCpu = it; applySize() })
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("RAM")
-                    Switch(checked = showRam, onCheckedChange = { showRam = it; applySize() })
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("GPU")
-                    Switch(checked = showGpu, onCheckedChange = { showGpu = it; applySize() })
-                }
+                Text("About this island", style = MaterialTheme.typography.titleSmall)
                 Text(
-                    "GPU needs sysfs access; shows n/a when blocked. Drag the island to move it.",
+                    "Format:  temp°  ·  RAM%   — the center dot sits like a camera cutout. Green M3 pill. Drag to move.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

@@ -53,15 +53,15 @@ class Prefs(context: Context) {
         }
 
     var overlayWidthDp: Int
-        get() = p.getInt("overlay_w_dp", 180).coerceIn(120, 420)
+        get() = p.getInt("overlay_w_dp", 168).coerceIn(120, 280)
         set(v) {
-            p.edit().putInt("overlay_w_dp", v.coerceIn(120, 420)).commit()
+            p.edit().putInt("overlay_w_dp", v.coerceIn(120, 280)).commit()
         }
 
     var overlayHeightDp: Int
-        get() = p.getInt("overlay_h_dp", 120).coerceIn(80, 280)
+        get() = p.getInt("overlay_h_dp", 34).coerceIn(28, 56)
         set(v) {
-            p.edit().putInt("overlay_h_dp", v.coerceIn(80, 280)).commit()
+            p.edit().putInt("overlay_h_dp", v.coerceIn(28, 56)).commit()
         }
 
     var overlayOpacity: Float
