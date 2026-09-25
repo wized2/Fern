@@ -48,7 +48,6 @@ import androidx.compose.material.icons.filled.BatteryFull
 import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Memory
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.DeviceThermostat
@@ -87,9 +86,6 @@ import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Switch
 import android.app.usage.UsageStatsManager
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import com.endroid.fern.monitor.ActiveApp
 import com.endroid.fern.monitor.ActiveAppsRepository
 import com.endroid.fern.monitor.ActiveWindow
@@ -167,7 +163,6 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.material3.Button
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.sp
 import com.endroid.fern.R
