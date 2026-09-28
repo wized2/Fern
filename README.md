@@ -74,6 +74,10 @@ Release signing uses GitHub secrets when present; otherwise falls back to the de
 
 See [CHANGELOG.md](CHANGELOG.md).
 
+## Website
+
+Landing page: [docs/index.html](docs/index.html) — enable **GitHub Pages** from the `docs/` folder to publish it.
+
 ## License
 
 MIT · [wized2/Fern](https://github.com/wized2/Fern)

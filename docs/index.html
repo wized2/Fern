@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fern — Live system pulse for Android</title>
+  <meta name="description" content="Fern is a Material 3 system monitor for Android. CPU, RAM, thermal, battery, storage, apps — offline, no ads." />
+  <meta name="theme-color" content="#1B5E20" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f4f7f4;
+      --surface: #ffffff;
+      --surface-2: #e8f0e9;
+      --text: #1a2e1c;
+      --muted: #5c7260;
+      --accent: #2e7d32;
+      --accent-deep: #1b5e20;
+      --accent-soft: rgba(46, 125, 50, 0.12);
+      --border: rgba(27, 94, 32, 0.12);
+      --shadow: 0 12px 40px rgba(27, 94, 32, 0.08);
+      --radius: 20px;
+      --font: "Inter", system-ui, -apple-system, sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1610;
+        --surface: #172019;
+        --surface-2: #1e2a20;
+        --text: #e8f0e9;
+        --muted: #9bb0a0;
+        --accent: #81c784;
+        --accent-deep: #a5d6a7;
+        --accent-soft: rgba(129, 199, 132, 0.14);
+        --border: rgba(165, 214, 167, 0.12);
+        --shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+      min-height: 100vh;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .nav {
+      position: sticky; top: 0; z-index: 50;
+      backdrop-filter: blur(12px);
+      background: color-mix(in srgb, var(--bg) 85%, transparent);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      max-width: 1080px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px;
+    }
+    .brand {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 700; font-size: 1.15rem; color: var(--accent-deep);
+      text-decoration: none;
+    }
+    .brand-mark {
+      width: 32px; height: 32px; border-radius: 10px;
+      background: linear-gradient(145deg, var(--accent), var(--accent-deep));
+      display: grid; place-items: center; color: #fff; font-size: 14px;
+    }
+    .nav-links { display: flex; gap: 18px; align-items: center; font-size: 0.92rem; }
+    .nav-links a { color: var(--muted); text-decoration: none; font-weight: 500; }
+    .nav-links a:hover { color: var(--accent); }
+
+    .hero {
+      max-width: 1080px; margin: 0 auto;
+      padding: 48px 20px 32px;
+      display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 40px; align-items: center;
+    }
+    @media (max-width: 860px) {
+      .hero { grid-template-columns: 1fr; text-align: center; padding-top: 28px; }
+      .hero-actions { justify-content: center; }
+      .nav-links .hide-sm { display: none; }
+    }
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 0.8rem; font-weight: 600; letter-spacing: 0.04em;
+      text-transform: uppercase; color: var(--accent);
+      background: var(--accent-soft); border-radius: 999px;
+      padding: 6px 12px; margin-bottom: 16px;
+    }
+    .eyebrow .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft);
+      animation: pulse 1.6s ease infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.55; transform: scale(0.85); }
+    }
+    h1 {
+      font-size: clamp(2rem, 4vw, 2.85rem);
+      line-height: 1.15; font-weight: 700;
+      letter-spacing: -0.02em; margin-bottom: 14px;
+    }
+    .lead {
+      font-size: 1.08rem; color: var(--muted); max-width: 34em; margin-bottom: 24px;
+    }
+    @media (max-width: 860px) { .lead { margin-inline: auto; } }
+    .hero-actions {
+      display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 18px;
+    }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      border: none; border-radius: 999px; padding: 14px 22px;
+      font-weight: 600; font-size: 0.98rem; cursor: pointer;
+      font-family: inherit; transition: transform .15s ease, box-shadow .15s ease, opacity .15s;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary {
+      background: linear-gradient(145deg, var(--accent), var(--accent-deep));
+      color: #fff; box-shadow: 0 8px 24px rgba(27, 94, 32, 0.28);
+      text-decoration: none;
+    }
+    .btn-primary:hover { text-decoration: none; filter: brightness(1.05); }
+    .btn-primary[disabled] { opacity: 0.65; cursor: wait; }
+    .btn-ghost {
+      background: var(--surface); color: var(--text);
+      border: 1px solid var(--border); text-decoration: none;
+    }
+    .btn-ghost:hover { text-decoration: none; background: var(--surface-2); }
+    .meta {
+      font-size: 0.85rem; color: var(--muted);
+    }
+    .meta strong { color: var(--text); font-weight: 600; }
+
+    .phone {
+      position: relative; max-width: 280px; margin: 0 auto;
+      border-radius: 32px; padding: 10px;
+      background: linear-gradient(160deg, var(--surface-2), var(--surface));
+      box-shadow: var(--shadow); border: 1px solid var(--border);
+    }
+    .phone img {
+      width: 100%; display: block; border-radius: 24px;
+      background: var(--surface-2);
+    }
+
+    section { max-width: 1080px; margin: 0 auto; padding: 28px 20px 12px; }
+    .section-title {
+      font-size: 1.45rem; font-weight: 700; letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+    .section-sub { color: var(--muted); margin-bottom: 22px; max-width: 40em; }
+
+    .features {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+    }
+    @media (max-width: 800px) { .features { grid-template-columns: 1fr; } }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 18px 18px 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.03);
+    }
+    .card h3 {
+      font-size: 1.02rem; margin-bottom: 6px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card h3 span {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: var(--accent-soft); color: var(--accent-deep);
+      display: grid; place-items: center; font-size: 14px;
+    }
+    .card p { font-size: 0.92rem; color: var(--muted); }
+
+    .shots {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+    }
+    @media (max-width: 800px) { .shots { grid-template-columns: 1fr; max-width: 320px; margin-inline: auto; } }
+    .shot {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 24px; padding: 12px; box-shadow: var(--shadow);
+    }
+    .shot img {
+      width: 100%; border-radius: 16px; display: block;
+      aspect-ratio: 9/16; object-fit: cover; object-position: top;
+      background: var(--surface-2);
+    }
+    .shot figcaption {
+      text-align: center; font-size: 0.85rem; color: var(--muted);
+      padding-top: 10px; font-weight: 500;
+    }
+
+    .cta {
+      margin: 36px auto 48px; max-width: 1080px; padding: 0 20px;
+    }
+    .cta-box {
+      background: linear-gradient(135deg, var(--surface-2), var(--surface));
+      border: 1px solid var(--border); border-radius: 28px;
+      padding: 32px 28px; text-align: center; box-shadow: var(--shadow);
+    }
+    .cta-box h2 { font-size: 1.5rem; margin-bottom: 8px; }
+    .cta-box p { color: var(--muted); margin-bottom: 18px; }
+    .cta-actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 22px 20px 36px; text-align: center;
+      color: var(--muted); font-size: 0.88rem;
+    }
+    footer a { color: var(--accent-deep); font-weight: 500; }
+
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: var(--surface); color: var(--text);
+      border: 1px solid var(--border); border-radius: 999px;
+      padding: 10px 18px; font-size: 0.9rem; box-shadow: var(--shadow);
+      opacity: 0; pointer-events: none; transition: opacity .2s;
+      z-index: 100;
+    }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <header class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="#">
+        <span class="brand-mark" aria-hidden="true">🌿</span>
+        Fern
+      </a>
+      <nav class="nav-links">
+        <a class="hide-sm" href="#features">Features</a>
+        <a class="hide-sm" href="#screens">Screenshots</a>
+        <a href="https://github.com/wized2/Fern" target="_blank" rel="noopener">GitHub</a>
+        <a class="btn btn-primary" id="navDownload" href="#download" style="padding:8px 16px;font-size:0.88rem">Download</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div>
+        <div class="eyebrow"><span class="dot" aria-hidden="true"></span> Live · Offline · Material 3</div>
+        <h1>Your phone’s pulse, at a glance.</h1>
+        <p class="lead">
+          Fern is a clean system monitor for Android — CPU, RAM, thermal, battery, storage,
+          and active apps. No ads. No accounts. Fully offline after install.
+        </p>
+        <div class="hero-actions">
+          <button type="button" class="btn btn-primary" id="btnDownload">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+              <path d="M12 3v12m0 0l-4-4m4 4l4-4M5 19h14"/>
+            </svg>
+            Download latest APK
+          </button>
+          <a class="btn btn-ghost" href="https://github.com/wized2/Fern" target="_blank" rel="noopener">Source on GitHub</a>
+        </div>
+        <p class="meta" id="releaseMeta">Fetching latest release…</p>
+      </div>
+      <div class="phone">
+        <img src="assets/home.png" alt="Fern home overview — CPU, RAM, thermal, storage, battery" width="360" height="780" />
+      </div>
+    </section>
+
+    <section id="features">
+      <h2 class="section-title">What Fern tracks</h2>
+      <p class="section-sub">Live gauges and trends on Home, deep stats in Details, and optional elevated access for advanced metrics.</p>
+      <div class="features">
+        <article class="card">
+          <h3><span>◎</span> CPU &amp; RAM</h3>
+          <p>Live usage gauges, per-core detail, load averages, and memory breakdown — with trend sparklines on Home.</p>
+        </article>
+        <article class="card">
+          <h3><span>🌡</span> Thermal</h3>
+          <p>Battery and system thermal status. Advanced mode can read real thermal zones via Shizuku or root.</p>
+        </article>
+        <article class="card">
+          <h3><span>🔋</span> Battery &amp; storage</h3>
+          <p>Level, temperature, health, and internal storage at a glance — designed for quick checks, not clutter.</p>
+        </article>
+        <article class="card">
+          <h3><span>📱</span> Active apps</h3>
+          <p>See recently active apps. With Usage access + Advanced mode, per-app RAM (and more) stays on-device.</p>
+        </article>
+        <article class="card">
+          <h3><span>🏝</span> Dynamic Island</h3>
+          <p>Optional notch-style overlay for temp and RAM — draggable, resizable, Material 3 pill design.</p>
+        </article>
+        <article class="card">
+          <h3><span>🔒</span> Private by design</h3>
+          <p>No internet permission for core monitoring. No tracking. Optional Shizuku/root only when you enable Advanced mode.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="screens">
+      <h2 class="section-title">Screenshots</h2>
+      <p class="section-sub">Soft green Material 3 surfaces — light and OLED-friendly dark themes in the app.</p>
+      <div class="shots">
+        <figure class="shot">
+          <img src="assets/home.png" alt="Fern Home overview" loading="lazy" />
+          <figcaption>Home — live overview</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="assets/details.jpg" alt="Fern Details tab" loading="lazy" />
+          <figcaption>Details — hardware &amp; power</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="assets/apps.jpg" alt="Fern Active Apps" loading="lazy" />
+          <figcaption>Apps — recently active</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <div class="cta" id="download">
+      <div class="cta-box">
+        <h2>Get Fern</h2>
+        <p>Sideload the latest release APK from GitHub. Android 8.0+ (API 26).</p>
+        <div class="cta-actions">
+          <button type="button" class="btn btn-primary" id="btnDownload2">Download latest APK</button>
+          <a class="btn btn-ghost" href="https://github.com/wized2/Fern/releases" target="_blank" rel="noopener">All releases</a>
+        </div>
+        <p class="meta" style="margin-top:14px" id="releaseMeta2"></p>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>
+      Fern is open source under MIT ·
+      <a href="https://github.com/wized2/Fern" target="_blank" rel="noopener">wized2/Fern</a>
+    </p>
+  </footer>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <script>
+    const REPO = 'wized2/Fern';
+    const api = 'https://api.github.com/repos/' + REPO + '/releases/latest';
+
+    const btn1 = document.getElementById('btnDownload');
+    const btn2 = document.getElementById('btnDownload2');
+    const navDl = document.getElementById('navDownload');
+    const meta1 = document.getElementById('releaseMeta');
+    const meta2 = document.getElementById('releaseMeta2');
+    const toast = document.getElementById('toast');
+
+    let apkUrl = null;
+    let releaseInfo = null;
+
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2800);
+    }
+
+    function formatBytes(n) {
+      if (!n && n !== 0) return '';
+      if (n < 1024 * 1024) return (n / 1024).toFixed(0) + ' KB';
+      return (n / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+
+    function setLoading(on) {
+      [btn1, btn2].forEach(b => {
+        if (!b) return;
+        b.disabled = !!on;
+        if (on) b.dataset.label = b.dataset.label || b.textContent;
+        if (on) b.textContent = 'Fetching…';
+        else if (b.dataset.label) b.textContent = b.dataset.label;
+      });
+    }
+
+    async function loadLatest() {
+      try {
+        const res = await fetch(api, {
+          headers: { Accept: 'application/vnd.github+json' }
+        });
+        if (!res.ok) throw new Error('GitHub API ' + res.status);
+        const data = await res.json();
+        const assets = data.assets || [];
+        // Prefer release APK naming
+        let asset =
+          assets.find(a => /Fern.*release.*\.apk$/i.test(a.name)) ||
+          assets.find(a => /\.apk$/i.test(a.name) && /release/i.test(a.name)) ||
+          assets.find(a => /\.apk$/i.test(a.name));
+        if (!asset) throw new Error('No APK in latest release');
+        apkUrl = asset.browser_download_url;
+        releaseInfo = {
+          tag: data.tag_name || data.name || 'latest',
+          name: asset.name,
+          size: asset.size,
+          published: data.published_at
+        };
+        const line =
+          'Latest <strong>' + releaseInfo.tag + '</strong> · ' +
+          releaseInfo.name + ' · ' + formatBytes(releaseInfo.size);
+        meta1.innerHTML = line;
+        meta2.innerHTML = line;
+        navDl.href = apkUrl;
+        navDl.removeAttribute('id'); // keep as link
+      } catch (e) {
+        console.error(e);
+        meta1.textContent = 'Could not load release info — open GitHub Releases.';
+        meta2.textContent = meta1.textContent;
+        apkUrl = 'https://github.com/' + REPO + '/releases/latest';
+      }
+    }
+
+    function downloadApk() {
+      if (!apkUrl) {
+        showToast('Still loading release…');
+        loadLatest().then(() => { if (apkUrl) window.location.href = apkUrl; });
+        return;
+      }
+      showToast('Starting download…');
+      window.location.href = apkUrl;
+    }
+
+    btn1.addEventListener('click', downloadApk);
+    btn2.addEventListener('click', downloadApk);
+
+    loadLatest();
+  </script>
+</body>
+</html>
