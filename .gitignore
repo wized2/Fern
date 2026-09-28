@@ -21,3 +21,6 @@ release.jks
 KEYS.md
 release-keys/
 release-keys-backup/
+
+# Website (tracked) — listed for clarity; do not move into app/
+# index.html and /assets are for GitHub Pages only

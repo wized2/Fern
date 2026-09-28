@@ -76,7 +76,7 @@ See [CHANGELOG.md](CHANGELOG.md).
 
 ## Website
 
-Landing page: [docs/index.html](docs/index.html) — enable **GitHub Pages** from the `docs/` folder to publish it.
+Landing page: [index.html](index.html) at the repo root (GitHub Pages from `/`). Not part of the Android APK build.
 
 ## License
 
