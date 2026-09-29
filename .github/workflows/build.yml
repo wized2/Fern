@@ -115,6 +115,21 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Publish APK to Pages download/
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          mkdir -p download
+          cp release-assets/Fern-release.apk download/Fern-release.apk
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add download/Fern-release.apk
+          if git diff --staged --quiet; then
+            echo "APK unchanged"
+          else
+            git commit -m "chore: publish site APK for in-page download [skip ci]"
+            git push origin HEAD:${{ github.ref_name }}
+          fi
+
       - name: Create / update release (main)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: softprops/action-gh-release@v2

@@ -391,14 +391,18 @@
   <script>
     const REPO = 'wized2/Fern';
     const api = 'https://api.github.com/repos/' + REPO + '/releases/latest';
+    // Same-origin first (published by CI into /download/) — avoids leaving the site
+    const LOCAL_APK = 'download/Fern-release.apk';
     const btn1 = document.getElementById('btnDownload');
     const btn2 = document.getElementById('btnDownload2');
     const navDl = document.getElementById('navDownload');
     const meta1 = document.getElementById('releaseMeta');
     const meta2 = document.getElementById('releaseMeta2');
     const toast = document.getElementById('toast');
-    let apkUrl = null;
+    let apkUrl = LOCAL_APK;
     let apkName = 'Fern-release.apk';
+    let remoteUrl = null;
+    let versionLabel = '';
 
     function showToast(msg) {
       toast.textContent = msg;
@@ -415,82 +419,118 @@
         if (!b) return;
         b.disabled = !!on;
         if (on) {
-          if (!b.dataset.label) b.dataset.label = b.textContent;
-          b.textContent = 'Downloading…';
+          if (!b.dataset.label) b.dataset.label = b.innerHTML;
+          b.innerHTML = 'Downloading…';
         } else if (b.dataset.label) {
-          b.textContent = b.dataset.label;
+          b.innerHTML = b.dataset.label;
         }
       });
+    }
+
+    async function headOk(url) {
+      try {
+        const r = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+        return r.ok;
+      } catch (_) {
+        return false;
+      }
     }
 
     async function loadLatest() {
       try {
         const res = await fetch(api, { headers: { Accept: 'application/vnd.github+json' } });
-        if (!res.ok) throw new Error('GitHub API ' + res.status);
-        const data = await res.json();
-        const assets = data.assets || [];
-        const asset =
-          assets.find(a => /Fern.*release.*\.apk$/i.test(a.name)) ||
-          assets.find(a => /\.apk$/i.test(a.name) && /release/i.test(a.name)) ||
-          assets.find(a => /\.apk$/i.test(a.name));
-        if (!asset) throw new Error('No APK in latest release');
-        apkUrl = asset.browser_download_url;
-        apkName = asset.name || apkName;
-        const line =
-          'Latest <strong>' + (data.tag_name || data.name || 'latest') + '</strong> · ' +
-          asset.name + ' · ' + formatBytes(asset.size);
-        meta1.innerHTML = line;
-        meta2.innerHTML = line;
+        if (res.ok) {
+          const data = await res.json();
+          const assets = data.assets || [];
+          const asset =
+            assets.find(a => /Fern.*release.*\.apk$/i.test(a.name)) ||
+            assets.find(a => /\.apk$/i.test(a.name) && /release/i.test(a.name)) ||
+            assets.find(a => /\.apk$/i.test(a.name));
+          if (asset) {
+            remoteUrl = asset.browser_download_url;
+            apkName = asset.name || apkName;
+            versionLabel = data.tag_name || data.name || '';
+            const line =
+              'Latest <strong>' + versionLabel + '</strong> · ' +
+              asset.name + ' · ' + formatBytes(asset.size);
+            meta1.innerHTML = line;
+            meta2.innerHTML = line;
+          }
+        }
       } catch (e) {
-        console.error(e);
-        meta1.textContent = 'Could not load release info — try again or open GitHub Releases.';
+        console.warn(e);
+      }
+      // Prefer same-origin file so the browser never navigates to github.com
+      const localWithVer = LOCAL_APK + (versionLabel ? ('?v=' + encodeURIComponent(versionLabel)) : ('?t=' + Date.now()));
+      if (await headOk(LOCAL_APK) || await headOk(localWithVer)) {
+        apkUrl = localWithVer;
+      } else if (remoteUrl) {
+        apkUrl = remoteUrl;
+        if (!meta1.textContent) {
+          meta1.textContent = 'Using GitHub Release CDN (first visit may take a moment).';
+          meta2.textContent = meta1.textContent;
+        }
+      } else {
+        meta1.textContent = 'Release info unavailable — try again later.';
         meta2.textContent = meta1.textContent;
-        apkUrl = null;
       }
     }
 
-    async function downloadApk() {
-      if (!apkUrl) {
-        showToast('Loading release…');
-        await loadLatest();
-        if (!apkUrl) {
-          showToast('Download unavailable — open GitHub Releases');
-          return;
-        }
+    function triggerBlobDownload(blob, name) {
+      const objUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objUrl;
+      a.download = name || 'Fern-release.apk';
+      a.rel = 'noopener';
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(objUrl), 8000);
+    }
+
+    async function downloadApk(ev) {
+      if (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
       }
       setBusy(true);
-      showToast('Downloading APK…');
+      showToast('Preparing download…');
       try {
-        const res = await fetch(apkUrl, { mode: 'cors' });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const blob = await res.blob();
-        const objUrl = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = objUrl;
-        a.download = apkName;
-        a.rel = 'noopener';
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(() => URL.revokeObjectURL(objUrl), 4000);
-        showToast('Saved ' + apkName);
+        if (!apkUrl) await loadLatest();
+        // Always try same-origin first at click time
+        const candidates = [];
+        candidates.push(LOCAL_APK + (versionLabel ? ('?v=' + encodeURIComponent(versionLabel)) : ('?t=' + Date.now())));
+        candidates.push(LOCAL_APK);
+        if (remoteUrl) candidates.push(remoteUrl);
+
+        let lastErr = null;
+        for (const url of candidates) {
+          try {
+            const res = await fetch(url, { cache: 'no-store' });
+            if (!res.ok) { lastErr = new Error('HTTP ' + res.status); continue; }
+            const blob = await res.blob();
+            if (!blob || blob.size < 1000) { lastErr = new Error('empty'); continue; }
+            // Ensure apk MIME if possible
+            const typed = blob.type && blob.type !== 'text/html'
+              ? blob
+              : new Blob([blob], { type: 'application/vnd.android.package-archive' });
+            triggerBlobDownload(typed, apkName);
+            showToast('Saved ' + apkName);
+            setBusy(false);
+            return;
+          } catch (e) {
+            lastErr = e;
+          }
+        }
+        throw lastErr || new Error('download failed');
       } catch (e) {
         console.error(e);
-        // Fallback: hidden iframe-style navigation without replacing the page
+        showToast('Download failed — open Releases on GitHub');
+        // Last resort: open Releases list (not the raw APK) in new tab only if blob path failed
         try {
-          const a = document.createElement('a');
-          a.href = apkUrl;
-          a.download = apkName;
-          a.rel = 'noopener';
-          a.style.display = 'none';
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          showToast('Download started');
-        } catch (e2) {
-          showToast('Could not download — open Releases on GitHub');
-        }
+          window.open('https://github.com/' + REPO + '/releases/latest', '_blank', 'noopener');
+        } catch (_) {}
       } finally {
         setBusy(false);
       }
@@ -501,5 +541,6 @@
     navDl.addEventListener('click', downloadApk);
     loadLatest();
   </script>
+
 </body>
 </html>
