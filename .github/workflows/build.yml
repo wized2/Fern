@@ -117,18 +117,26 @@ jobs:
 
       - name: Publish APK to Pages download/
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        continue-on-error: true
         run: |
+          set -e
           mkdir -p download
           cp release-assets/Fern-release.apk download/Fern-release.apk
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add download/Fern-release.apk
           if git diff --staged --quiet; then
-            echo "APK unchanged"
-          else
-            git commit -m "chore: publish site APK for in-page download [skip ci]"
-            git push origin HEAD:${{ github.ref_name }}
+            echo "APK unchanged — already on branch"
+            exit 0
           fi
+          git commit -m "chore: publish site APK for in-page download [skip ci]"
+          # Avoid non-fast-forward when another commit landed during the build
+          git pull --rebase origin "${{ github.ref_name }}" || {
+            echo "rebase failed — retry once"
+            git fetch origin "${{ github.ref_name }}"
+            git rebase "origin/${{ github.ref_name }}" || git rebase --abort || true
+          }
+          git push origin "HEAD:${{ github.ref_name }}"
 
       - name: Create / update release (main)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
