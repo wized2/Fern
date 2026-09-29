@@ -8,6 +8,7 @@
 .externalNativeBuild
 .cxx
 *.apk
+!download/*.apk
 *.aab
 app/release/
 app/build/
@@ -24,3 +25,4 @@ release-keys-backup/
 
 # Website (tracked) — listed for clarity; do not move into app/
 # index.html and /assets are for GitHub Pages only
+
