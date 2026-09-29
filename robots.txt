@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://wized2.github.io/Fern/sitemap.xml

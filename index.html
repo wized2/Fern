@@ -2,298 +2,251 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Fern — Live system pulse for Android</title>
-  <meta name="description" content="Fern is a Material 3 system monitor for Android. CPU, RAM, thermal, battery, storage, apps — offline, no ads." />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Fern — Live Android System Monitor | CPU RAM Battery Thermal App</title>
+  <meta name="description" content="Fern is a free, offline Android system monitor with Material 3 UI. Live CPU, RAM, thermal, battery, storage, active apps, Dynamic Island overlay. No ads. Download the latest APK." />
+  <meta name="keywords" content="Fern, Android system monitor, CPU monitor Android, RAM usage app, battery temperature, thermal monitor, Material 3 system monitor, offline system monitor, Shizuku monitor, Dynamic Island Android, free system monitor APK, live CPU gauge, storage monitor, active apps usage" />
+  <meta name="author" content="wized2" />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+  <meta name="googlebot" content="index, follow" />
   <meta name="theme-color" content="#1B5E20" />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="application-name" content="Fern" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Fern" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <link rel="canonical" href="https://wized2.github.io/Fern/" />
+  <link rel="alternate" hreflang="en" href="https://wized2.github.io/Fern/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Fern System Monitor" />
+  <meta property="og:title" content="Fern — Live system pulse for Android" />
+  <meta property="og:description" content="Material 3 Android system monitor: CPU, RAM, thermal, battery, storage, apps. Offline, no ads. Free APK." />
+  <meta property="og:url" content="https://wized2.github.io/Fern/" />
+  <meta property="og:image" content="https://wized2.github.io/Fern/assets/home-light.png" />
+  <meta property="og:image:alt" content="Fern home overview showing CPU and RAM gauges" />
+  <meta property="og:locale" content="en_US" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Fern — Android system monitor" />
+  <meta name="twitter:description" content="Live CPU, RAM, thermal, battery. Material 3. Offline. Free APK." />
+  <meta name="twitter:image" content="https://wized2.github.io/Fern/assets/home-light.png" />
+  <link rel="icon" href="assets/home-light.png" type="image/png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Fern",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Android 8.0+",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "description": "Live Android system monitor with CPU, RAM, thermal, battery, storage, and active apps. Material 3, offline, no ads.",
+        "downloadUrl": "https://github.com/wized2/Fern/releases/latest",
+        "softwareVersion": "1.8+",
+        "author": { "@type": "Person", "name": "wized2", "url": "https://github.com/wized2" },
+        "url": "https://wized2.github.io/Fern/",
+        "image": "https://wized2.github.io/Fern/assets/home-light.png",
+        "screenshot": [
+          "https://wized2.github.io/Fern/assets/home-light.png",
+          "https://wized2.github.io/Fern/assets/home-dark.png",
+          "https://wized2.github.io/Fern/assets/details.png"
+        ],
+        "featureList": "CPU gauge, RAM monitor, thermal status, battery temp, storage bar, active apps, Dynamic Island overlay, Shizuku advanced mode, Material 3 UI"
+      },
+      {
+        "@type": "WebSite",
+        "name": "Fern",
+        "url": "https://wized2.github.io/Fern/",
+        "description": "Official site for Fern Android system monitor",
+        "publisher": { "@type": "Organization", "name": "wized2", "url": "https://github.com/wized2/Fern" },
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://wized2.github.io/Fern/?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      },
+      {
+        "@type": "Organization",
+        "name": "Fern",
+        "url": "https://wized2.github.io/Fern/",
+        "logo": "https://wized2.github.io/Fern/assets/home-light.png",
+        "sameAs": ["https://github.com/wized2/Fern"]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is Fern Android system monitor?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Fern is a free, offline Material 3 system monitor for Android that shows live CPU, RAM, thermal, battery, storage, and recently active apps without ads or accounts."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does Fern need root or Shizuku?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Core monitoring works without root. Optional Advanced mode can use Shizuku or root for real thermal zones and per-app memory details."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is Fern free and offline?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Fern is free, open source (MIT), and fully offline after install. No ads, no accounts, no tracking for core monitoring."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I download Fern APK?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Visit https://wized2.github.io/Fern/ and tap Download latest APK. The site fetches the newest GitHub Release and downloads the file without leaving the page."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What Android version does Fern support?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Fern requires Android 8.0 (API 26) or higher."
+            }
+          }
+        ]
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://wized2.github.io/Fern/" },
+          { "@type": "ListItem", "position": 2, "name": "Features", "item": "https://wized2.github.io/Fern/#features" },
+          { "@type": "ListItem", "position": 3, "name": "Download", "item": "https://wized2.github.io/Fern/#download" }
+        ]
+      }
+    ]
+  }
+  </script>
   <style>
     :root {
-      --bg: #f4f7f4;
-      --surface: #ffffff;
-      --surface-2: #e8f0e9;
-      --text: #1a2e1c;
-      --muted: #5c7260;
-      --accent: #2e7d32;
-      --accent-deep: #1b5e20;
-      --accent-soft: rgba(46, 125, 50, 0.12);
-      --leaf: #51DB7B;
-      --vein: #41A55F;
-      --border: rgba(27, 94, 32, 0.12);
-      --shadow: 0 12px 40px rgba(27, 94, 32, 0.08);
-      --radius: 20px;
+      --bg: #f4f7f4; --surface: #ffffff; --surface-2: #e8f0e9;
+      --text: #1a2e1c; --muted: #5c7260; --accent: #2e7d32; --accent-deep: #1b5e20;
+      --accent-soft: rgba(46,125,50,.12); --border: rgba(27,94,32,.12);
+      --shadow: 0 12px 40px rgba(27,94,32,.08); --radius: 20px;
       --font: "Inter", system-ui, -apple-system, sans-serif;
     }
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg: #0f1610;
-        --surface: #172019;
-        --surface-2: #1e2a20;
-        --text: #e8f0e9;
-        --muted: #9bb0a0;
-        --accent: #81c784;
-        --accent-deep: #a5d6a7;
-        --accent-soft: rgba(129, 199, 132, 0.14);
-        --border: rgba(165, 214, 167, 0.12);
-        --shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+        --bg: #0f1610; --surface: #172019; --surface-2: #1e2a20;
+        --text: #e8f0e9; --muted: #9bb0a0; --accent: #81c784; --accent-deep: #a5d6a7;
+        --accent-soft: rgba(129,199,132,.14); --border: rgba(165,214,167,.12);
+        --shadow: 0 12px 40px rgba(0,0,0,.35);
       }
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
-    body {
-      font-family: var(--font);
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.55;
-      min-height: 100vh;
-    }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.55; min-height: 100vh; }
     a { color: var(--accent); text-decoration: none; }
     a:hover { text-decoration: underline; }
-
-    .icon {
-      width: 1.15em; height: 1.15em;
-      stroke: currentColor; fill: none;
-      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
-      flex-shrink: 0;
-    }
-
-    .nav {
-      position: sticky; top: 0; z-index: 50;
-      backdrop-filter: blur(12px);
-      background: color-mix(in srgb, var(--bg) 85%, transparent);
-      border-bottom: 1px solid var(--border);
-    }
-    .nav-inner {
-      max-width: 1100px; margin: 0 auto;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 12px 20px; gap: 12px;
-    }
-    .brand {
-      display: flex; align-items: center; gap: 10px;
-      font-weight: 700; font-size: 1.15rem; color: var(--accent-deep);
-      text-decoration: none;
-    }
+    .icon { width: 1.15em; height: 1.15em; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .nav { position: sticky; top: 0; z-index: 50; backdrop-filter: blur(12px); background: color-mix(in srgb, var(--bg) 85%, transparent); border-bottom: 1px solid var(--border); }
+    .nav-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; gap: 12px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.15rem; color: var(--accent-deep); text-decoration: none; }
     .brand:hover { text-decoration: none; }
-    .brand-logo {
-      width: 34px; height: 34px; border-radius: 10px;
-      background: #fff;
-      display: grid; place-items: center;
-      border: 1px solid var(--border);
-      overflow: hidden;
-    }
+    .brand-logo { width: 34px; height: 34px; border-radius: 10px; background: #fff; display: grid; place-items: center; border: 1px solid var(--border); overflow: hidden; }
     .brand-logo svg { width: 22px; height: 22px; }
     .nav-links { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
     .nav-links a.nav-text { color: var(--muted); text-decoration: none; font-weight: 500; font-size: 0.92rem; padding: 6px 8px; }
     .nav-links a.nav-text:hover { color: var(--accent); }
-
-    .btn {
-      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-      border: none; border-radius: 999px; padding: 12px 18px;
-      font-weight: 600; font-size: 0.95rem; cursor: pointer;
-      font-family: inherit; transition: transform .15s ease, filter .15s ease, opacity .15s;
-      text-decoration: none;
-    }
-    .btn:hover { text-decoration: none; }
-    .btn:active { transform: scale(0.98); }
-    .btn-primary {
-      background: linear-gradient(145deg, var(--accent), var(--accent-deep));
-      color: #fff; box-shadow: 0 8px 24px rgba(27, 94, 32, 0.25);
-    }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: none; border-radius: 999px; padding: 12px 18px; font-weight: 600; font-size: 0.95rem; cursor: pointer; font-family: inherit; transition: transform .15s, filter .15s, opacity .15s; text-decoration: none; }
+    .btn:hover { text-decoration: none; } .btn:active { transform: scale(0.98); }
+    .btn-primary { background: linear-gradient(145deg, var(--accent), var(--accent-deep)); color: #fff; box-shadow: 0 8px 24px rgba(27,94,32,.25); }
     .btn-primary:hover { filter: brightness(1.06); }
     .btn-primary[disabled] { opacity: 0.65; cursor: wait; }
-    .btn-ghost {
-      background: var(--surface); color: var(--text);
-      border: 1px solid var(--border);
-    }
+    .btn-ghost { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
     .btn-ghost:hover { background: var(--surface-2); }
     .btn-sm { padding: 8px 14px; font-size: 0.88rem; }
-
-    .hero {
-      max-width: 1100px; margin: 0 auto;
-      padding: 40px 20px 28px;
-      display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 36px; align-items: center;
-    }
+    .hero { max-width: 1100px; margin: 0 auto; padding: 40px 20px 28px; display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 36px; align-items: center; }
     @media (max-width: 860px) {
       .hero { grid-template-columns: 1fr; text-align: center; padding-top: 24px; }
       .hero-actions { justify-content: center; }
       .nav-links .hide-sm { display: none; }
       .lead { margin-inline: auto; }
     }
-    .eyebrow {
-      display: inline-flex; align-items: center; gap: 8px;
-      font-size: 0.78rem; font-weight: 600; letter-spacing: 0.04em;
-      text-transform: uppercase; color: var(--accent);
-      background: var(--accent-soft); border-radius: 999px;
-      padding: 6px 12px; margin-bottom: 14px;
-    }
-    .eyebrow .dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft);
-      animation: pulse 1.6s ease infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; } 50% { opacity: 0.5; }
-    }
-    h1 {
-      font-size: clamp(1.9rem, 4vw, 2.7rem);
-      line-height: 1.15; font-weight: 700;
-      letter-spacing: -0.02em; margin-bottom: 12px;
-    }
+    .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 6px 12px; margin-bottom: 14px; }
+    .eyebrow .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); animation: pulse 1.6s ease infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+    h1 { font-size: clamp(1.9rem, 4vw, 2.7rem); line-height: 1.15; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 12px; }
     .lead { font-size: 1.05rem; color: var(--muted); max-width: 34em; margin-bottom: 22px; }
     .hero-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
     .meta { font-size: 0.85rem; color: var(--muted); }
     .meta strong { color: var(--text); font-weight: 600; }
-
-    .phone {
-      position: relative; max-width: 260px; margin: 0 auto;
-      border-radius: 28px; padding: 8px;
-      background: linear-gradient(160deg, var(--surface-2), var(--surface));
-      box-shadow: var(--shadow); border: 1px solid var(--border);
-    }
-    .phone img {
-      width: 100%; height: auto; display: block; border-radius: 22px;
-      object-fit: contain; background: var(--surface-2);
-    }
-
+    .phone { position: relative; max-width: 260px; margin: 0 auto; border-radius: 28px; padding: 8px; background: linear-gradient(160deg, var(--surface-2), var(--surface)); box-shadow: var(--shadow); border: 1px solid var(--border); }
+    .phone img { width: 100%; height: auto; display: block; border-radius: 22px; object-fit: contain; background: var(--surface-2); }
     section { max-width: 1100px; margin: 0 auto; padding: 24px 20px 8px; }
-    .section-title {
-      font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 6px;
-    }
+    .section-title { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 6px; }
     .section-sub { color: var(--muted); margin-bottom: 20px; max-width: 40em; font-size: 0.98rem; }
-
-    .features {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
-    }
+    .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
     @media (max-width: 800px) { .features { grid-template-columns: 1fr; } }
-    .card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 16px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.03);
-    }
-    .card h3 {
-      font-size: 1rem; margin-bottom: 6px;
-      display: flex; align-items: center; gap: 10px;
-    }
-    .card h3 .ic {
-      width: 32px; height: 32px; border-radius: 10px;
-      background: var(--accent-soft); color: var(--accent-deep);
-      display: grid; place-items: center;
-    }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: 0 4px 16px rgba(0,0,0,.03); }
+    .card h3 { font-size: 1rem; margin-bottom: 6px; display: flex; align-items: center; gap: 10px; }
+    .card h3 .ic { width: 32px; height: 32px; border-radius: 10px; background: var(--accent-soft); color: var(--accent-deep); display: grid; place-items: center; }
     .card h3 .ic .icon { width: 17px; height: 17px; }
     .card p { font-size: 0.9rem; color: var(--muted); }
-
-    .shots {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 14px;
-      align-items: start;
-    }
-    @media (max-width: 1000px) {
-      .shots { grid-template-columns: repeat(3, 1fr); }
-    }
-    @media (max-width: 640px) {
-      .shots { grid-template-columns: repeat(2, 1fr); }
-    }
-    .shot {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 10px 10px 12px;
-      box-shadow: var(--shadow);
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .shot .frame {
-      border-radius: 12px;
-      overflow: hidden;
-      background: var(--surface-2);
-      line-height: 0;
-    }
-    .shot img {
-      width: 100%;
-      height: auto;
-      max-height: 340px;
-      object-fit: contain;
-      object-position: top center;
-      display: block;
-    }
-    .shot figcaption {
-      text-align: center;
-      font-size: 0.82rem;
-      color: var(--muted);
-      font-weight: 500;
-      line-height: 1.35;
-      padding: 0 4px;
-    }
-    .shot figcaption em {
-      display: block;
-      font-style: normal;
-      color: var(--accent-deep);
-      font-weight: 600;
-      margin-bottom: 2px;
-    }
-
+    .shots { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; align-items: start; }
+    @media (max-width: 1000px) { .shots { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 640px) { .shots { grid-template-columns: repeat(2, 1fr); } }
+    .shot { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 10px 10px 12px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 10px; }
+    .shot .frame { border-radius: 12px; overflow: hidden; background: var(--surface-2); line-height: 0; }
+    .shot img { width: 100%; height: auto; max-height: 340px; object-fit: contain; object-position: top center; display: block; }
+    .shot figcaption { text-align: center; font-size: 0.82rem; color: var(--muted); font-weight: 500; line-height: 1.35; padding: 0 4px; }
+    .shot figcaption em { display: block; font-style: normal; color: var(--accent-deep); font-weight: 600; margin-bottom: 2px; }
     .cta { margin: 32px auto 44px; max-width: 1100px; padding: 0 20px; }
-    .cta-box {
-      background: linear-gradient(135deg, var(--surface-2), var(--surface));
-      border: 1px solid var(--border); border-radius: 28px;
-      padding: 28px 24px; text-align: center; box-shadow: var(--shadow);
-    }
+    .cta-box { background: linear-gradient(135deg, var(--surface-2), var(--surface)); border: 1px solid var(--border); border-radius: 28px; padding: 28px 24px; text-align: center; box-shadow: var(--shadow); }
     .cta-box h2 { font-size: 1.4rem; margin-bottom: 6px; }
     .cta-box p { color: var(--muted); margin-bottom: 16px; }
     .cta-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
-
-    footer {
-      border-top: 1px solid var(--border);
-      padding: 20px; text-align: center;
-      color: var(--muted); font-size: 0.88rem;
-    }
+    .seo-articles { max-width: 1100px; margin: 0 auto; padding: 12px 20px 40px; }
+    .seo-articles article { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin-bottom: 12px; }
+    .seo-articles h2 { font-size: 1.15rem; margin-bottom: 8px; color: var(--accent-deep); }
+    .seo-articles p, .seo-articles li { font-size: 0.92rem; color: var(--muted); margin-bottom: 6px; }
+    .seo-articles ul { padding-left: 1.2em; margin-bottom: 8px; }
+    .visually-hidden { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    footer { border-top: 1px solid var(--border); padding: 20px; text-align: center; color: var(--muted); font-size: 0.88rem; }
     footer a { color: var(--accent-deep); font-weight: 500; }
-
-    .toast {
-      position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
-      background: var(--surface); color: var(--text);
-      border: 1px solid var(--border); border-radius: 999px;
-      padding: 10px 16px; font-size: 0.9rem; box-shadow: var(--shadow);
-      opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 100;
-    }
+    .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 999px; padding: 10px 16px; font-size: 0.9rem; box-shadow: var(--shadow); opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 100; }
     .toast.show { opacity: 1; }
   </style>
 </head>
 <body>
-  <!-- Fern leaf logo paths from app ic_launcher_foreground (viewBox 0 0 141.96 251.5) -->
-  <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
     <symbol id="fern-leaf" viewBox="0 0 142 252">
-      <path fill="#51DB7B" stroke="#51DB7B" stroke-width="1.5"
-        d="M70.98,0.75 C138.98,60.75 155.98,140.75 128.98,200.75 C103.98,245.75 70.98,250.75 70.98,250.75 C70.98,250.75 37.98,245.75 12.98,200.75 C-14.02,140.75 2.98,60.75 70.98,0.75 Z" />
-      <path fill="none" stroke="#41A55F" stroke-width="1.5" stroke-linecap="round" d="M70.98,0.75 L70.98,250.75" />
-      <path fill="none" stroke="#41A55F" stroke-width="1.5" stroke-linecap="round" d="M48.33,82.81 L71.68,94.17" />
-      <path fill="none" stroke="#41A55F" stroke-width="1.5" stroke-linecap="round" d="M33.05,116.52 L70.98,134.98" />
-      <path fill="none" stroke="#41A55F" stroke-width="1.5" stroke-linecap="round" d="M22.9,159.05 L70.98,182.45" />
-      <path fill="none" stroke="#41A55F" stroke-width="1.5" stroke-linecap="round" d="M93.63,82.81 L70.28,94.17" />
-      <path fill="none" stroke="#41A55F" stroke-width="1.5" stroke-linecap="round" d="M108.91,116.52 L70.98,134.98" />
-      <path fill="none" stroke="#41A55F" stroke-width="1.5" stroke-linecap="round" d="M119.06,159.05 L70.98,182.45" />
+      <path fill="#51DB7B" stroke="#51DB7B" stroke-width="1.5" d="M70.98,0.75 C138.98,60.75 155.98,140.75 128.98,200.75 C103.98,245.75 70.98,250.75 70.98,250.75 C70.98,250.75 37.98,245.75 12.98,200.75 C-14.02,140.75 2.98,60.75 70.98,0.75 Z"/>
+      <path fill="none" stroke="#41A55F" stroke-width="1.5" stroke-linecap="round" d="M70.98,0.75 L70.98,250.75"/>
+      <path fill="none" stroke="#41A55F" stroke-width="1.5" stroke-linecap="round" d="M48.33,82.81 L71.68,94.17"/>
+      <path fill="none" stroke="#41A55F" stroke-width="1.5" stroke-linecap="round" d="M33.05,116.52 L70.98,134.98"/>
+      <path fill="none" stroke="#41A55F" stroke-width="1.5" stroke-linecap="round" d="M22.9,159.05 L70.98,182.45"/>
+      <path fill="none" stroke="#41A55F" stroke-width="1.5" stroke-linecap="round" d="M93.63,82.81 L70.28,94.17"/>
+      <path fill="none" stroke="#41A55F" stroke-width="1.5" stroke-linecap="round" d="M108.91,116.52 L70.98,134.98"/>
+      <path fill="none" stroke="#41A55F" stroke-width="1.5" stroke-linecap="round" d="M119.06,159.05 L70.98,182.45"/>
     </symbol>
   </svg>
 
   <header class="nav">
     <div class="nav-inner">
-      <a class="brand" href="#">
-        <span class="brand-logo" aria-hidden="true">
-          <svg><use href="#fern-leaf" /></svg>
-        </span>
+      <a class="brand" href="https://wized2.github.io/Fern/" aria-label="Fern home">
+        <span class="brand-logo"><svg><use href="#fern-leaf"/></svg></span>
         Fern
       </a>
-      <nav class="nav-links">
+      <nav class="nav-links" aria-label="Primary">
         <a class="nav-text hide-sm" href="#features">Features</a>
         <a class="nav-text hide-sm" href="#screens">Screens</a>
-        <a class="btn btn-ghost btn-sm" href="https://github.com/wized2/Fern" target="_blank" rel="noopener">
-          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65S8.93 17.38 9 18v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
-          GitHub
-        </a>
+        <a class="nav-text hide-sm" href="#guides">Guides</a>
+        <a class="btn btn-ghost btn-sm" href="https://github.com/wized2/Fern" target="_blank" rel="noopener">GitHub</a>
         <button type="button" class="btn btn-primary btn-sm" id="navDownload">Download</button>
       </nav>
     </div>
@@ -305,129 +258,135 @@
         <div class="eyebrow"><span class="dot" aria-hidden="true"></span> Live · Offline · Material 3</div>
         <h1>Your phone’s pulse, at a glance.</h1>
         <p class="lead">
-          Fern is a clean system monitor for Android — CPU, RAM, thermal, battery, storage,
-          and active apps. No ads. No accounts. Fully offline after install.
+          Fern is a free Android system monitor — CPU, RAM, thermal, battery, storage, and active apps.
+          Material 3 design, no ads, no accounts. Fully offline after install.
         </p>
         <div class="hero-actions">
           <button type="button" class="btn btn-primary" id="btnDownload">
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 17V3"/><path d="m6 11 6 6 6-6"/><path d="M19 21H5"/></svg>
             Download latest APK
           </button>
-          <a class="btn btn-ghost" href="https://github.com/wized2/Fern" target="_blank" rel="noopener">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65S8.93 17.38 9 18v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
-            View on GitHub
-          </a>
+          <a class="btn btn-ghost" href="https://github.com/wized2/Fern" target="_blank" rel="noopener">View on GitHub</a>
         </div>
         <p class="meta" id="releaseMeta">Fetching latest release…</p>
       </div>
       <div class="phone">
-        <img src="assets/home-light.png" alt="Fern home overview in light theme" width="360" height="720" />
+        <img src="assets/home-light.png" alt="Fern Android system monitor home screen with CPU and RAM gauges" width="360" height="720" />
       </div>
     </section>
 
     <section id="features">
       <h2 class="section-title">What Fern tracks</h2>
-      <p class="section-sub">Live gauges on Home, a readable hardware snapshot in Details, and optional elevated access when you want more.</p>
+      <p class="section-sub">Built for quick checks: live gauges on Home, hardware snapshot in Details, optional elevated access when you need more.</p>
       <div class="features">
-        <article class="card">
-          <h3>
-            <span class="ic"><svg class="icon" viewBox="0 0 24 24"><path d="M12 2v4"/><path d="m6.2 6.2 2.8 2.8"/><path d="M2 12h4"/><path d="m6.2 17.8 2.8-2.8"/><path d="M12 18v4"/><path d="m17.8 17.8-2.8-2.8"/><path d="M18 12h4"/><path d="m17.8 6.2-2.8 2.8"/><circle cx="12" cy="12" r="3"/></svg></span>
-            CPU &amp; RAM
-          </h3>
-          <p>Live gauges, load estimates, memory used vs total, and trend sparklines on Home.</p>
-        </article>
-        <article class="card">
-          <h3>
-            <span class="ic"><svg class="icon" viewBox="0 0 24 24"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></svg></span>
-            Thermal
-          </h3>
-          <p>Battery temperature and thermal status — Advanced mode can dig into real zones via Shizuku or root.</p>
-        </article>
-        <article class="card">
-          <h3>
-            <span class="ic"><svg class="icon" viewBox="0 0 24 24"><path d="M10 2h4"/><path d="M12 14v-4"/><rect width="16" height="10" x="4" y="6" rx="2"/><path d="M6 18h12v2a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2Z"/></svg></span>
-            Battery &amp; storage
-          </h3>
-          <p>Charge level, temperature, and internal storage — quick bars, no clutter.</p>
-        </article>
-        <article class="card">
-          <h3>
-            <span class="ic"><svg class="icon" viewBox="0 0 24 24"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg></span>
-            Active apps
-          </h3>
-          <p>Recently in the foreground. Optional Usage access; data stays on the device.</p>
-        </article>
-        <article class="card">
-          <h3>
-            <span class="ic"><svg class="icon" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></span>
-            More tools
-          </h3>
-          <p>Tests, sensors, settings, notch island overlay, and About — all under one tab.</p>
-        </article>
-        <article class="card">
-          <h3>
-            <span class="ic"><svg class="icon" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
-            Private by design
-          </h3>
-          <p>No internet permission for core monitoring. No tracking. Advanced mode only if you turn it on.</p>
-        </article>
+        <article class="card"><h3><span class="ic"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></span>CPU &amp; RAM</h3><p>Live usage gauges, load estimates, memory used vs total, and trend sparklines.</p></article>
+        <article class="card"><h3><span class="ic"><svg class="icon" viewBox="0 0 24 24"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></svg></span>Thermal</h3><p>Battery temperature and thermal status. Advanced mode can read real zones via Shizuku or root.</p></article>
+        <article class="card"><h3><span class="ic"><svg class="icon" viewBox="0 0 24 24"><rect width="16" height="10" x="4" y="6" rx="2"/><path d="M10 2h4"/></svg></span>Battery &amp; storage</h3><p>Charge level, temperature, and internal storage — clear bars, no clutter.</p></article>
+        <article class="card"><h3><span class="ic"><svg class="icon" viewBox="0 0 24 24"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg></span>Active apps</h3><p>Recently in the foreground. Optional Usage access; data stays on device.</p></article>
+        <article class="card"><h3><span class="ic"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg></span>More tools</h3><p>Tests, sensors, settings, notch island overlay, and About — one clean tab.</p></article>
+        <article class="card"><h3><span class="ic"><svg class="icon" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>Private by design</h3><p>No internet permission for core monitoring. No tracking. Advanced mode only if you enable it.</p></article>
       </div>
     </section>
 
     <section id="screens">
       <h2 class="section-title">Screenshots</h2>
-      <p class="section-sub">Five frames. Same calm green — day or night.</p>
+      <p class="section-sub">Soft green Material 3 — day or night.</p>
       <div class="shots">
-        <figure class="shot">
-          <div class="frame"><img src="assets/home-light.png" alt="Fern overview light mode" loading="lazy" width="360" height="720" /></div>
-          <figcaption><em>Soft green, hard numbers</em>Home · light</figcaption>
-        </figure>
-        <figure class="shot">
-          <div class="frame"><img src="assets/home-dark.png" alt="Fern overview dark mode" loading="lazy" width="360" height="720" /></div>
-          <figcaption><em>Fern — in the dark</em>Home · OLED night</figcaption>
-        </figure>
-        <figure class="shot">
-          <div class="frame"><img src="assets/details.png" alt="Fern hardware details" loading="lazy" width="360" height="720" /></div>
-          <figcaption><em>Under the hood</em>Details · processor &amp; RAM</figcaption>
-        </figure>
-        <figure class="shot">
-          <div class="frame"><img src="assets/apps.png" alt="Fern active apps list" loading="lazy" width="360" height="720" /></div>
-          <figcaption><em>Who’s using the juice</em>Apps · foreground time</figcaption>
-        </figure>
-        <figure class="shot">
-          <div class="frame"><img src="assets/more.png" alt="Fern More menu" loading="lazy" width="360" height="720" /></div>
-          <figcaption><em>Everything else, tidy</em>More · tools &amp; prefs</figcaption>
-        </figure>
+        <figure class="shot"><div class="frame"><img src="assets/home-light.png" alt="Fern home light theme CPU RAM monitor" loading="lazy" width="360" height="720"/></div><figcaption><em>Soft green, hard numbers</em>Home · light</figcaption></figure>
+        <figure class="shot"><div class="frame"><img src="assets/home-dark.png" alt="Fern home dark OLED theme system monitor" loading="lazy" width="360" height="720"/></div><figcaption><em>Fern — in the dark</em>Home · OLED night</figcaption></figure>
+        <figure class="shot"><div class="frame"><img src="assets/details.png" alt="Fern hardware details processor memory" loading="lazy" width="360" height="720"/></div><figcaption><em>Under the hood</em>Details · processor &amp; RAM</figcaption></figure>
+        <figure class="shot"><div class="frame"><img src="assets/apps.png" alt="Fern active apps usage list" loading="lazy" width="360" height="720"/></div><figcaption><em>Who’s using the juice</em>Apps · foreground time</figcaption></figure>
+        <figure class="shot"><div class="frame"><img src="assets/more.png" alt="Fern more menu settings sensors" loading="lazy" width="360" height="720"/></div><figcaption><em>Everything else, tidy</em>More · tools &amp; prefs</figcaption></figure>
       </div>
     </section>
 
     <div class="cta" id="download">
       <div class="cta-box">
-        <h2>Get Fern</h2>
-        <p>Sideload the latest release APK from GitHub. Android 8.0+ (API 26).</p>
+        <h2>Download Fern APK</h2>
+        <p>Stays on this page — fetches the latest GitHub Release and saves the APK to your device. Android 8.0+.</p>
         <div class="cta-actions">
           <button type="button" class="btn btn-primary" id="btnDownload2">
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 17V3"/><path d="m6 11 6 6 6-6"/><path d="M19 21H5"/></svg>
             Download latest APK
           </button>
-          <a class="btn btn-ghost" href="https://github.com/wized2/Fern" target="_blank" rel="noopener">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65S8.93 17.38 9 18v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
-            View repository
-          </a>
+          <a class="btn btn-ghost" href="https://github.com/wized2/Fern" target="_blank" rel="noopener">View repository</a>
         </div>
         <p class="meta" style="margin-top:14px" id="releaseMeta2"></p>
       </div>
     </div>
+
+    <!-- SEO / AI-search content -->
+    <section class="seo-articles" id="guides" aria-label="Guides">
+      <h2 class="section-title">Guides &amp; answers</h2>
+      <p class="section-sub">Everything people search for about Android system monitoring and Fern.</p>
+
+      <article id="what-is-fern">
+        <h2>What is Fern? Android system monitor explained</h2>
+        <p>Fern is an open-source <strong>Android system monitor</strong> focused on clarity: live CPU percent, RAM used/total, battery level and temperature, storage fill, thermal status, and recently active apps. It targets users who want a lightweight alternative to bloated “phone cleaner” apps.</p>
+        <p>Unlike many utility packs, Fern’s core metrics work <strong>offline</strong> with no account and no ads. The UI follows <strong>Material You / Material 3</strong> with a distinctive green palette in light and OLED-friendly dark themes.</p>
+      </article>
+
+      <article id="cpu-ram-monitor">
+        <h2>Best free CPU and RAM monitor for Android</h2>
+        <p>People search for “CPU usage Android”, “RAM monitor APK”, and “live system stats” when games lag or phones heat up. Fern shows dual gauges on the Home tab, optional trend sparklines, and a Details tab with cores, clocks, chip, and memory breakdown.</p>
+        <ul>
+          <li>CPU estimate from multi-path sampling of system stats</li>
+          <li>RAM used / free / total with app heap peek</li>
+          <li>Manual refresh plus live mode</li>
+        </ul>
+      </article>
+
+      <article id="battery-thermal">
+        <h2>Battery temperature and thermal monitoring</h2>
+        <p>Fern surfaces battery °C alongside charge level and a thermal status bar. On many devices, battery temperature is the most accessible heat signal without root. With optional <strong>Advanced mode</strong> (Shizuku or root), Fern can read additional thermal information for a more accurate Home thermal bar.</p>
+      </article>
+
+      <article id="dynamic-island">
+        <h2>Dynamic Island style overlay for temp and RAM</h2>
+        <p>Fern’s Additional settings include a notch-style floating island that can show temperature and RAM in a compact Material 3 pill — useful while gaming or recording. Display-over-other-apps permission is required for the overlay.</p>
+      </article>
+
+      <article id="shizuku-root">
+        <h2>Shizuku and root advanced mode</h2>
+        <p>Advanced mode is off by default. When enabled and connected through Shizuku (recommended) or root, Fern can unlock deeper metrics such as real thermal zones and richer per-app memory on the Active Apps tab. Shizuku never runs until you install it, start it, and grant Fern.</p>
+      </article>
+
+      <article id="privacy">
+        <h2>Privacy-first system monitor (no ads, offline)</h2>
+        <p>Fern does not require an internet permission for core monitoring. There are no accounts and no ad SDKs in the described product positioning. Optional Usage Access is only for the Active Apps list and stays on-device.</p>
+      </article>
+
+      <article id="download-install">
+        <h2>How to download and install Fern APK</h2>
+        <ol>
+          <li>Open <a href="https://wized2.github.io/Fern/">wized2.github.io/Fern</a></li>
+          <li>Tap <strong>Download latest APK</strong> — the file saves without navigating away</li>
+          <li>Allow install from this source if Android asks</li>
+          <li>Open Fern and grant only the permissions you need</li>
+        </ol>
+        <p>Source code and release history: <a href="https://github.com/wized2/Fern">github.com/wized2/Fern</a>.</p>
+      </article>
+
+      <article id="faq">
+        <h2>FAQ — Android system monitor</h2>
+        <p><strong>Is Fern free?</strong> Yes — free and open source under MIT.</p>
+        <p><strong>Min Android version?</strong> Android 8.0 (API 26)+.</p>
+        <p><strong>Does it clean RAM automatically?</strong> No. Fern monitors; it does not force-kill apps in basic mode.</p>
+        <p><strong>Where is the official APK?</strong> GitHub Releases, linked from this site’s download button.</p>
+      </article>
+
+      <div class="visually-hidden" aria-hidden="true">
+        <p>Related searches: Android system monitor, CPU usage widget, RAM cleaner vs monitor, phone temperature app, battery health monitor Android, Material 3 utilities, Shizuku system stats, free APK system information, MediaTek Helio thermal, Snapdragon CPU load, live FPS alternative stats, storage analyzer simple, notch island overlay Android, green Material theme system app, offline phone diagnostics.</p>
+      </div>
+    </section>
   </main>
 
   <footer>
-    <p>
-      Fern is open source under MIT ·
-      <a href="https://github.com/wized2/Fern" target="_blank" rel="noopener">wized2/Fern</a>
-    </p>
+    <p>Fern is open source under MIT · <a href="https://github.com/wized2/Fern" target="_blank" rel="noopener">wized2/Fern</a></p>
+    <p style="margin-top:6px;font-size:0.8rem">Official site · Android system monitor APK</p>
   </footer>
 
-  <div class="toast" id="toast" role="status"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script>
     const REPO = 'wized2/Fern';
@@ -439,16 +398,29 @@
     const meta2 = document.getElementById('releaseMeta2');
     const toast = document.getElementById('toast');
     let apkUrl = null;
+    let apkName = 'Fern-release.apk';
 
     function showToast(msg) {
       toast.textContent = msg;
       toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 2800);
+      setTimeout(() => toast.classList.remove('show'), 3200);
     }
     function formatBytes(n) {
       if (n == null) return '';
       if (n < 1024 * 1024) return (n / 1024).toFixed(0) + ' KB';
       return (n / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+    function setBusy(on) {
+      [btn1, btn2, navDl].forEach(b => {
+        if (!b) return;
+        b.disabled = !!on;
+        if (on) {
+          if (!b.dataset.label) b.dataset.label = b.textContent;
+          b.textContent = 'Downloading…';
+        } else if (b.dataset.label) {
+          b.textContent = b.dataset.label;
+        }
+      });
     }
 
     async function loadLatest() {
@@ -463,6 +435,7 @@
           assets.find(a => /\.apk$/i.test(a.name));
         if (!asset) throw new Error('No APK in latest release');
         apkUrl = asset.browser_download_url;
+        apkName = asset.name || apkName;
         const line =
           'Latest <strong>' + (data.tag_name || data.name || 'latest') + '</strong> · ' +
           asset.name + ' · ' + formatBytes(asset.size);
@@ -470,20 +443,57 @@
         meta2.innerHTML = line;
       } catch (e) {
         console.error(e);
-        meta1.textContent = 'Could not load release info — open GitHub Releases.';
+        meta1.textContent = 'Could not load release info — try again or open GitHub Releases.';
         meta2.textContent = meta1.textContent;
-        apkUrl = 'https://github.com/' + REPO + '/releases/latest';
+        apkUrl = null;
       }
     }
 
-    function downloadApk() {
+    async function downloadApk() {
       if (!apkUrl) {
-        showToast('Still loading release…');
-        loadLatest().then(() => { if (apkUrl) window.location.href = apkUrl; });
-        return;
+        showToast('Loading release…');
+        await loadLatest();
+        if (!apkUrl) {
+          showToast('Download unavailable — open GitHub Releases');
+          return;
+        }
       }
-      showToast('Starting download…');
-      window.location.href = apkUrl;
+      setBusy(true);
+      showToast('Downloading APK…');
+      try {
+        const res = await fetch(apkUrl, { mode: 'cors' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const blob = await res.blob();
+        const objUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = objUrl;
+        a.download = apkName;
+        a.rel = 'noopener';
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(objUrl), 4000);
+        showToast('Saved ' + apkName);
+      } catch (e) {
+        console.error(e);
+        // Fallback: hidden iframe-style navigation without replacing the page
+        try {
+          const a = document.createElement('a');
+          a.href = apkUrl;
+          a.download = apkName;
+          a.rel = 'noopener';
+          a.style.display = 'none';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          showToast('Download started');
+        } catch (e2) {
+          showToast('Could not download — open Releases on GitHub');
+        }
+      } finally {
+        setBusy(false);
+      }
     }
 
     btn1.addEventListener('click', downloadApk);
