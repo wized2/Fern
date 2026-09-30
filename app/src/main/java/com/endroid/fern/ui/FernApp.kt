@@ -159,7 +159,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.size
-import androidx.compose.ui.graphics.Color
 import com.endroid.fern.monitor.SystemSnapshot
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Image
@@ -2680,4 +2679,99 @@ private fun AdditionalContent() {
             }
         }
     }
+}
+
+@Composable
+private fun SeedColorPickerDialog(
+    initial: Color,
+    onDismiss: () -> Unit,
+    onConfirm: (Color) -> Unit
+) {
+    var hue by remember {
+        val hsv = FloatArray(3)
+        android.graphics.Color.colorToHSV(initial.toArgb(), hsv)
+        mutableStateOf(hsv[0])
+    }
+    var sat by remember {
+        val hsv = FloatArray(3)
+        android.graphics.Color.colorToHSV(initial.toArgb(), hsv)
+        mutableStateOf(hsv[1].coerceIn(0.25f, 1f))
+    }
+    var value by remember {
+        val hsv = FloatArray(3)
+        android.graphics.Color.colorToHSV(initial.toArgb(), hsv)
+        mutableStateOf(hsv[2].coerceIn(0.25f, 1f))
+    }
+    val preview = Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, sat, value)))
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Choose seed color") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(preview)
+                        .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.medium)
+                )
+                Text("Presets", style = MaterialTheme.typography.labelLarge)
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(6),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.height(96.dp)
+                ) {
+                    items(PresetSeedColors) { c ->
+                        val selected = (c.toArgb() and 0xFFFFFF) == (preview.toArgb() and 0xFFFFFF)
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(c)
+                                .border(
+                                    if (selected) 3.dp else 1.dp,
+                                    if (selected) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.outline,
+                                    CircleShape
+                                )
+                                .clickable {
+                                    val hsv = FloatArray(3)
+                                    android.graphics.Color.colorToHSV(c.toArgb(), hsv)
+                                    hue = hsv[0]
+                                    sat = hsv[1].coerceIn(0.25f, 1f)
+                                    value = hsv[2].coerceIn(0.25f, 1f)
+                                }
+                        )
+                    }
+                }
+                Text("Hue", style = MaterialTheme.typography.labelMedium)
+                Slider(
+                    value = hue,
+                    onValueChange = { hue = it },
+                    valueRange = 0f..360f
+                )
+                Text("Saturation", style = MaterialTheme.typography.labelMedium)
+                Slider(
+                    value = sat,
+                    onValueChange = { sat = it },
+                    valueRange = 0.15f..1f
+                )
+                Text("Brightness", style = MaterialTheme.typography.labelMedium)
+                Slider(
+                    value = value,
+                    onValueChange = { value = it },
+                    valueRange = 0.2f..1f
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(preview) }) { Text("Apply") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }

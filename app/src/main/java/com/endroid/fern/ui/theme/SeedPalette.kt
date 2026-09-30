@@ -21,7 +21,7 @@ fun colorSchemeFromSeed(seed: Color, dark: Boolean): ColorScheme {
 
     return if (!dark) {
         val primary = tone(h, (s * 0.92f).coerceAtLeast(0.35f), (v * 0.72f).coerceIn(0.35f, 0.72f))
-        val onPrimary = if (primary.luminance() > 0.45f) Color(0xFF111411) else Color.White
+        val onPrimary = if (relativeLuminance(primary) > 0.45f) Color(0xFF111411) else Color.White
         val primaryContainer = tone(h, (s * 0.45f).coerceIn(0.15f, 0.55f), 0.90f)
         val onPrimaryContainer = tone(h, 0.55f, 0.18f)
         val secondary = tone(secondaryHue, 0.22f, 0.38f)
@@ -107,6 +107,13 @@ fun colorSchemeFromSeed(seed: Color, dark: Boolean): ColorScheme {
             onErrorContainer = Color(0xFFFFDAD6)
         )
     }
+}
+
+
+private fun relativeLuminance(c: Color): Float {
+    fun lin(x: Float): Float =
+        if (x <= 0.04045f) x / 12.92f else ((x + 0.055f) / 1.055f).toDouble().let { Math.pow(it, 2.4) }.toFloat()
+    return 0.2126f * lin(c.red) + 0.7152f * lin(c.green) + 0.0722f * lin(c.blue)
 }
 
 fun Color.toArgbCompat(): Int = toArgb()
