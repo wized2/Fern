@@ -10,6 +10,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -139,14 +140,23 @@ private val FernTypography = Typography(
 )
 
 @Composable
-fun FernTheme(mode: ThemeMode, content: @Composable () -> Unit) {
+fun FernTheme(
+    mode: ThemeMode = ThemeMode.AUTO,
+    seedColor: Color = DefaultSeedColor,
+    content: @Composable () -> Unit
+) {
     val dark = when (mode) {
         ThemeMode.AUTO -> isSystemInDarkTheme()
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
     }
+    val scheme = if (seedColor.toArgb() == DefaultSeedColor.toArgb()) {
+        if (dark) DarkColors else LightColors
+    } else {
+        colorSchemeFromSeed(seedColor, dark)
+    }
     MaterialTheme(
-        colorScheme = if (dark) DarkColors else LightColors,
+        colorScheme = scheme,
         typography = FernTypography,
         shapes = Shapes(
             extraSmall = RoundedCornerShape(8.dp),

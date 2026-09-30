@@ -146,6 +146,20 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import kotlinx.coroutines.delay
 import com.endroid.fern.BuildConfig
 import com.endroid.fern.data.ThemeMode
+import com.endroid.fern.ui.theme.DefaultSeedColor
+import com.endroid.fern.ui.theme.PresetSeedColors
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.foundation.border
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Slider
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.graphics.Color
 import com.endroid.fern.monitor.SystemSnapshot
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Image
@@ -182,6 +196,8 @@ fun FernApp(
     netHistory: List<Float>,
     storageHistory: List<Float>,
     themeMode: ThemeMode,
+    seedColorArgb: Int = DefaultSeedColor.toArgb(),
+    onSeedColor: (Int) -> Unit = {},
     refreshMs: Int,
     keepScreenOn: Boolean,
     haptics: Boolean,
@@ -365,7 +381,8 @@ fun FernApp(
                 key == Tab.More.name || key == "more/None" -> MoreContent(onOpen = { openMore(it) })
                 key == "more/Tests" -> TestsContent()
                 key == "more/Settings" -> SettingsContent(
-                    themeMode, refreshMs, keepScreenOn, haptics, pauseInBackground,
+                    themeMode, seedColorArgb, onSeedColor,
+                    refreshMs, keepScreenOn, haptics, pauseInBackground,
                     onThemeMode, onRefreshMs, onKeepScreenOn, onHaptics, onPauseInBackground, onClearHistory,
                     advancedMode, elevatedStatus, onAdvancedMode, onRequestShizuku, onRefreshElevated
                 )
@@ -818,6 +835,8 @@ private fun SpecRow(label: String, value: String) {
 @Composable
 private fun SettingsContent(
     themeMode: ThemeMode,
+    seedColorArgb: Int,
+    onSeedColor: (Int) -> Unit,
     refreshMs: Int,
     keepScreenOn: Boolean,
     haptics: Boolean,
@@ -907,6 +926,78 @@ private fun SettingsContent(
                     }
                 }
             }
+        }
+
+        var showColorPicker by remember { mutableStateOf(false) }
+        val seedColor = Color(seedColorArgb)
+        Card(
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            ),
+            shape = MaterialTheme.shapes.extraLarge,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    "Color palette",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    "Pick a seed color — Material colors are generated for the whole app.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.large)
+                        .clickable { showColorPicker = true }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(seedColor)
+                            .border(2.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Seed color", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            "#%06X".format(seedColorArgb and 0xFFFFFF),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    TextButton(onClick = { showColorPicker = true }) {
+                        Text("Choose")
+                    }
+                }
+                TextButton(
+                    onClick = { onSeedColor(DefaultSeedColor.toArgb()) },
+                    enabled = seedColorArgb != DefaultSeedColor.toArgb()
+                ) {
+                    Text("Reset to Fern green")
+                }
+            }
+        }
+        if (showColorPicker) {
+            SeedColorPickerDialog(
+                initial = seedColor,
+                onDismiss = { showColorPicker = false },
+                onConfirm = { c ->
+                    onSeedColor(c.toArgb())
+                    showColorPicker = false
+                }
+            )
         }
         Card(
             colors = CardDefaults.cardColors(

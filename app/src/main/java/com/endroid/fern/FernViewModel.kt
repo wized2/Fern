@@ -44,6 +44,9 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _themeMode = MutableStateFlow(prefs.themeMode)
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
+
+    private val _seedColorArgb = MutableStateFlow(prefs.seedColorArgb)
+    val seedColorArgb: StateFlow<Int> = _seedColorArgb.asStateFlow()
     private val _refreshMs = MutableStateFlow(prefs.refreshMs)
     val refreshMs: StateFlow<Int> = _refreshMs.asStateFlow()
     private val _keepScreenOn = MutableStateFlow(prefs.keepScreenOn)
@@ -78,6 +81,11 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
     fun setThemeMode(mode: ThemeMode) {
         prefs.themeMode = mode
         _themeMode.value = mode
+    }
+
+    fun setSeedColor(argb: Int) {
+        prefs.seedColorArgb = argb
+        _seedColorArgb.value = argb
     }
 
     fun setRefreshMs(ms: Int) {

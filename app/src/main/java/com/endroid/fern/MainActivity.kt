@@ -85,6 +85,7 @@ class MainActivity : ComponentActivity() {
         WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightNavigationBars = true
         setContent {
             val theme by viewModel.themeMode.collectAsState()
+            val seedArgb by viewModel.seedColorArgb.collectAsState()
             val keepOn by viewModel.keepScreenOn.collectAsState()
             LaunchedEffect(keepOn) {
                 if (keepOn) {
@@ -93,7 +94,7 @@ class MainActivity : ComponentActivity() {
                     window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                 }
             }
-            FernTheme(mode = theme) {
+            FernTheme(mode = theme, seedColor = androidx.compose.ui.graphics.Color(seedArgb)) {
                 val snap by viewModel.snapshot.collectAsState()
                 val cpu by viewModel.historyCpu.collectAsState()
                 val ram by viewModel.historyRam.collectAsState()
@@ -127,6 +128,8 @@ class MainActivity : ComponentActivity() {
                     peakNet = peakNet,
                     lastUpdatedMs = lastUpdated,
                     onThemeMode = viewModel::setThemeMode,
+                    seedColorArgb = seedArgb,
+                    onSeedColor = viewModel::setSeedColor,
                     onRefreshMs = viewModel::setRefreshMs,
                     onKeepScreenOn = viewModel::setKeepScreenOn,
                     onHaptics = viewModel::setHaptics,

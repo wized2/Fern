@@ -15,6 +15,13 @@ class Prefs(context: Context) {
             p.edit().putString("theme", v.name).commit()
         }
 
+    /** ARGB seed for Material palette generation (default Fern green). */
+    var seedColorArgb: Int
+        get() = p.getInt("seed_color", 0xFF1B7A3D.toInt())
+        set(v) {
+            p.edit().putInt("seed_color", v).commit()
+        }
+
     var refreshMs: Int
         get() = p.getInt("refresh_ms", 1500).coerceIn(500, 10_000)
         set(v) {
