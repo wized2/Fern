@@ -111,6 +111,8 @@ class MainActivity : ComponentActivity() {
                 val advancedMode by viewModel.advancedMode.collectAsState()
                 val elevatedStatus by viewModel.elevatedStatus.collectAsState()
                 val advancedSnap by viewModel.advancedSnapshot.collectAsState()
+                val avgCpu by viewModel.avgCpu.collectAsState()
+                val avgRam by viewModel.avgRam.collectAsState()
                 FernApp(
                     snapshot = snap,
                     cpuHistory = cpu,
@@ -144,7 +146,9 @@ class MainActivity : ComponentActivity() {
                     onRequestShizuku = viewModel::requestShizukuPermission,
                     onRefreshElevated = viewModel::refreshElevatedStatus,
                     onRefreshElevatedMetrics = viewModel::refreshElevatedMetrics,
-                    onForceStop = viewModel::forceStopPackage
+                    onForceStop = viewModel::forceStopPackage,
+                    avgCpu = avgCpu,
+                    avgRam = avgRam
                 )
             }
         }

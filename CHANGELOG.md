@@ -1,3 +1,10 @@
+## 1.9.0
+- Home: session avg CPU/RAM, uptime chip, low-memory banner, battery power (W)
+- Settings: CPU and temperature alerts (local toasts)
+- Share snapshot includes session averages and power
+- Metrics: ActivityManager lowMemory + battery mW estimate
+- Docs cleanup
+
 ## 1.7.7
 - Shizuku UserService shell (real elevated exec — not stripped newProcess alone)
 - System back on Settings/Tests/Sensors/About returns to More (does not exit app)

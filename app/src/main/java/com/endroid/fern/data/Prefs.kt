@@ -123,3 +123,21 @@ class Prefs(context: Context) {
             p.edit().putBoolean("overlay_show_cpu", v).commit()
         }
 }
+
+    /** 0 = off. Alert when CPU stays at/above this % (session). */
+    var alertCpuPercent: Int
+        get() = p.getInt("alert_cpu", 0).coerceIn(0, 100)
+        set(v) { p.edit().putInt("alert_cpu", v.coerceIn(0, 100)).apply() }
+
+    /** 0 = off. Alert when battery temp ≥ this °C. */
+    var alertTempC: Int
+        get() = p.getInt("alert_temp", 0).coerceIn(0, 60)
+        set(v) { p.edit().putInt("alert_temp", v.coerceIn(0, 60)).apply() }
+
+    var showTrends: Boolean
+        get() = p.getBoolean("show_trends", true)
+        set(v) { p.edit().putBoolean("show_trends", v).apply() }
+
+    var compactHome: Boolean
+        get() = p.getBoolean("compact_home", false)
+        set(v) { p.edit().putBoolean("compact_home", v).apply() }

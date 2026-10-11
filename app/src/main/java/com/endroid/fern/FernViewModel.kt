@@ -71,6 +71,14 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
     private val _lastUpdatedMs = MutableStateFlow(0L)
     val lastUpdatedMs: StateFlow<Long> = _lastUpdatedMs.asStateFlow()
 
+    private val _avgCpu = MutableStateFlow(0f)
+    val avgCpu: StateFlow<Float> = _avgCpu.asStateFlow()
+    private val _avgRam = MutableStateFlow(0f)
+    val avgRam: StateFlow<Float> = _avgRam.asStateFlow()
+    private val _alertMessage = MutableStateFlow<String?>(null)
+    val alertMessage: StateFlow<String?> = _alertMessage.asStateFlow()
+    private var lastAlertAt = 0L
+
     private var loop: Job? = null
     private var elevatedLoop: Job? = null
     private var running = false
@@ -117,6 +125,27 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
         prefs.pauseInBackground = on
         _pauseInBackground.value = on
     }
+
+    fun setAlertCpu(v: Int) {
+        prefs.alertCpuPercent = v
+    }
+
+    fun setAlertTemp(v: Int) {
+        prefs.alertTempC = v
+    }
+
+    fun setShowTrends(on: Boolean) {
+        prefs.showTrends = on
+    }
+
+    fun setCompactHome(on: Boolean) {
+        prefs.compactHome = on
+    }
+
+    fun alertCpuPercent(): Int = prefs.alertCpuPercent
+    fun alertTempC(): Int = prefs.alertTempC
+    fun showTrendsPref(): Boolean = prefs.showTrends
+    fun compactHomePref(): Boolean = prefs.compactHome
 
     fun setAdvancedMode(on: Boolean) {
         prefs.advancedMode = on
@@ -197,6 +226,8 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
         _peakCpu.value = 0f
         _peakRam.value = 0f
         _peakNet.value = 0f
+        _avgCpu.value = 0f
+        _avgRam.value = 0f
     }
 
     fun startSampling() {
@@ -241,7 +272,34 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
         if (snap.cpuPercent > _peakCpu.value) _peakCpu.value = snap.cpuPercent
         if (snap.ramPercent > _peakRam.value) _peakRam.value = snap.ramPercent
         if (snap.networkKBps > _peakNet.value) _peakNet.value = snap.networkKBps
+        val hc = _historyCpu.value
+        val hr = _historyRam.value
+        if (hc.isNotEmpty()) _avgCpu.value = hc.average().toFloat()
+        if (hr.isNotEmpty()) _avgRam.value = hr.average().toFloat()
+        maybeAlert(snap)
     }
+
+    private fun maybeAlert(snap: SystemSnapshot) {
+        val now = System.currentTimeMillis()
+        if (now - lastAlertAt < 45_000L) return
+        val cpuLim = prefs.alertCpuPercent
+        val tempLim = prefs.alertTempC
+        val msg = when {
+            cpuLim > 0 && snap.cpuPercent >= cpuLim ->
+                "CPU ${"%.0f".format(snap.cpuPercent)}% ≥ alert $cpuLim%"
+            tempLim > 0 && (snap.batteryTempC ?: -1f) >= tempLim ->
+                "Battery ${"%.1f".format(snap.batteryTempC)}°C ≥ alert ${tempLim}°C"
+            snap.lowMemory -> "System reports low memory"
+            else -> null
+        }
+        if (msg != null) {
+            lastAlertAt = now
+            _alertMessage.value = msg
+            Toast.makeText(getApplication(), msg, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun clearAlert() { _alertMessage.value = null }
 
     fun metricsShareText(): String {
         val s = _snapshot.value ?: return "Fern: no sample yet"
@@ -258,6 +316,15 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
                 "Battery: ${s.batteryPercent}% ${if (s.batteryCharging) "charging" else "discharging"} · ${s.batteryHealth}"
             )
             appendLine("Thermal: ${s.thermalLabel} · Uptime ${"%.1f".format(s.uptimeHours)} h")
+            appendLine(
+                "Session avg CPU ${"%.1f".format(_avgCpu.value)}% · RAM ${"%.1f".format(_avgRam.value)}%"
+            )
+            s.batteryTempC?.let { appendLine("Battery temp: ${"%.1f".format(it)}°C") }
+            s.batteryPowerMw?.let {
+                appendLine("Battery power: ${"%.0f".format(kotlin.math.abs(it))} mW")
+            }
+            if (s.lowMemory) appendLine("Memory pressure: low")
+            appendLine("Net: ${s.networkLabel} · ${"%.1f".format(s.networkKBps)} KB/s (peak ${"%.1f".format(_peakNet.value)})")
             appendLine("Refresh: ${_refreshMs.value} ms · Advanced: ${_advancedMode.value} · ${_elevatedStatus.value.label}")
         }
     }

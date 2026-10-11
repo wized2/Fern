@@ -122,6 +122,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -222,7 +223,9 @@ fun FernApp(
     onRequestShizuku: () -> Unit = {},
     onRefreshElevated: () -> Unit = {},
     onRefreshElevatedMetrics: () -> Unit = {},
-    onForceStop: suspend (String) -> Boolean = { false }
+    onForceStop: suspend (String) -> Boolean = { false },
+    avgCpu: Float = 0f,
+    avgRam: Float = 0f
 ) {
     var tab by remember { mutableStateOf(Tab.Home) }
     var moreSub by remember { mutableStateOf(MoreSub.None) }
@@ -366,7 +369,8 @@ fun FernApp(
             when {
                 key == Tab.Home.name -> HomeContent(
                     snapshot, cpuHistory, ramHistory, batteryHistory, netHistory, storageHistory,
-                    lastUpdatedMs, haptics, onRefreshNow, advancedSnapshot, advancedMode, elevatedStatus
+                    lastUpdatedMs, haptics, onRefreshNow, advancedSnapshot, advancedMode, elevatedStatus,
+                    avgCpu, avgRam
                 )
                 key == Tab.Details.name -> DetailsContent(snapshot, peakCpu, peakRam, peakNet, onShareMetrics)
                 key == Tab.ActiveApps.name -> ActiveAppsContent(
@@ -407,7 +411,9 @@ private fun HomeContent(
     onRefreshNow: () -> Unit,
     advancedSnapshot: AdvancedSnapshot = AdvancedSnapshot(emptyList(), null, emptyMap()),
     advancedMode: Boolean = false,
-    elevatedStatus: ElevatedStatus = ElevatedStatus(ElevatedBackend.None, "Off", "")
+    elevatedStatus: ElevatedStatus = ElevatedStatus(ElevatedBackend.None, "Off", ""),
+    avgCpu: Float = 0f,
+    avgRam: Float = 0f
 ) {
     var nowTick by remember { mutableStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
@@ -505,6 +511,45 @@ private fun HomeContent(
         if (s == null) {
             Text("Reading sensors…")
             return
+        }
+        if (s.lowMemory) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                shape = MaterialTheme.shapes.large,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    "Low memory — system is under pressure",
+                    modifier = Modifier.padding(12.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            PeakChip("Avg CPU", String.format("%.0f%%", avgCpu), Modifier.weight(1f))
+            PeakChip("Avg RAM", String.format("%.0f%%", avgRam), Modifier.weight(1f))
+            PeakChip(
+                "Uptime",
+                if (s.uptimeHours >= 24f) String.format("%.1fd", s.uptimeHours / 24f)
+                else String.format("%.1fh", s.uptimeHours),
+                Modifier.weight(1f)
+            )
+        }
+        s.batteryPowerMw?.let { mw ->
+            val watts = kotlin.math.abs(mw) / 1000f
+            Text(
+                buildString {
+                    append(if (s.batteryCharging) "Charging ~" else "Draw ~")
+                    append(String.format("%.2f W", watts))
+                    s.batteryTempC?.let { append(" · "); append(String.format("%.1f°C", it)) }
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -850,8 +895,21 @@ private fun SettingsContent(
     elevatedStatus: ElevatedStatus = ElevatedStatus(ElevatedBackend.None, "Off", ""),
     onAdvancedMode: (Boolean) -> Unit = {},
     onRequestShizuku: () -> Unit = {},
-    onRefreshElevated: () -> Unit = {}
+    onRefreshElevated: () -> Unit = {},
+    alertCpu: Int = 0,
+    alertTemp: Int = 0,
+    onAlertCpu: (Int) -> Unit = {},
+    onAlertTemp: (Int) -> Unit = {},
+    showTrends: Boolean = true,
+    onShowTrends: (Boolean) -> Unit = {},
+    compactHome: Boolean = false,
+    onCompactHome: (Boolean) -> Unit = {}
 ) {
+    val ctx = LocalContext.current
+    val localPrefs = remember { com.endroid.fern.data.Prefs(ctx) }
+    var alertCpu by remember { mutableIntStateOf(localPrefs.alertCpuPercent) }
+    var alertTemp by remember { mutableIntStateOf(localPrefs.alertTempC) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -1099,6 +1157,44 @@ private fun SettingsContent(
                 }
                 androidx.compose.material3.OutlinedButton(onClick = onClearHistory, modifier = Modifier.fillMaxWidth()) {
                     Text("Clear sparkline history")
+                }
+            }
+        }
+
+
+        Card(
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            ),
+            shape = MaterialTheme.shapes.extraLarge,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Alerts", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                Text(
+                    "Local only — toast when thresholds are hit (min 45s between alerts).",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text("CPU ≥ ${if (alertCpu == 0) "off" else "$alertCpu%"}", style = MaterialTheme.typography.labelLarge)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(0, 70, 85, 95).forEach { v ->
+                        androidx.compose.material3.FilterChip(
+                            selected = alertCpu == v,
+                            onClick = { alertCpu = v; localPrefs.alertCpuPercent = v },
+                            label = { Text(if (v == 0) "Off" else "$v%") }
+                        )
+                    }
+                }
+                Text("Battery temp ≥ ${if (alertTemp == 0) "off" else "${alertTemp}°C"}", style = MaterialTheme.typography.labelLarge)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(0, 40, 45, 50).forEach { v ->
+                        androidx.compose.material3.FilterChip(
+                            selected = alertTemp == v,
+                            onClick = { alertTemp = v; localPrefs.alertTempC = v },
+                            label = { Text(if (v == 0) "Off" else "${v}°") }
+                        )
+                    }
                 }
             }
         }

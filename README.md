@@ -7,7 +7,7 @@ Material 3 · offline · no ads · small release APK (R8 + resource shrink).
 ![Min API 26](https://img.shields.io/badge/minSdk-26-green)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0-blue)
 ![Compose](https://img.shields.io/badge/Material%203-green)
-![Version](https://img.shields.io/badge/version-1.7.0-blue)
+![Version](https://img.shields.io/badge/version-1.9.0-blue)
 
 ## Features
 
@@ -15,49 +15,39 @@ Material 3 · offline · no ads · small release APK (R8 + resource shrink).
 |--------|--------|
 | **CPU %** | Multi-path `/proc/stat` dual-sample + cross-tick; loadavg fallback |
 | **CPU detail** | Cores, current/max MHz, governor, ABI, chip, load 1/5/15 |
-| **RAM** | Used / free / total + app heap |
+| **RAM** | Used / free / total + app heap + low-memory pressure |
 | **Storage** | Internal `StatFs`; external when distinct |
-| **Battery** | Level, charge state, health, tech, °C, mV, mA + sparkline |
-| **Thermal** | `PowerManager` status (API 29+) |
+| **Battery** | Level, charge, health, tech, °C, mV, mA, estimated watts |
+| **Thermal** | `PowerManager` status (API 29+) + battery °C bar |
 | **Network** | Type + live KB/s throughput |
 | **Display** | Resolution, DPI, refresh Hz |
 | **System** | Security patch, kernel, locale, timezone, sensor count |
 
 ### Tabs
 
-- **Home** — live status, gauges, bars, trend sparklines, manual refresh  
-- **Details** — processor, memory, power, display, device peaks; share snapshot  
-- **Active Apps** — recently active apps (optional Usage access; data stays on device)  
-- **More** — Tests, Settings, Sensors  
+- **Home** — live gauges, session averages, uptime, trends, thermal, refresh
+- **Details** — processor, memory, power, display, peaks; share snapshot
+- **Active Apps** — recent apps (optional Usage access); elevated per-app RAM/CPU
+- **More** — Tests, Settings (alerts, theme, advanced), Sensors, Notch island, About
+
+### Alerts
+
+Optional CPU % and battery temperature thresholds in Settings. Alerts are on-device toasts only (no network).
 
 ### Permissions
 
 | Permission | Required | Purpose |
 |------------|----------|---------|
-| `ACCESS_NETWORK_STATE` | yes | Network type / throughput on Home |
-| `VIBRATE` | yes | Haptics and Tests vibration |
-| `PACKAGE_USAGE_STATS` | optional | Active Apps only — user grants Usage access in system settings; never leaves the device |
+| `ACCESS_NETWORK_STATE` | yes | Network type / throughput |
+| `VIBRATE` | yes | Haptics and Tests |
+| `PACKAGE_USAGE_STATS` | optional | Active Apps |
+| `SYSTEM_ALERT_WINDOW` | optional | Notch island overlay |
 
 No internet permission. No accounts. No tracking.
 
-### Advanced mode (optional)
+### Advanced mode
 
-Off by default. In **More → Settings**, enable **Advanced mode** to use **Shizuku** (recommended) or **root**:
-
-- Real thermal zones for the Home Thermal bar  
-- Per-app memory on Active Apps  
-- Force-stop from the app list  
-
-Shizuku never runs until you install it, start it, and grant Fern. Root is only used if `su` is present and Advanced mode is on.
-
-
-### UX
-
-- Centered top bar, fade tab transitions, nav labels only when selected  
-- Soft surface containers, refined green Material 3 palette (light + OLED dark)  
-- Sampling can pause in background; optional haptic feedback  
-
-Fully offline after install.
+Optional Shizuku or root for thermal zones, per-app memory/CPU, force-stop.
 
 ## Build
 
@@ -67,16 +57,13 @@ Fully offline after install.
 
 Min SDK 26 · Target 35 · Kotlin + Jetpack Compose + Material 3.
 
-CI builds debug + release APKs and attaches them to GitHub Releases on `main` / tags.  
-Release signing uses GitHub secrets when present; otherwise falls back to the debug keystore.
-
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md).
 
 ## Website
 
-Landing page: [index.html](index.html) at the repo root (GitHub Pages from `/`). Not part of the Android APK build.
+[index.html](index.html) (GitHub Pages). Not in the APK.
 
 ## License
 
@@ -84,18 +71,10 @@ MIT · [wized2/Fern](https://github.com/wized2/Fern)
 
 ## Contributing
 
-Bug reports and pull requests are welcome. Please:
-
-1. Open an issue for larger changes  
-2. Keep the APK size and offline-first design  
-3. Run `./gradlew assembleDebug` before submitting  
-
-## License
-
-This project is released for personal and educational use. See repository license if present.
+1. Prefer offline-first, small APK  
+2. Run `./gradlew assembleDebug` before PR  
+3. No telemetry  
 
 ## Acknowledgments
 
-- Android Jetpack Compose & Material 3  
-- Optional advanced metrics via Shizuku  
-
+Jetpack Compose, Material 3, optional Shizuku.

@@ -69,7 +69,11 @@ data class SystemSnapshot(
     val timeZoneId: String,
     val sensorCount: Int,
     val externalStorageFreeGb: Float?,
-    val externalStorageTotalGb: Float?
+    val externalStorageTotalGb: Float?,
+    /** ActivityManager reports system under memory pressure. */
+    val lowMemory: Boolean = false,
+    /** Approx battery power in mW (voltage × current); null if unknown. */
+    val batteryPowerMw: Float? = null
 )
 
 object SystemMetrics {
@@ -87,6 +91,7 @@ object SystemMetrics {
         val availRam = mem.availMem
         val usedRam = (totalRam - availRam).coerceAtLeast(0)
         val ramPct = if (totalRam > 0) usedRam.toFloat() / totalRam * 100f else 0f
+        val lowMem = mem.lowMemory
 
         val stat = StatFs(Environment.getDataDirectory().path)
         val totalStore = stat.totalBytes
@@ -158,6 +163,9 @@ object SystemMetrics {
             sensorCount = readSensorCount(context),
             externalStorageFreeGb = ext?.first,
             externalStorageTotalGb = ext?.second
+        ,
+            lowMemory = lowMem,
+            batteryPowerMw = battery.powerMw
         )
     }
 
@@ -168,12 +176,13 @@ object SystemMetrics {
         val health: String,
         val voltageMv: Int?,
         val currentUa: Int?,
-        val technology: String
+        val technology: String,
+        val powerMw: Float? = null
     )
 
     private fun readBattery(context: Context): BatteryInfo {
         val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-            ?: return BatteryInfo(-1, false, null, "Unknown", null, null, "?")
+            ?: return BatteryInfo(-1, false, null, "Unknown", null, null, "?", null)
         val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
         val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, 100).coerceAtLeast(1)
         val pct = (level * 100) / scale
@@ -201,7 +210,11 @@ object SystemMetrics {
                 if (ua != Int.MIN_VALUE && ua != 0) currentUa = ua
             }
         } catch (_: Exception) { }
-        return BatteryInfo(pct, charging, temp, health, voltage, currentUa, tech)
+        val powerMw = if (voltage != null && currentUa != null) {
+            // µA × mV → mW: (ua/1000) * (mv/1000) * 1000 = ua * mv / 1e6 * 1000 = ua*mv/1000
+            (currentUa.toLong() * voltage.toLong()) / 1000f
+        } else null
+        return BatteryInfo(pct, charging, temp, health, voltage, currentUa, tech, powerMw)
     }
 
     private fun parseProcStatLine(line: String?): Pair<Long, Long>? {
