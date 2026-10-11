@@ -162,8 +162,7 @@ object SystemMetrics {
             timeZoneId = java.util.TimeZone.getDefault().id,
             sensorCount = readSensorCount(context),
             externalStorageFreeGb = ext?.first,
-            externalStorageTotalGb = ext?.second
-        ,
+            externalStorageTotalGb = ext?.second,
             lowMemory = lowMem,
             batteryPowerMw = battery.powerMw
         )
