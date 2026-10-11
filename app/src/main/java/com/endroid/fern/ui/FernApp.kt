@@ -725,7 +725,7 @@ private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, p
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+            Icon(Icons.Default.Share, contentDescription = "Share", modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.size(8.dp))
             Text("Share snapshot")
         }
@@ -787,7 +787,7 @@ private fun DetailSection(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     icon,
-                    contentDescription = null,
+                    contentDescription = "Decorative",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp)
                 )
@@ -1141,7 +1141,7 @@ private fun SettingsContent(
                         Icon(
                             if (elevatedStatus.backend != ElevatedBackend.None)
                                 Icons.Default.VerifiedUser else Icons.Default.Security,
-                            contentDescription = null,
+                            contentDescription = "Decorative",
                             tint = if (elevatedStatus.backend != ElevatedBackend.None)
                                 MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1351,7 +1351,7 @@ private fun MoreContent(onOpen: (MoreSub) -> Unit) {
                         ) {
                             Icon(
                                 item.icon,
-                                contentDescription = null,
+                                contentDescription = "Decorative",
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(22.dp)
                             )
@@ -1371,7 +1371,7 @@ private fun MoreContent(onOpen: (MoreSub) -> Unit) {
                         }
                         Icon(
                             Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                            contentDescription = null,
+                            contentDescription = "Decorative",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -1813,7 +1813,7 @@ private fun ActiveAppRow(
             if (iconPainter != null) {
                 Image(
                     painter = iconPainter,
-                    contentDescription = null,
+                    contentDescription = "Decorative",
                     modifier = Modifier
                         .size(40.dp)
                         .clip(MaterialTheme.shapes.medium)
@@ -1828,7 +1828,7 @@ private fun ActiveAppRow(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Apps, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Icon(Icons.Default.Apps, contentDescription = "Apps", tint = MaterialTheme.colorScheme.primary)
                 }
             }
             Spacer(modifier = Modifier.size(12.dp))
@@ -2305,7 +2305,7 @@ private fun ThermalBar(
             ) {
                 Icon(
                     Icons.Default.DeviceThermostat,
-                    contentDescription = null,
+                    contentDescription = "Decorative",
                     tint = barColor,
                     modifier = Modifier.size(18.dp)
                 )
@@ -2364,7 +2364,7 @@ private fun Bar(icon: ImageVector, title: String, percent: Float, detail: String
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                Icon(icon, contentDescription = "Decorative", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.size(8.dp))
                 Text(title, style = MaterialTheme.typography.titleSmall)
             }

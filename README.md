@@ -81,3 +81,21 @@ Landing page: [index.html](index.html) at the repo root (GitHub Pages from `/`).
 ## License
 
 MIT · [wized2/Fern](https://github.com/wized2/Fern)
+
+## Contributing
+
+Bug reports and pull requests are welcome. Please:
+
+1. Open an issue for larger changes  
+2. Keep the APK size and offline-first design  
+3. Run `./gradlew assembleDebug` before submitting  
+
+## License
+
+This project is released for personal and educational use. See repository license if present.
+
+## Acknowledgments
+
+- Android Jetpack Compose & Material 3  
+- Optional advanced metrics via Shizuku  
+
