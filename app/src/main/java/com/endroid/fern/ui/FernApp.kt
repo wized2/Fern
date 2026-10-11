@@ -13,6 +13,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -131,6 +132,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -603,8 +605,14 @@ private fun HomeContent(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    "Trends",
-                    style = MaterialTheme.typography.labelLarge,
+                    "Live trends",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    "Smoothed session history",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spark(
@@ -2490,60 +2498,148 @@ private fun Spark(
     label: String,
     fixedMax: Float? = 100f
 ) {
-    Column {
-        Text(
-            label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Canvas(
+    val latest = values.lastOrNull() ?: 0f
+    val peak = values.maxOrNull() ?: 0f
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                buildString {
+                    append(String.format("%.0f", latest))
+                    if (fixedMax != null) append("%")
+                    append(" · peak ")
+                    append(String.format("%.0f", peak))
+                    if (fixedMax != null) append("%")
+                },
+                style = MaterialTheme.typography.labelMedium,
+                color = color,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(58.dp)
+                .height(72.dp)
+                .clip(RoundedCornerShape(16.dp))
                 .background(
-                    MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.45f),
-                    MaterialTheme.shapes.medium
+                    Brush.verticalGradient(
+                        listOf(
+                            color.copy(alpha = 0.10f),
+                            MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.55f)
+                        )
+                    )
                 )
-                .padding(8.dp)
+                .padding(horizontal = 10.dp, vertical = 10.dp)
         ) {
-            if (values.size < 2) return@Canvas
-            val vmin = values.minOrNull() ?: 0f
-            val vmaxRaw = values.maxOrNull() ?: 1f
-            // Fixed 0..100 for % metrics so small changes are visible against full range.
-            // For network, auto-scale with a floor so idle is not a flat top line.
-            val lo: Float
-            val hi: Float
-            if (fixedMax != null) {
-                lo = 0f
-                hi = fixedMax.coerceAtLeast(1f)
-            } else {
-                lo = 0f
-                hi = maxOf(vmaxRaw * 1.15f, 1f)
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                if (values.size < 2) return@Canvas
+                val lo: Float
+                val hi: Float
+                if (fixedMax != null) {
+                    lo = 0f
+                    hi = fixedMax.coerceAtLeast(1f)
+                } else {
+                    lo = 0f
+                    val vmax = values.maxOrNull() ?: 1f
+                    hi = maxOf(vmax * 1.2f, 1f)
+                }
+                val range = (hi - lo).coerceAtLeast(0.001f)
+                val n = values.size
+                val step = size.width / (n - 1).coerceAtLeast(1)
+                fun yOf(v: Float): Float {
+                    val t = ((v - lo) / range).coerceIn(0f, 1f)
+                    return size.height - t * size.height * 0.90f - size.height * 0.05f
+                }
+                val pts = values.mapIndexed { i, v -> Offset(i * step, yOf(v)) }
+
+                // soft horizontal guides
+                val guide = color.copy(alpha = 0.08f)
+                for (g in 1..3) {
+                    val gy = size.height * g / 4f
+                    drawLine(
+                        guide,
+                        Offset(0f, gy),
+                        Offset(size.width, gy),
+                        strokeWidth = 1f
+                    )
+                }
+
+                // smooth cubic path through points
+                fun smoothPath(closeBottom: Boolean): Path {
+                    val path = Path()
+                    if (pts.isEmpty()) return path
+                    path.moveTo(pts[0].x, pts[0].y)
+                    if (pts.size == 2) {
+                        path.lineTo(pts[1].x, pts[1].y)
+                    } else {
+                        for (i in 0 until pts.lastIndex) {
+                            val p0 = pts[if (i == 0) 0 else i - 1]
+                            val p1 = pts[i]
+                            val p2 = pts[i + 1]
+                            val p3 = pts[if (i + 2 < pts.size) i + 2 else i + 1]
+                            val c1 = Offset(
+                                p1.x + (p2.x - p0.x) / 6f,
+                                p1.y + (p2.y - p0.y) / 6f
+                            )
+                            val c2 = Offset(
+                                p2.x - (p3.x - p1.x) / 6f,
+                                p2.y - (p3.y - p1.y) / 6f
+                            )
+                            path.cubicTo(c1.x, c1.y, c2.x, c2.y, p2.x, p2.y)
+                        }
+                    }
+                    if (closeBottom) {
+                        path.lineTo(pts.last().x, size.height)
+                        path.lineTo(pts.first().x, size.height)
+                        path.close()
+                    }
+                    return path
+                }
+
+                val fillPath = smoothPath(closeBottom = true)
+                drawPath(
+                    fillPath,
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            color.copy(alpha = 0.32f),
+                            color.copy(alpha = 0.06f),
+                            Color.Transparent
+                        ),
+                        startY = 0f,
+                        endY = size.height
+                    )
+                )
+
+                val linePath = smoothPath(closeBottom = false)
+                drawPath(
+                    linePath,
+                    color = color.copy(alpha = 0.22f),
+                    style = Stroke(width = 7f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+                )
+                drawPath(
+                    linePath,
+                    color = color,
+                    style = Stroke(width = 2.8f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+                )
+
+                // end glow + tip
+                val tip = pts.last()
+                drawCircle(color.copy(alpha = 0.20f), radius = 10f, center = tip)
+                drawCircle(Color.White.copy(alpha = 0.9f), radius = 4.2f, center = tip)
+                drawCircle(color, radius = 2.6f, center = tip)
             }
-            val range = (hi - lo).coerceAtLeast(0.001f)
-            val step = size.width / (values.size - 1).coerceAtLeast(1)
-            val pts = values.mapIndexed { i, v ->
-                val y = size.height - ((v - lo) / range).coerceIn(0f, 1f) * size.height * 0.92f
-                Offset(i * step, y)
-            }
-            // soft fill under the line
-            val fill = Path().apply {
-                moveTo(pts.first().x, size.height)
-                pts.forEach { lineTo(it.x, it.y) }
-                lineTo(pts.last().x, size.height)
-                close()
-            }
-            drawPath(fill, color = color.copy(alpha = 0.14f))
-            for (i in 0 until pts.lastIndex) {
-                drawLine(color, pts[i], pts[i + 1], strokeWidth = 2.75f, cap = StrokeCap.Round)
-            }
-            // endpoint dots so movement is obvious
-            drawCircle(color, radius = 3.5f, center = pts.last())
-            drawCircle(color.copy(alpha = 0.5f), radius = 2.5f, center = pts.first())
         }
     }
 }
-
 
 
 @Composable

@@ -52,7 +52,6 @@ class Prefs(context: Context) {
             p.edit().putBoolean("advanced_mode", v).commit()
         }
 
-    // Floating island overlay
     var overlayEnabled: Boolean
         get() = p.getBoolean("overlay_enabled", false)
         set(v) {
@@ -122,22 +121,44 @@ class Prefs(context: Context) {
         set(v) {
             p.edit().putBoolean("overlay_show_cpu", v).commit()
         }
-}
 
-    /** 0 = off. Alert when CPU stays at/above this % (session). */
+    /** 0 = off. Alert when CPU is at/above this %. */
     var alertCpuPercent: Int
         get() = p.getInt("alert_cpu", 0).coerceIn(0, 100)
-        set(v) { p.edit().putInt("alert_cpu", v.coerceIn(0, 100)).apply() }
+        set(v) {
+            p.edit().putInt("alert_cpu", v.coerceIn(0, 100)).apply()
+        }
 
     /** 0 = off. Alert when battery temp ≥ this °C. */
     var alertTempC: Int
         get() = p.getInt("alert_temp", 0).coerceIn(0, 60)
-        set(v) { p.edit().putInt("alert_temp", v.coerceIn(0, 60)).apply() }
+        set(v) {
+            p.edit().putInt("alert_temp", v.coerceIn(0, 60)).apply()
+        }
 
     var showTrends: Boolean
         get() = p.getBoolean("show_trends", true)
-        set(v) { p.edit().putBoolean("show_trends", v).apply() }
+        set(v) {
+            p.edit().putBoolean("show_trends", v).apply()
+        }
 
     var compactHome: Boolean
         get() = p.getBoolean("compact_home", false)
-        set(v) { p.edit().putBoolean("compact_home", v).apply() }
+        set(v) {
+            p.edit().putBoolean("compact_home", v).apply()
+        }
+
+    /** Show session peaks/averages strip on Home. */
+    var showSessionStats: Boolean
+        get() = p.getBoolean("show_session_stats", true)
+        set(v) {
+            p.edit().putBoolean("show_session_stats", v).apply()
+        }
+
+    /** Smoother chart animation / denser samples retained. */
+    var richCharts: Boolean
+        get() = p.getBoolean("rich_charts", true)
+        set(v) {
+            p.edit().putBoolean("rich_charts", v).apply()
+        }
+}

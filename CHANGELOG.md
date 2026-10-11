@@ -1,3 +1,10 @@
+## 1.9.1
+- Fix: Prefs alert/trends/compact properties were outside the class (CI red)
+- Charts: smooth cubic trends with soft gradient fill, guides, end glow
+- Longer session history (48 samples) for richer timelines
+- Accessibility polish on icons and nav labels
+- Docs: contributing notes
+
 ## 1.9.0
 - Home: session avg CPU/RAM, uptime chip, low-memory banner, battery power (W)
 - Settings: CPU and temperature alerts (local toasts)
