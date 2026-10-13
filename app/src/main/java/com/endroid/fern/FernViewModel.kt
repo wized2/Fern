@@ -362,7 +362,7 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
                     _advancedSnapshot.value = adv
                     adv.accurateCpuPercent?.let { elevatedCpu = it }
                 }
-                delay(3_000)
+                delay(2_500)
             }
         }
     }

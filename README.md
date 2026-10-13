@@ -1,80 +1,56 @@
 # Fern
 
-**Live system pulse for Android** — CPU, RAM, storage, battery, thermal, network, and hardware tests.
+**Live system pulse for Android** — Material 3 resource monitor. Offline. No ads. Optional Shizuku / root for true per-app CPU & RAM.
 
-Material 3 · offline · no ads · small release APK (R8 + resource shrink).
+[![Build](https://github.com/wized2/Fern/actions/workflows/build.yml/badge.svg)](https://github.com/wized2/Fern/actions/workflows/build.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/Android-8%2B-blue.svg)](https://github.com/wized2/Fern/releases)
 
-![Min API 26](https://img.shields.io/badge/minSdk-26-green)
-![Kotlin](https://img.shields.io/badge/Kotlin-2.0-blue)
-![Compose](https://img.shields.io/badge/Material%203-green)
-![Version](https://img.shields.io/badge/version-1.9.1-blue)
+**Site:** https://wized2.github.io/Fern/ · **Releases:** https://github.com/wized2/Fern/releases
 
 ## Features
 
-| Metric | Source |
-|--------|--------|
-| **CPU %** | Multi-path `/proc/stat` dual-sample + cross-tick; loadavg fallback |
-| **CPU detail** | Cores, current/max MHz, governor, ABI, chip, load 1/5/15 |
-| **RAM** | Used / free / total + app heap + low-memory pressure |
-| **Storage** | Internal `StatFs`; external when distinct |
-| **Battery** | Level, charge, health, tech, °C, mV, mA, estimated watts |
-| **Thermal** | `PowerManager` status (API 29+) + battery °C bar |
-| **Network** | Type + live KB/s throughput |
-| **Display** | Resolution, DPI, refresh Hz |
-| **System** | Security patch, kernel, locale, timezone, sensor count |
+- Live **CPU**, **RAM**, **battery**, **storage**, **network** with history charts  
+- **Thermal** bar (standard APIs + Advanced thermal zones)  
+- **Active Apps** (Usage Access) with sort by recent / CPU / RAM  
+- **Dynamic Island**-style overlay (display over other apps)  
+- Home-screen **widgets**  
+- **Material You** seed color palette (full-circle presets + custom HSV)  
+- **Advanced mode** (Shizuku or root):
+  - Accurate system CPU  
+  - **Per-app RAM (RSS)** and **per-app CPU**  
+  - Thermal zones from sysfs  
+  - Force-stop apps  
+  - Process count  
 
-### Tabs
+## Advanced mode (Shizuku)
 
-- **Home** — live gauges, session averages, uptime, trends, thermal, refresh
-- **Details** — processor, memory, power, display, peaks; share snapshot
-- **Active Apps** — recent apps (optional Usage access); elevated per-app RAM/CPU
-- **More** — Tests, Settings (alerts, theme, advanced), Sensors, Notch island, About
+1. Install and **start** [Shizuku](https://shizuku.rikka.app/)  
+2. In Shizuku, **authorize Fern** (`com.endroid.fern`)  
+3. Fern → More → Settings → **Advanced mode ON** → **Grant** / **Refresh**  
+4. Open **Active Apps** → **Refresh** — CPU% and RAM appear per app when the shell is ready  
 
-### Alerts
+Root works as a fallback when available.
 
-Optional CPU % and battery temperature thresholds in Settings. Alerts are on-device toasts only (no network).
+## Install
 
-### Permissions
+- [Latest APK](https://github.com/wized2/Fern/releases/latest)  
+- In-page download: https://wized2.github.io/Fern/  
 
-| Permission | Required | Purpose |
-|------------|----------|---------|
-| `ACCESS_NETWORK_STATE` | yes | Network type / throughput |
-| `VIBRATE` | yes | Haptics and Tests |
-| `PACKAGE_USAGE_STATS` | optional | Active Apps |
-| `SYSTEM_ALERT_WINDOW` | optional | Notch island overlay |
-
-No internet permission. No accounts. No tracking.
-
-### Advanced mode
-
-Optional Shizuku or root for thermal zones, per-app memory/CPU, force-stop.
+Min SDK 26 · Target 35 · arm64-v8a / armeabi-v7a  
 
 ## Build
 
 ```bash
-./gradlew assembleDebug assembleRelease
+./gradlew :app:assembleRelease
 ```
 
-Min SDK 26 · Target 35 · Kotlin + Jetpack Compose + Material 3.
-
-## Changelog
-
-See [CHANGELOG.md](CHANGELOG.md).
-
-## Website
-
-[index.html](index.html) (GitHub Pages). Not in the APK.
-
-## License
-
-MIT · [wized2/Fern](https://github.com/wized2/Fern)
+CI publishes signed release APK on `main` when secrets are configured.
 
 ## Contributing
 
-1. Prefer offline-first, small APK  
-2. Run `./gradlew assembleDebug` before PR  
-3. No telemetry  
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Acknowledgments
+## License
 
-Jetpack Compose, Material 3, optional Shizuku.
+MIT © wized2

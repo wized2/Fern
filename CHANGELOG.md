@@ -1,3 +1,13 @@
+# Changelog
+
+## 1.10.0
+
+* **Per-app CPU & RAM (Shizuku/root):** multi-strategy parsers (`dumpsys cpuinfo`, `top`, `ps`, `dumpsys meminfo`) so elevated metrics actually populate
+* Active Apps: sort by **Recent / CPU / RAM**, shell status line, process count, Refresh elevated
+* Color picker: preset swatches are true **circles** (aspect-ratio cells), more presets
+* Advanced snapshot: process count, more resilient shell probe/bind
+* Docs: README, CONTRIBUTING, release notes; website SEO pass
+
 ## 1.9.1
 - Fix: Prefs alert/trends/compact properties were outside the class (CI red)
 - Charts: smooth cubic trends with soft gradient fill, guides, end glow

@@ -163,5 +163,11 @@ val PresetSeedColors = listOf(
     Color(0xFF2E7D32), // Green
     Color(0xFF37474F), // Blue grey
     Color(0xFF00897B), // Teal 2
-    Color(0xFFF9A825)  // Amber
+    Color(0xFFF9A825), // Amber
+    Color(0xFF0277BD), // Light blue
+    Color(0xFF558B2F), // Light green
+    Color(0xFF6D4C41), // Brown
+    Color(0xFF455A64), // Blue grey dark
+    Color(0xFFD84315), // Deep orange
+    Color(0xFF5E35B1)  // Indigo
 )

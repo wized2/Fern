@@ -379,9 +379,12 @@ fun FernApp(
                     haptics = haptics,
                     advancedMode = advancedMode,
                     elevated = elevatedStatus.backend != ElevatedBackend.None,
+                    shellOk = advancedSnapshot.shellOk,
                     rssByPackage = advancedSnapshot.rssKbByPackage,
                     cpuByPackage = advancedSnapshot.cpuTop.associate { it.first to it.second },
-                    onForceStop = onForceStop
+                    processCount = advancedSnapshot.processCount,
+                    onForceStop = onForceStop,
+                    onRefreshElevated = onRefreshElevatedMetrics
                 )
                 key == Tab.More.name || key == "more/None" -> MoreContent(onOpen = { openMore(it) })
                 key == "more/Tests" -> TestsContent()
@@ -1640,12 +1643,16 @@ private fun sensorTypeLabel(type: Int): String = when (type) {
 }
 
 @Composable
+private enum class AppSort { Recent, Cpu, Ram }
+
 private fun ActiveAppsContent(
     haptics: Boolean,
     advancedMode: Boolean = false,
     elevated: Boolean = false,
+    shellOk: Boolean = false,
     rssByPackage: Map<String, Long> = emptyMap(),
     cpuByPackage: Map<String, Float> = emptyMap(),
+    processCount: Int = 0,
     onForceStop: suspend (String) -> Boolean = { false },
     onRefreshElevated: () -> Unit = {}
 ) {
@@ -1654,6 +1661,7 @@ private fun ActiveAppsContent(
     var hasAccess by remember { mutableStateOf(repo.hasUsageAccess()) }
     var window by remember { mutableStateOf(ActiveWindow.HOUR_1) }
     var showSystem by remember { mutableStateOf(false) }
+    var sort by remember { mutableStateOf(AppSort.Recent) }
     var apps by remember { mutableStateOf<List<ActiveApp>>(emptyList()) }
     var loading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -1720,6 +1728,28 @@ private fun ActiveAppsContent(
                 TextButton(onClick = onRefreshElevated) {
                     Text("Refresh")
                 }
+            }
+        }
+        if (advancedMode && elevated) {
+            Text(
+                if (shellOk)
+                    "Shell OK · ${cpuByPackage.size} CPU · ${rssByPackage.size} RAM" +
+                        if (processCount > 0) " · $processCount procs" else ""
+                else
+                    "Shell warming up — tap Refresh",
+                style = MaterialTheme.typography.labelSmall,
+                color = if (shellOk) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.error
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(AppSort.Recent to "Recent", AppSort.Cpu to "CPU", AppSort.Ram to "RAM").forEach { (s, label) ->
+                FilterChip(
+                    selected = sort == s,
+                    onClick = { sort = s },
+                    enabled = s == AppSort.Recent || (advancedMode && elevated),
+                    label = { Text(label) }
+                )
             }
         }
         Spacer(modifier = Modifier.size(12.dp))
@@ -1806,11 +1836,18 @@ private fun ActiveAppsContent(
                 modifier = Modifier.padding(vertical = 24.dp)
             )
         } else {
+            val displayApps = remember(apps, sort, rssByPackage, cpuByPackage) {
+                when (sort) {
+                    AppSort.Recent -> apps
+                    AppSort.Cpu -> apps.sortedByDescending { lookupFloat(cpuByPackage, it.packageName) ?: -1f }
+                    AppSort.Ram -> apps.sortedByDescending { lookupLong(rssByPackage, it.packageName) ?: -1L }
+                }
+            }
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.weight(1f)
             ) {
-                items(apps, key = { it.packageName }) { app ->
+                items(displayApps, key = { it.packageName }) { app ->
                     val rss = lookupLong(rssByPackage, app.packageName)
                     val cpuPct = lookupFloat(cpuByPackage, app.packageName)
                     ActiveAppRow(
@@ -2912,15 +2949,15 @@ private fun SeedColorPickerDialog(
                 Text("Presets", style = MaterialTheme.typography.labelLarge)
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(6),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.height(96.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.height(168.dp)
                 ) {
                     items(PresetSeedColors) { c ->
                         val selected = (c.toArgb() and 0xFFFFFF) == (preview.toArgb() and 0xFFFFFF)
                         Box(
                             modifier = Modifier
-                                .size(36.dp)
+                                .aspectRatio(1f)
                                 .clip(CircleShape)
                                 .background(c)
                                 .border(
