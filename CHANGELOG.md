@@ -1,3 +1,8 @@
+## 1.10.1
+
+* Fix CI: AppSort enum must not carry @Composable; ActiveApps is @Composable again
+* Primary website: https://get-fern.vercel.app
+
 # Changelog
 
 ## 1.10.0

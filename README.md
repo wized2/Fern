@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Android-8%2B-blue.svg)](https://github.com/wized2/Fern/releases)
 
-**Site:** https://wized2.github.io/Fern/ · **Releases:** https://github.com/wized2/Fern/releases
+**Site:** https://get-fern.vercel.app · **Mirror:** https://wized2.github.io/Fern/ · **Releases:** https://github.com/wized2/Fern/releases
 
 ## Features
 
@@ -35,7 +35,8 @@ Root works as a fallback when available.
 ## Install
 
 - [Latest APK](https://github.com/wized2/Fern/releases/latest)  
-- In-page download: https://wized2.github.io/Fern/  
+- Website: https://get-fern.vercel.app
+- GitHub Pages: https://wized2.github.io/Fern/  
 
 Min SDK 26 · Target 35 · arm64-v8a / armeabi-v7a  
 

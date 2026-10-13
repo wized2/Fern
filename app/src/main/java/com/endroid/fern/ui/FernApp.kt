@@ -1642,9 +1642,9 @@ private fun sensorTypeLabel(type: Int): String = when (type) {
     else -> "Type $type"
 }
 
-@Composable
 private enum class AppSort { Recent, Cpu, Ram }
 
+@Composable
 private fun ActiveAppsContent(
     haptics: Boolean,
     advancedMode: Boolean = false,
