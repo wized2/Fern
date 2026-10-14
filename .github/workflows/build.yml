@@ -4,7 +4,22 @@ on:
   push:
     branches: [main]
     tags: ['v*']
+    paths-ignore:
+      - '**.md'
+      - 'index.html'
+      - 'sitemap.xml'
+      - 'robots.txt'
+      - 'assets/**'
+      - 'LICENSE'
+      - '.gitignore'
   pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'index.html'
+      - 'sitemap.xml'
+      - 'robots.txt'
+      - 'assets/**'
+      - 'LICENSE'
   workflow_dispatch:
 
 permissions:
@@ -97,6 +112,26 @@ jobs:
           # debug APK stays as workflow artifact only (smaller GitHub Releases; avoids large upload timeouts)
           ls -la release-assets/
 
+      - name: Load release notes
+        if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main')
+        id: notes
+        run: |
+          if [ -f RELEASE_NOTES.md ]; then
+            {
+              echo "body<<FERN_NOTES_EOF"
+              cat RELEASE_NOTES.md
+              echo "FERN_NOTES_EOF"
+            } >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo "body<<FERN_NOTES_EOF"
+              echo "## Fern ${{ steps.ver.outputs.name }}"
+              echo ""
+              echo "See CHANGELOG.md"
+              echo "FERN_NOTES_EOF"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Create GitHub Release (tag push)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
@@ -104,14 +139,7 @@ jobs:
           files: release-assets/Fern-release.apk
           generate_release_notes: true
           fail_on_unmatched_files: true
-          body: |
-            ## Fern ${{ github.ref_name }}
-
-            Live system pulse — Material 3 monitor with working Shizuku/root per-app CPU & RAM.
-
-            **Fern-release.apk** — R8 + resource-shrunk
-
-            Min SDK 26 · offline · no ads · MIT
+          body_path: RELEASE_NOTES.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -147,24 +175,6 @@ jobs:
           files: release-assets/Fern-release.apk
           generate_release_notes: true
           fail_on_unmatched_files: true
-          body: |
-            ## Fern ${{ steps.ver.outputs.name }}
-
-            Live system pulse — Material 3 resource monitor.
-
-            **Fern-release.apk** — R8 + resource-shrunk (from `main`)
-
-            ### What's new (1.10+)
-            - **Working per-app CPU & RAM** via Shizuku/root (dumpsys/top/ps parsers)
-            - Active Apps: sort Recent / CPU / RAM · shell status · process count
-            - Material seed color picker: full-circle presets · more colors
-            - Thermal zones, force-stop, accurate system CPU in Advanced mode
-            - Widgets · Dynamic Island overlay · Material 3 · offline · no ads
-
-            **Shizuku setup:** start Shizuku → authorize `com.endroid.fern` → Fern Settings → Advanced ON → Grant → Active Apps → Refresh.
-
-            Site: https://wized2.github.io/Fern/
-
-            Min SDK 26 · MIT
+          body_path: RELEASE_NOTES.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -421,9 +421,21 @@ class AdvancedAccess(private val context: Context) {
     }
 
     suspend fun readCpuPercent(): Pair<Float, Boolean>? = withContext(Dispatchers.IO) {
-        val a = parseProcStat(exec("cat /proc/stat", 2_000)) ?: return@withContext null
-        delay(220)
-        val b = parseProcStat(exec("cat /proc/stat", 2_000)) ?: return@withContext null
+        val a = parseProcStat(exec("cat /proc/stat", 1_500)) ?: return@withContext null
+        delay(180)
+        val b = parseProcStat(exec("cat /proc/stat", 1_500)) ?: return@withContext null
+        val dTotal = b.first - a.first
+        val dIdle = b.second - a.second
+        if (dTotal <= 0L) return@withContext null
+        val busy = ((dTotal - dIdle).toFloat() / dTotal * 100f).coerceIn(0f, 100f)
+        busy to true
+    }
+
+    /** Faster CPU sample for elevated loop (shorter dwell). */
+    suspend fun readCpuPercentFast(): Pair<Float, Boolean>? = withContext(Dispatchers.IO) {
+        val a = parseProcStat(exec("cat /proc/stat", 1_200)) ?: return@withContext null
+        delay(90)
+        val b = parseProcStat(exec("cat /proc/stat", 1_200)) ?: return@withContext null
         val dTotal = b.first - a.first
         val dIdle = b.second - a.second
         if (dTotal <= 0L) return@withContext null

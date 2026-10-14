@@ -226,6 +226,10 @@ fun FernApp(
     onRefreshElevated: () -> Unit = {},
     onRefreshElevatedMetrics: () -> Unit = {},
     onForceStop: suspend (String) -> Boolean = { false },
+    elevatedProfile: Int = 1,
+    onElevatedProfile: (Int) -> Unit = {},
+    elevatedIntervalSec: Int = 5,
+    onElevatedInterval: (Int) -> Unit = {},
     avgCpu: Float = 0f,
     avgRam: Float = 0f
 ) {
@@ -392,7 +396,11 @@ fun FernApp(
                     themeMode, seedColorArgb, onSeedColor,
                     refreshMs, keepScreenOn, haptics, pauseInBackground,
                     onThemeMode, onRefreshMs, onKeepScreenOn, onHaptics, onPauseInBackground, onClearHistory,
-                    advancedMode, elevatedStatus, onAdvancedMode, onRequestShizuku, onRefreshElevated
+                    advancedMode, elevatedStatus, onAdvancedMode, onRequestShizuku, onRefreshElevated,
+                    elevatedProfile = elevatedProfile,
+                    onElevatedProfile = onElevatedProfile,
+                    elevatedIntervalSec = elevatedIntervalSec,
+                    onElevatedInterval = onElevatedInterval
                 )
                 key == "more/Sensors" -> SensorsContent()
                 key == "more/About" -> AboutContent()
@@ -914,7 +922,13 @@ private fun SettingsContent(
     showTrends: Boolean = true,
     onShowTrends: (Boolean) -> Unit = {},
     compactHome: Boolean = false,
-    onCompactHome: (Boolean) -> Unit = {}
+    onCompactHome: (Boolean) -> Unit = {},
+    elevatedProfile: Int = 1,
+    onElevatedProfile: (Int) -> Unit = {},
+    elevatedIntervalSec: Int = 5,
+    onElevatedInterval: (Int) -> Unit = {},
+    alertRam: Int = 0,
+    onAlertRam: (Int) -> Unit = {}
 ) {
     val ctx = LocalContext.current
     val localPrefs = remember { com.endroid.fern.data.Prefs(ctx) }
@@ -1292,6 +1306,37 @@ private fun SettingsContent(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.outline
                     )
+                    if (advancedMode) {
+                        Text(
+                            "Elevated load (lower = less lag)",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf(0 to "Lite", 1 to "Balanced", 2 to "Full").forEach { (v, label) ->
+                                FilterChip(
+                                    selected = elevatedProfile == v,
+                                    onClick = { onElevatedProfile(v) },
+                                    label = { Text(label) }
+                                )
+                            }
+                        }
+                        Text(
+                            "Shell interval: ${elevatedIntervalSec}s",
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                        Slider(
+                            value = elevatedIntervalSec.toFloat(),
+                            onValueChange = { onElevatedInterval(it.toInt()) },
+                            valueRange = 3f..15f,
+                            steps = 11
+                        )
+                        Text(
+                            "Lite rotates light reads only. Balanced spreads per-app CPU/RAM across ticks. Full is more frequent but still staggered — never all dumpsys at once.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
                 }
             }
         }
@@ -1662,6 +1707,7 @@ private fun ActiveAppsContent(
     var window by remember { mutableStateOf(ActiveWindow.HOUR_1) }
     var showSystem by remember { mutableStateOf(false) }
     var sort by remember { mutableStateOf(AppSort.Recent) }
+    var query by remember { mutableStateOf("") }
     var apps by remember { mutableStateOf<List<ActiveApp>>(emptyList()) }
     var loading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -1742,6 +1788,14 @@ private fun ActiveAppsContent(
                 else MaterialTheme.colorScheme.error
             )
         }
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            label = { Text("Search apps") },
+            placeholder = { Text("Name or package") }
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(AppSort.Recent to "Recent", AppSort.Cpu to "CPU", AppSort.Ram to "RAM").forEach { (s, label) ->
                 FilterChip(
@@ -1836,11 +1890,16 @@ private fun ActiveAppsContent(
                 modifier = Modifier.padding(vertical = 24.dp)
             )
         } else {
-            val displayApps = remember(apps, sort, rssByPackage, cpuByPackage) {
+            val displayApps = remember(apps, sort, rssByPackage, cpuByPackage, query) {
+                val q = query.trim().lowercase()
+                val base = if (q.isEmpty()) apps else apps.filter {
+                    it.packageName.lowercase().contains(q) ||
+                        it.label.lowercase().contains(q)
+                }
                 when (sort) {
-                    AppSort.Recent -> apps
-                    AppSort.Cpu -> apps.sortedByDescending { lookupFloat(cpuByPackage, it.packageName) ?: -1f }
-                    AppSort.Ram -> apps.sortedByDescending { lookupLong(rssByPackage, it.packageName) ?: -1L }
+                    AppSort.Recent -> base
+                    AppSort.Cpu -> base.sortedByDescending { lookupFloat(cpuByPackage, it.packageName) ?: -1f }
+                    AppSort.Ram -> base.sortedByDescending { lookupLong(rssByPackage, it.packageName) ?: -1L }
                 }
             }
             LazyColumn(

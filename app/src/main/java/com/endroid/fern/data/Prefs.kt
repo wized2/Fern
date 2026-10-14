@@ -52,6 +52,25 @@ class Prefs(context: Context) {
             p.edit().putBoolean("advanced_mode", v).commit()
         }
 
+    /** 0=Lite 1=Balanced 2=Full — elevated shell work intensity. */
+    var elevatedProfile: Int
+        get() = p.getInt("elevated_profile", 1).coerceIn(0, 2)
+        set(v) {
+            p.edit().putInt("elevated_profile", v.coerceIn(0, 2)).commit()
+        }
+
+    var alertRamPercent: Int
+        get() = p.getInt("alert_ram", 0).coerceIn(0, 100)
+        set(v) {
+            p.edit().putInt("alert_ram", v.coerceIn(0, 100)).commit()
+        }
+
+    var elevatedIntervalSec: Int
+        get() = p.getInt("elevated_iv_sec", 5).coerceIn(3, 20)
+        set(v) {
+            p.edit().putInt("elevated_iv_sec", v.coerceIn(3, 20)).commit()
+        }
+
     var overlayEnabled: Boolean
         get() = p.getBoolean("overlay_enabled", false)
         set(v) {

@@ -1,3 +1,12 @@
+## 1.11.0
+
+* **Advanced mode performance**: phased shell work (Lite/Balanced/Full), 3–15s interval, probe cache, mutex — stops lag from stacking dumpsys
+* Manual Refresh still runs a full heavy sample when you need immediate per-app data
+* Active Apps search; RAM alert threshold; ZRAM + process count on elevated snapshot
+* Core MHz sysfs cached 3s; shorter elevated CPU dwell
+* CI: paths-ignore for site/docs-only changes; release body from `RELEASE_NOTES.md`
+* Website primary: https://get-fern.vercel.app
+
 ## 1.10.1
 
 * Fix CI: AppSort enum must not carry @Composable; ActiveApps is @Composable again

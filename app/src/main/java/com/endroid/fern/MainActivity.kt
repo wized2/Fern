@@ -113,6 +113,8 @@ class MainActivity : ComponentActivity() {
                 val advancedSnap by viewModel.advancedSnapshot.collectAsState()
                 val avgCpu by viewModel.avgCpu.collectAsState()
                 val avgRam by viewModel.avgRam.collectAsState()
+                val elevatedProfile by viewModel.elevatedProfile.collectAsState()
+                val elevatedIntervalSec by viewModel.elevatedIntervalSecFlow.collectAsState()
                 FernApp(
                     snapshot = snap,
                     cpuHistory = cpu,
@@ -148,7 +150,11 @@ class MainActivity : ComponentActivity() {
                     onRefreshElevatedMetrics = viewModel::refreshElevatedMetrics,
                     onForceStop = viewModel::forceStopPackage,
                     avgCpu = avgCpu,
-                    avgRam = avgRam
+                    avgRam = avgRam,
+                    elevatedProfile = elevatedProfile,
+                    onElevatedProfile = viewModel::setElevatedProfile,
+                    elevatedIntervalSec = elevatedIntervalSec,
+                    onElevatedInterval = viewModel::setElevatedIntervalSec
                 )
             }
         }

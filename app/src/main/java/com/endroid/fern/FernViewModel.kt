@@ -11,6 +11,7 @@ import com.endroid.fern.monitor.SystemSnapshot
 import com.endroid.fern.monitor.AdvancedAccess
 import com.endroid.fern.monitor.AdvancedMetrics
 import com.endroid.fern.monitor.AdvancedSnapshot
+import com.endroid.fern.monitor.ElevatedProfile
 import com.endroid.fern.monitor.ElevatedStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -56,6 +57,10 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
     private val _pauseInBackground = MutableStateFlow(prefs.pauseInBackground)
     val pauseInBackground: StateFlow<Boolean> = _pauseInBackground.asStateFlow()
     private val _advancedMode = MutableStateFlow(prefs.advancedMode)
+    private val _elevatedProfile = MutableStateFlow(prefs.elevatedProfile)
+    val elevatedProfile: StateFlow<Int> = _elevatedProfile.asStateFlow()
+    private val _elevatedIntervalSec = MutableStateFlow(prefs.elevatedIntervalSec)
+    val elevatedIntervalSecFlow: StateFlow<Int> = _elevatedIntervalSec.asStateFlow()
     val advancedMode: StateFlow<Boolean> = _advancedMode.asStateFlow()
     private val _elevatedStatus = MutableStateFlow(advancedAccess.status(prefs.advancedMode))
     val elevatedStatus: StateFlow<ElevatedStatus> = _elevatedStatus.asStateFlow()
@@ -147,6 +152,20 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
     fun showTrendsPref(): Boolean = prefs.showTrends
     fun compactHomePref(): Boolean = prefs.compactHome
 
+    fun setElevatedProfile(v: Int) {
+        prefs.elevatedProfile = v
+        _elevatedProfile.value = prefs.elevatedProfile
+        if (_advancedMode.value) restartElevatedLoop()
+    }
+
+    fun setElevatedIntervalSec(v: Int) {
+        prefs.elevatedIntervalSec = v
+        _elevatedIntervalSec.value = prefs.elevatedIntervalSec
+        if (_advancedMode.value) restartElevatedLoop()
+    }
+
+    fun elevatedIntervalSec(): Int = prefs.elevatedIntervalSec
+
     fun setAdvancedMode(on: Boolean) {
         prefs.advancedMode = on
         _advancedMode.value = on
@@ -171,8 +190,9 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             advancedAccess.ensureUserService()
             refreshElevatedStatus()
+            advancedMetrics.invalidateShellCache()
             val adv = withContext(Dispatchers.IO) {
-                advancedMetrics.collect(true)
+                advancedMetrics.collect(true, ElevatedProfile.Full, forceHeavy = true)
             }
             _advancedSnapshot.value = adv
             adv.accurateCpuPercent?.let { elevatedCpu = it }
@@ -284,9 +304,12 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
         if (now - lastAlertAt < 45_000L) return
         val cpuLim = prefs.alertCpuPercent
         val tempLim = prefs.alertTempC
+        val ramLim = prefs.alertRamPercent
         val msg = when {
             cpuLim > 0 && snap.cpuPercent >= cpuLim ->
                 "CPU ${"%.0f".format(snap.cpuPercent)}% ≥ alert $cpuLim%"
+            ramLim > 0 && snap.ramPercent >= ramLim ->
+                "RAM ${"%.0f".format(snap.ramPercent)}% ≥ alert $ramLim%"
             tempLim > 0 && (snap.batteryTempC ?: -1f) >= tempLim ->
                 "Battery ${"%.1f".format(snap.batteryTempC)}°C ≥ alert ${tempLim}°C"
             snap.lowMemory -> "System reports low memory"
@@ -348,21 +371,29 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Slow loop — elevated shell (Shizuku/root). Never blocks the main refresh. */
+    /** Slow staggered elevated loop — never stacks with itself; light phases by default. */
     private fun restartElevatedLoop() {
         elevatedLoop?.cancel()
         if (!_advancedMode.value) return
         elevatedLoop = viewModelScope.launch {
+            var statusEvery = 0
             while (isActive && running && _advancedMode.value) {
-                refreshElevatedStatus()
+                statusEvery++
+                if (statusEvery % 3 == 1) refreshElevatedStatus()
                 if (advancedAccess.isElevatedLive(true)) {
+                    val profile = when (_elevatedProfile.value) {
+                        0 -> ElevatedProfile.Lite
+                        2 -> ElevatedProfile.Full
+                        else -> ElevatedProfile.Balanced
+                    }
                     val adv = withContext(Dispatchers.IO) {
-                        advancedMetrics.collect(true)
+                        advancedMetrics.collect(true, profile, forceHeavy = false)
                     }
                     _advancedSnapshot.value = adv
                     adv.accurateCpuPercent?.let { elevatedCpu = it }
                 }
-                delay(2_500)
+                val sec = prefs.elevatedIntervalSec.coerceIn(3, 20)
+                delay(sec * 1000L)
             }
         }
     }

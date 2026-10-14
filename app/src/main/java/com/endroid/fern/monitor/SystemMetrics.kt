@@ -82,6 +82,8 @@ object SystemMetrics {
     @Volatile private var prevTotal: Long = -1
     @Volatile private var prevNetBytes: Long = -1
     @Volatile private var prevNetAt: Long = 0
+    @Volatile private var coreMhzCacheAt: Long = 0
+    @Volatile private var coreMhzCache: List<Int> = emptyList()
 
     fun capture(context: Context): SystemSnapshot {
         val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager

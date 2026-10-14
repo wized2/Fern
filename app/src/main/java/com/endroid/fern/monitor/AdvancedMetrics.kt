@@ -2,9 +2,23 @@ package com.endroid.fern.monitor
 
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 
 data class ThermalZone(val name: String, val tempC: Float)
+
+enum class ElevatedProfile {
+    /** Thermals + light CPU only — lowest impact. */
+    Lite,
+    /** Rotate heavy per-app work across ticks. */
+    Balanced,
+    /** More frequent per-app, still not all-at-once. */
+    Full
+}
 
 data class AdvancedSnapshot(
     val thermalZones: List<ThermalZone>,
@@ -14,58 +28,149 @@ data class AdvancedSnapshot(
     val accurateCpuPercent: Float? = null,
     val shellOk: Boolean = false,
     val netKbByPackage: Map<String, Long> = emptyMap(),
-    val processCount: Int = 0
+    val processCount: Int = 0,
+    val zramKb: Long? = null,
+    val lastPhase: String = ""
 )
 
+/**
+ * Elevated metrics with staggered work so Shizuku/root does not hammer the device.
+ * Never runs dumpsys cpuinfo + meminfo + top + net in the same tick.
+ */
 class AdvancedMetrics(private val access: AdvancedAccess) {
 
-    suspend fun collect(advancedEnabled: Boolean): AdvancedSnapshot = withContext(Dispatchers.IO) {
-        if (!access.isElevatedLive(advancedEnabled)) {
-            return@withContext AdvancedSnapshot(emptyList(), null, emptyMap())
-        }
+    private val mutex = Mutex()
+    private val lastShellOkAt = AtomicLong(0L)
+    private val shellOkCached = AtomicBoolean(false)
+    private val lastRss = AtomicReference<Map<String, Long>>(emptyMap())
+    private val lastCpu = AtomicReference<List<Pair<String, Float>>>(emptyList())
+    private val lastZones = AtomicReference<List<ThermalZone>>(emptyList())
+    private val lastAccCpu = AtomicReference<Float?>(null)
+    private val lastNet = AtomicReference<Map<String, Long>>(emptyMap())
+    private val lastProcs = AtomicLong(0L)
+    private val lastZram = AtomicReference<Long?>(null)
+    private val tick = AtomicLong(0L)
 
+    suspend fun collect(
+        advancedEnabled: Boolean,
+        profile: ElevatedProfile = ElevatedProfile.Balanced,
+        forceHeavy: Boolean = false
+    ): AdvancedSnapshot = mutex.withLock {
+        withContext(Dispatchers.IO) {
+            if (!access.isElevatedLive(advancedEnabled)) {
+                return@withContext AdvancedSnapshot(emptyList(), null, emptyMap())
+            }
+
+            val n = tick.incrementAndGet()
+            val shellOk = ensureShell()
+            if (!shellOk) {
+                return@withContext AdvancedSnapshot(
+                    thermalZones = lastZones.get(),
+                    maxTempC = lastZones.get().maxOfOrNull { it.tempC },
+                    rssKbByPackage = lastRss.get(),
+                    cpuTop = lastCpu.get(),
+                    accurateCpuPercent = lastAccCpu.get(),
+                    shellOk = false,
+                    netKbByPackage = lastNet.get(),
+                    processCount = lastProcs.get().toInt(),
+                    zramKb = lastZram.get(),
+                    lastPhase = "shell-wait"
+                )
+            }
+
+            // Phase plan depends on profile — never all heavy dumpsys in one pass.
+            val phase = when {
+                forceHeavy -> "heavy"
+                profile == ElevatedProfile.Lite -> when ((n % 4).toInt()) {
+                    0 -> "thermal"
+                    1 -> "cpu-acc"
+                    2 -> "thermal"
+                    else -> "idle"
+                }
+                profile == ElevatedProfile.Full -> when ((n % 4).toInt()) {
+                    0 -> "thermal+cpu-acc"
+                    1 -> "rss"
+                    2 -> "cpu-top"
+                    else -> "procs+zram"
+                }
+                else -> when ((n % 5).toInt()) { // Balanced
+                    0 -> "thermal"
+                    1 -> "cpu-acc"
+                    2 -> "rss"
+                    3 -> "cpu-top"
+                    else -> "procs"
+                }
+            }
+
+            when {
+                phase.contains("thermal") -> {
+                    val z = readThermalZones()
+                    if (z.isNotEmpty()) lastZones.set(z)
+                }
+                phase == "idle" -> { /* keep cache */ }
+            }
+            if (phase.contains("cpu-acc")) {
+                // Single /proc/stat sample pair is enough; shorter dwell than before.
+                access.readCpuPercentFast()?.let { lastAccCpu.set(it.first) }
+            }
+            if (phase == "rss" || phase == "heavy") {
+                val rss = readPackageRss()
+                if (rss.isNotEmpty()) lastRss.set(rss)
+            }
+            if (phase == "cpu-top" || phase == "heavy") {
+                val cpu = readCpuTop()
+                if (cpu.isNotEmpty()) lastCpu.set(cpu)
+            }
+            if (phase.contains("procs") || phase == "heavy") {
+                val c = countProcesses()
+                if (c > 0) lastProcs.set(c.toLong())
+            }
+            if (phase.contains("zram") || phase == "heavy") {
+                readZramKb()?.let { lastZram.set(it) }
+            }
+
+            val zones = lastZones.get()
+            AdvancedSnapshot(
+                thermalZones = zones,
+                maxTempC = zones.maxOfOrNull { it.tempC },
+                rssKbByPackage = lastRss.get(),
+                cpuTop = lastCpu.get(),
+                accurateCpuPercent = lastAccCpu.get(),
+                shellOk = true,
+                netKbByPackage = lastNet.get(),
+                processCount = lastProcs.get().toInt(),
+                zramKb = lastZram.get(),
+                lastPhase = phase
+            )
+        }
+    }
+
+    private suspend fun ensureShell(): Boolean {
+        val now = System.currentTimeMillis()
+        if (shellOkCached.get() && now - lastShellOkAt.get() < 20_000L) return true
         access.ensureUserService()
-        var shellOk = access.probeShell()
-        if (!shellOk) {
-            // one more bind attempt
+        var ok = access.probeShell()
+        if (!ok) {
             access.ensureUserService()
-            kotlinx.coroutines.delay(400)
-            shellOk = access.probeShell()
+            kotlinx.coroutines.delay(200)
+            ok = access.probeShell()
         }
-
-        val rss = if (shellOk) readPackageRss() else emptyMap()
-        val zones = if (shellOk) readThermalZones() else emptyList()
-        val cpu = if (shellOk) readCpuTop() else emptyList()
-        val accurate = if (shellOk) access.readCpuPercent()?.first else null
-        val net = if (shellOk) readNetKb() else emptyMap()
-        val procs = if (shellOk) countProcesses() else 0
-
-        Log.i(
-            "FernAdvanced",
-            "collect shell=$shellOk rss=${rss.size} cpu=${cpu.size} zones=${zones.size} net=${net.size} acc=$accurate"
-        )
-
-        AdvancedSnapshot(
-            thermalZones = zones,
-            maxTempC = zones.maxOfOrNull { it.tempC },
-            rssKbByPackage = rss,
-            cpuTop = cpu,
-            accurateCpuPercent = accurate,
-            shellOk = shellOk,
-            netKbByPackage = net,
-            processCount = procs
-        )
+        shellOkCached.set(ok)
+        if (ok) lastShellOkAt.set(now)
+        return ok
     }
 
     private suspend fun readThermalZones(): List<ThermalZone> {
+        // Cap zones read — max 12 hottest after sort
         val out = access.exec(
-            "for z in /sys/class/thermal/thermal_zone*; do " +
+            "c=0; for z in /sys/class/thermal/thermal_zone*; do " +
+                "[ \$c -ge 16 ] && break; " +
                 "n=\$(cat \"\$z/type\" 2>/dev/null); " +
                 "t=\$(cat \"\$z/temp\" 2>/dev/null); " +
-                "[ -n \"\$t\" ] && echo \"\$n|\$t\"; done",
-            3_000
+                "[ -n \"\$t\" ] && echo \"\$n|\$t\"; c=\$((c+1)); done",
+            2_500
         ) ?: return emptyList()
-        val list = ArrayList<ThermalZone>()
+        val list = ArrayList<ThermalZone>(16)
         for (line in out.lineSequence()) {
             val parts = line.split('|', limit = 2)
             if (parts.size < 2) continue
@@ -74,142 +179,68 @@ class AdvancedMetrics(private val access: AdvancedAccess) {
             if (c < -50f || c > 120f) continue
             list.add(ThermalZone(parts[0].trim().ifEmpty { "zone" }, c))
         }
-        return list.sortedByDescending { it.tempC }
+        return list.sortedByDescending { it.tempC }.take(12)
     }
 
     private suspend fun readPackageRss(): Map<String, Long> {
-        // Prefer dumpsys meminfo --package (modern) then -s, then ps
-        val attempts = listOf(
-            "dumpsys meminfo -s 2>/dev/null | head -n 200",
-            "dumpsys meminfo 2>/dev/null | grep -E 'kB:|K:|TOTAL' | head -n 250",
-            "ps -A -o NAME,RSS 2>/dev/null | head -n 400",
-            "ps -A -o ARGS,RSS 2>/dev/null | head -n 400"
-        )
-        for (cmd in attempts) {
-            val raw = access.exec(cmd, 6_000) ?: continue
-            val map = when {
-                cmd.startsWith("ps") -> parsePsRss(raw)
-                else -> parseDumpsysMeminfo(raw).ifEmpty { parsePsRss(raw) }
-            }
-            if (map.isNotEmpty()) return map
-        }
-        return emptyMap()
+        // One command only — prefer compact dumpsys -s
+        val raw = access.exec("dumpsys meminfo -s 2>/dev/null | head -n 80", 4_000)
+            ?: access.exec("ps -A -o NAME,RSS 2>/dev/null | head -n 120", 3_000)
+            ?: return emptyMap()
+        val fromDump = parseDumpsysMeminfo(raw)
+        if (fromDump.isNotEmpty()) return fromDump
+        return parsePsRss(raw)
     }
 
     private suspend fun readCpuTop(): List<Pair<String, Float>> {
-        // 1) dumpsys cpuinfo (most accurate process attribution on Android)
-        val dump = access.exec("dumpsys cpuinfo 2>/dev/null | head -n 80", 6_000)
+        val dump = access.exec("dumpsys cpuinfo 2>/dev/null | head -n 40", 4_000)
         val fromDump = parseDumpsysCpuinfo(dump)
         if (fromDump.isNotEmpty()) return fromDump
-
-        // 2) toybox top
-        val top = access.exec("top -b -n 1 -m 40 2>/dev/null", 5_000)
-        val fromTop = parseTopCpu(top)
-        if (fromTop.isNotEmpty()) return fromTop
-
-        // 3) ps with %CPU when available
-        val ps = access.exec("ps -A -o NAME,%CPU 2>/dev/null | head -n 200", 4_000)
-        return parsePsCpu(ps)
+        val top = access.exec("top -b -n 1 -m 25 2>/dev/null", 3_500)
+        return parseTopCpu(top)
     }
 
     private fun parseDumpsysCpuinfo(raw: String?): List<Pair<String, Float>> {
-        if (raw.isNullOrBlank()) return emptyMap<String, Float>().toList()
+        if (raw.isNullOrBlank()) return emptyList()
         val acc = LinkedHashMap<String, Float>()
-        // Formats seen across OEMs:
-        // "  12% 1000/com.example.app: 8% user + 4% kernel"
-        // "  3.5% 1234/com.foo:bar: 2% user + 1% kernel / faults ..."
-        // "  0.1% 567/system_server: ..."
-        val patterns = listOf(
-            Regex("""^\s*([\d.]+)%\s+\d+/(?:u\d+_a\d+:)?([a-zA-Z0-9._]+(?::[a-zA-Z0-9._]+)?)"""),
-            Regex("""^\s*([\d.]+)%\s+\d+/\S*?([a-zA-Z][a-zA-Z0-9_]*(?:\.[a-zA-Z0-9_]+){1,})""")
-        )
+        val re = Regex("""^\s*([\d.]+)%\s+\d+/\S*?([a-zA-Z][a-zA-Z0-9_]*(?:\.[a-zA-Z0-9_]+){1,})""")
         for (line in raw.lineSequence()) {
-            var matched = false
-            for (re in patterns) {
-                val m = re.find(line) ?: continue
-                val pct = m.groupValues[1].toFloatOrNull() ?: continue
-                var name = m.groupValues[2]
-                // strip process suffix after colon for grouping (com.app:service → com.app)
-                if (name.contains(':') && name.contains('.')) {
-                    name = name.substringBefore(':')
-                }
-                if (!name.contains('.')) continue
-                acc[name] = (acc[name] ?: 0f) + pct
-                matched = true
-                break
-            }
-            if (!matched) continue
+            val m = re.find(line) ?: continue
+            val pct = m.groupValues[1].toFloatOrNull() ?: continue
+            var name = m.groupValues[2].substringBefore(':')
+            if (!name.contains('.')) continue
+            acc[name] = (acc[name] ?: 0f) + pct
         }
-        return acc.entries
-            .sortedByDescending { it.value }
-            .take(40)
-            .map { it.key to it.value }
+        return acc.entries.sortedByDescending { it.value }.take(30).map { it.key to it.value }
     }
 
     private fun parseTopCpu(raw: String?): List<Pair<String, Float>> {
         if (raw.isNullOrBlank()) return emptyList()
         val acc = LinkedHashMap<String, Float>()
-        // PID USER PR NI VIRT RES SHR S [%CPU] %MEM TIME+ ARGS
         for (line in raw.lineSequence()) {
             val parts = line.trim().split(Regex("\\s+"))
             if (parts.size < 9) continue
-            val cpuIdx = parts.indexOfFirst { it.contains('%') && it.replace("%", "").toFloatOrNull() != null }
-            // find package-like token
             val pkg = parts.lastOrNull { it.contains('.') && it.matches(Regex("[a-zA-Z0-9._:]+")) } ?: continue
-            val pct = when {
-                cpuIdx >= 0 -> parts[cpuIdx].replace("%", "").toFloatOrNull()
-                else -> parts.getOrNull(8)?.replace("%", "")?.toFloatOrNull()
-                    ?: parts.getOrNull(7)?.toFloatOrNull()
-            } ?: continue
+            val pct = parts.getOrNull(8)?.replace("%", "")?.toFloatOrNull()
+                ?: parts.getOrNull(7)?.toFloatOrNull() ?: continue
             if (pct <= 0f) continue
             val name = pkg.substringBefore(':')
             if (!name.contains('.')) continue
             acc[name] = (acc[name] ?: 0f) + pct
         }
-        return acc.entries.sortedByDescending { it.value }.take(40).map { it.key to it.value }
-    }
-
-    private fun parsePsCpu(raw: String?): List<Pair<String, Float>> {
-        if (raw.isNullOrBlank()) return emptyList()
-        val acc = LinkedHashMap<String, Float>()
-        for (line in raw.lineSequence()) {
-            val parts = line.trim().split(Regex("\\s+"))
-            if (parts.size < 2) continue
-            val name = parts[0].substringBefore(':')
-            val pct = parts[1].replace("%", "").toFloatOrNull() ?: continue
-            if (!name.contains('.') || pct <= 0f) continue
-            acc[name] = (acc[name] ?: 0f) + pct
-        }
-        return acc.entries.sortedByDescending { it.value }.take(40).map { it.key to it.value }
+        return acc.entries.sortedByDescending { it.value }.take(30).map { it.key to it.value }
     }
 
     private fun parseDumpsysMeminfo(raw: String?): Map<String, Long> {
         if (raw.isNullOrBlank()) return emptyMap()
         val map = HashMap<String, Long>()
-        val patterns = listOf(
-            Regex("""([\d,]+)\s*kB:\s*([a-zA-Z0-9._:]+)""", RegexOption.IGNORE_CASE),
-            Regex("""([\d,]+)\s*K:\s*([a-zA-Z0-9._:]+)""", RegexOption.IGNORE_CASE),
-            Regex("""^\s*([\d,]+)\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)\s+([a-zA-Z0-9._:]+)""")
-        )
+        val re = Regex("""([\d,]+)\s*kB:\s*([a-zA-Z0-9._:]+)""", RegexOption.IGNORE_CASE)
         for (line in raw.lineSequence()) {
-            var hit = false
-            for ((idx, re) in patterns.withIndex()) {
-                val m = re.find(line) ?: continue
-                val kb = when (idx) {
-                    2 -> m.groupValues[1].replace(",", "").toLongOrNull() // pss-like
-                    else -> m.groupValues[1].replace(",", "").toLongOrNull()
-                } ?: continue
-                val pkgRaw = when (idx) {
-                    2 -> m.groupValues[5]
-                    else -> m.groupValues[2]
-                }
-                val pkg = pkgRaw.substringBefore(':')
-                if (!pkg.contains('.')) continue
-                map[pkg] = maxOf(map[pkg] ?: 0L, kb)
-                hit = true
-                break
-            }
-            if (!hit) continue
+            val m = re.find(line) ?: continue
+            val kb = m.groupValues[1].replace(",", "").toLongOrNull() ?: continue
+            val pkg = m.groupValues[2].substringBefore(':')
+            if (!pkg.contains('.')) continue
+            map[pkg] = maxOf(map[pkg] ?: 0L, kb)
         }
         return map
     }
@@ -221,59 +252,56 @@ class AdvancedMetrics(private val access: AdvancedAccess) {
             val parts = line.trim().split(Regex("\\s+"))
             if (parts.size < 2) continue
             val name = parts[0].substringBefore(':')
-            val rss = parts.lastOrNull()?.toLongOrNull()
-                ?: parts.getOrNull(1)?.toLongOrNull()
-                ?: continue
+            val rss = parts.lastOrNull()?.toLongOrNull() ?: continue
             if (!name.contains('.')) continue
             map[name] = maxOf(map[name] ?: 0L, rss)
         }
         return map
     }
 
-    private suspend fun readNetKb(): Map<String, Long> {
-        // Aggregate /proc/net/xt_qtaguid/stats or /proc/net/xt_qtaguid if present (older)
-        // On modern Android, try dumpsys netstats detail (heavy) — use lighter uid_stat if available
-        val raw = access.exec(
-            "if [ -d /proc/uid_stat ]; then " +
-                "for d in /proc/uid_stat/*; do " +
-                "u=\$(basename \"\$d\"); " +
-                "t=\$(( \$(cat \"\$d/tcp_rcv\" 2>/dev/null || echo 0) + \$(cat \"\$d/tcp_snd\" 2>/dev/null || echo 0) )); " +
-                "echo \"\$u \$t\"; done; " +
-                "fi",
-            4_000
-        ) ?: return emptyMap()
-        // Map uid → bytes; resolve package via pm path is slow — store as uid string keys u:12345
-        val map = HashMap<String, Long>()
-        for (line in raw.lineSequence()) {
-            val parts = line.trim().split(Regex("\\s+"))
-            if (parts.size < 2) continue
-            val uid = parts[0]
-            val bytes = parts[1].toLongOrNull() ?: continue
-            if (bytes <= 0) continue
-            map["uid:$uid"] = bytes / 1024L
-        }
-        return map
+    private suspend fun countProcesses(): Int {
+        val out = access.exec("ps -A 2>/dev/null | wc -l", 1_500) ?: return 0
+        return out.trim().toIntOrNull()?.coerceAtLeast(0) ?: 0
     }
 
-    private suspend fun countProcesses(): Int {
-        val out = access.exec("ps -A 2>/dev/null | wc -l", 2_000) ?: return 0
-        return out.trim().toIntOrNull()?.coerceAtLeast(0) ?: 0
+    private suspend fun readZramKb(): Long? {
+        val out = access.exec(
+            "cat /sys/block/zram0/mm_stat 2>/dev/null || cat /proc/swaps 2>/dev/null | head -n 3",
+            1_500
+        ) ?: return null
+        // mm_stat: orig_data_size compr_data_size ...
+        val first = out.lineSequence().firstOrNull()?.trim() ?: return null
+        val nums = first.split(Regex("\\s+")).mapNotNull { it.toLongOrNull() }
+        if (nums.isNotEmpty() && !first.contains("Filename")) {
+            return nums[0] / 1024L // bytes → approx kb for orig size
+        }
+        // swaps line: /dev/block/zram0 partition size used priority
+        for (line in out.lineSequence().drop(1)) {
+            val p = line.trim().split(Regex("\\s+"))
+            if (p.size >= 4 && p[0].contains("zram")) {
+                return p[3].toLongOrNull() // already KB on many kernels
+            }
+        }
+        return null
     }
 
     suspend fun forceStop(packageName: String, advancedEnabled: Boolean): Boolean {
         if (!access.isElevatedLive(advancedEnabled)) return false
         if (packageName.isBlank() || packageName.contains(' ')) return false
         if (access.forceStopPackage(packageName)) return true
-        val out = access.exec("am force-stop ${packageName.trim()}; echo FERN_STOPPED", 4_000)
+        val out = access.exec("am force-stop ${packageName.trim()}; echo FERN_STOPPED", 3_000)
         return out != null && out.contains("FERN_STOPPED")
     }
 
     suspend fun clearAppCache(packageName: String, advancedEnabled: Boolean): Boolean {
         if (!access.isElevatedLive(advancedEnabled)) return false
         if (packageName.isBlank() || packageName.contains(' ')) return false
-        val out = access.exec("pm clear --cache-only ${packageName.trim()} 2>/dev/null; echo FERN_CACHE", 5_000)
-        if (out != null && out.contains("FERN_CACHE")) return true
-        val out2 = access.exec("pm clear ${packageName.trim()} 2>/dev/null; echo FERN_CLEAR", 5_000)
-        return out2 != null && out2.contains("Success")
+        val out = access.exec("pm clear --cache-only ${packageName.trim()} 2>/dev/null; echo FERN_CACHE", 4_000)
+        return out != null && (out.contains("FERN_CACHE") || out.contains("Success"))
+    }
+
+    fun invalidateShellCache() {
+        shellOkCached.set(false)
+        lastShellOkAt.set(0L)
     }
 }

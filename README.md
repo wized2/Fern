@@ -27,10 +27,13 @@
 
 1. Install and **start** [Shizuku](https://shizuku.rikka.app/)  
 2. In Shizuku, **authorize Fern** (`com.endroid.fern`)  
-3. Fern → More → Settings → **Advanced mode ON** → **Grant** / **Refresh**  
-4. Open **Active Apps** → **Refresh** — CPU% and RAM appear per app when the shell is ready  
+3. Fern → More → Settings → **Advanced mode ON** → **Grant**  
+4. Pick **Lite / Balanced / Full** and shell interval (default **Balanced**, 5s) if the device feels busy  
+5. Open **Active Apps** → **Refresh** for an immediate full sample  
 
-Root works as a fallback when available.
+Elevated work is **staggered** (not every dumpsys every tick) so the phone stays smooth. Root works as a fallback when available.
+
+**Site:** https://get-fern.vercel.app
 
 ## Install
 
