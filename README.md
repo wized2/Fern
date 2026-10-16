@@ -58,3 +58,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 ## License
 
 MIT © wized2
+
+## Related projects
+
+- **[Latch](https://github.com/wized2/Latch)** — privacy-first Tasker-style automation (local rules, optional Shizuku)
+
+## Support
+
+If Fern is useful, a GitHub star helps others find it. Issues and PRs welcome.
