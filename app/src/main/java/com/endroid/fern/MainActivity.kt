@@ -86,6 +86,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val theme by viewModel.themeMode.collectAsState()
             val seedArgb by viewModel.seedColorArgb.collectAsState()
+            val amoled by viewModel.amoledDark.collectAsState()
             val keepOn by viewModel.keepScreenOn.collectAsState()
             LaunchedEffect(keepOn) {
                 if (keepOn) {
@@ -94,7 +95,7 @@ class MainActivity : ComponentActivity() {
                     window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                 }
             }
-            FernTheme(mode = theme, seedColor = androidx.compose.ui.graphics.Color(seedArgb)) {
+            FernTheme(mode = theme, seedColor = androidx.compose.ui.graphics.Color(seedArgb), amoledDark = amoled) {
                 val snap by viewModel.snapshot.collectAsState()
                 val cpu by viewModel.historyCpu.collectAsState()
                 val ram by viewModel.historyRam.collectAsState()
@@ -134,6 +135,8 @@ class MainActivity : ComponentActivity() {
                     onThemeMode = viewModel::setThemeMode,
                     seedColorArgb = seedArgb,
                     onSeedColor = viewModel::setSeedColor,
+                    onAmoledDark = viewModel::setAmoledDark,
+                    onCompactHome = viewModel::setCompactUi,
                     onRefreshMs = viewModel::setRefreshMs,
                     onKeepScreenOn = viewModel::setKeepScreenOn,
                     onHaptics = viewModel::setHaptics,

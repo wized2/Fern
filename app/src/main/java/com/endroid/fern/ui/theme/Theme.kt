@@ -143,6 +143,7 @@ private val FernTypography = Typography(
 fun FernTheme(
     mode: ThemeMode = ThemeMode.AUTO,
     seedColor: Color = DefaultSeedColor,
+    amoledDark: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val dark = when (mode) {
@@ -150,20 +151,33 @@ fun FernTheme(
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
     }
-    val scheme = if (seedColor.toArgb() == DefaultSeedColor.toArgb()) {
+    var scheme = if (seedColor.toArgb() == DefaultSeedColor.toArgb()) {
         if (dark) DarkColors else LightColors
     } else {
         colorSchemeFromSeed(seedColor, dark)
+    }
+    if (dark && amoledDark) {
+        val black = Color(0xFF000000)
+        val near = Color(0xFF0A0A0A)
+        scheme = scheme.copy(
+            background = black,
+            surface = black,
+            surfaceContainerLowest = black,
+            surfaceContainerLow = near,
+            surfaceContainer = Color(0xFF111111),
+            surfaceContainerHigh = Color(0xFF161616),
+            surfaceContainerHighest = Color(0xFF1C1C1C),
+        )
     }
     MaterialTheme(
         colorScheme = scheme,
         typography = FernTypography,
         shapes = Shapes(
-            extraSmall = RoundedCornerShape(8.dp),
-            small = RoundedCornerShape(10.dp),
-            medium = RoundedCornerShape(14.dp),
-            large = RoundedCornerShape(18.dp),
-            extraLarge = RoundedCornerShape(22.dp)
+            extraSmall = RoundedCornerShape(10.dp),
+            small = RoundedCornerShape(12.dp),
+            medium = RoundedCornerShape(16.dp),
+            large = RoundedCornerShape(20.dp),
+            extraLarge = RoundedCornerShape(28.dp)
         ),
         content = content
     )

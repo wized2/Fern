@@ -148,6 +148,28 @@ class Prefs(context: Context) {
             p.edit().putInt("alert_cpu", v.coerceIn(0, 100)).apply()
         }
 
+    /** Pure black surfaces in dark theme (OLED). */
+    var amoledDark: Boolean
+        get() = p.getBoolean("amoled_dark", false)
+        set(v) {
+            p.edit().putBoolean("amoled_dark", v).commit()
+        }
+
+    /** Tighter spacing on Home metric cards. */
+    var compactUi: Boolean
+        get() = p.getBoolean("compact_ui", false)
+        set(v) {
+            p.edit().putBoolean("compact_ui", v).commit()
+        }
+
+    /** Accent chart glow on timeline. */
+    var chartGlow: Boolean
+        get() = p.getBoolean("chart_glow", true)
+        set(v) {
+            p.edit().putBoolean("chart_glow", v).commit()
+        }
+
+
     /** 0 = off. Alert when battery temp ≥ this °C. */
     var alertTempC: Int
         get() = p.getInt("alert_temp", 0).coerceIn(0, 60)

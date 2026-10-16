@@ -48,6 +48,10 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _seedColorArgb = MutableStateFlow(prefs.seedColorArgb)
     val seedColorArgb: StateFlow<Int> = _seedColorArgb.asStateFlow()
+    private val _amoledDark = MutableStateFlow(prefs.amoledDark)
+    val amoledDark: StateFlow<Boolean> = _amoledDark.asStateFlow()
+    private val _compactUi = MutableStateFlow(prefs.compactUi)
+    val compactUi: StateFlow<Boolean> = _compactUi.asStateFlow()
     private val _refreshMs = MutableStateFlow(prefs.refreshMs)
     val refreshMs: StateFlow<Int> = _refreshMs.asStateFlow()
     private val _keepScreenOn = MutableStateFlow(prefs.keepScreenOn)
@@ -99,6 +103,16 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
     fun setSeedColor(argb: Int) {
         prefs.seedColorArgb = argb
         _seedColorArgb.value = argb
+    }
+
+    fun setAmoledDark(on: Boolean) {
+        prefs.amoledDark = on
+        _amoledDark.value = on
+    }
+
+    fun setCompactUi(on: Boolean) {
+        prefs.compactUi = on
+        _compactUi.value = on
     }
 
     fun setRefreshMs(ms: Int) {

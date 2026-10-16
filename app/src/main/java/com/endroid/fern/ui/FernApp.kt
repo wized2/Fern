@@ -200,6 +200,8 @@ fun FernApp(
     themeMode: ThemeMode,
     seedColorArgb: Int = DefaultSeedColor.toArgb(),
     onSeedColor: (Int) -> Unit = {},
+    onAmoledDark: (Boolean) -> Unit = {},
+    onCompactHome: (Boolean) -> Unit = {},
     refreshMs: Int,
     keepScreenOn: Boolean,
     haptics: Boolean,
@@ -396,6 +398,7 @@ fun FernApp(
                     themeMode, seedColorArgb, onSeedColor,
                     refreshMs, keepScreenOn, haptics, pauseInBackground,
                     onThemeMode, onRefreshMs, onKeepScreenOn, onHaptics, onPauseInBackground, onClearHistory,
+                    onAmoledDark = onAmoledDark, onCompactHome = onCompactHome,
                     advancedMode, elevatedStatus, onAdvancedMode, onRequestShizuku, onRefreshElevated,
                     elevatedProfile = elevatedProfile,
                     onElevatedProfile = onElevatedProfile,
@@ -923,6 +926,7 @@ private fun SettingsContent(
     onShowTrends: (Boolean) -> Unit = {},
     compactHome: Boolean = false,
     onCompactHome: (Boolean) -> Unit = {},
+    onAmoledDark: (Boolean) -> Unit = {},
     elevatedProfile: Int = 1,
     onElevatedProfile: (Int) -> Unit = {},
     elevatedIntervalSec: Int = 5,
@@ -1134,6 +1138,74 @@ private fun SettingsContent(
                     )
                 }
                 Switch(checked = keepScreenOn, onCheckedChange = onKeepScreenOn)
+            }
+        }
+
+        var amoledLocal by remember { mutableStateOf(localPrefs.amoledDark) }
+        var compactLocal by remember { mutableStateOf(localPrefs.compactUi) }
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+            shape = MaterialTheme.shapes.extraLarge,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "AMOLED black",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            "Pure black surfaces in dark theme",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = amoledLocal,
+                        onCheckedChange = {
+                            amoledLocal = it
+                            localPrefs.amoledDark = it
+                            onAmoledDark(it)
+                        }
+                    )
+                }
+                HorizontalDivider()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Compact home",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            "Tighter metric cards and spacing",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = compactLocal,
+                        onCheckedChange = {
+                            compactLocal = it
+                            localPrefs.compactUi = it
+                            onCompactHome(it)
+                        }
+                    )
+                }
             }
         }
 
