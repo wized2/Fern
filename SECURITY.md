@@ -8,7 +8,7 @@ Security fixes are applied to the latest release on the `main` branch.
 
 Please report security issues privately:
 
-- **Email:** wa0026343@gmail.com  
+- **Email:** acartoon766@gmail.com  
 - Or use GitHub **Private vulnerability reporting** on this repository if enabled.
 
 Please include steps to reproduce, affected version/commit, and impact.
