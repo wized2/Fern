@@ -1,67 +1,60 @@
 # Fern
 
-**Live system pulse for Android** — Material 3 resource monitor. Offline. No ads. Optional Shizuku / root for true per-app CPU & RAM.
+<p align="center">
+  <img src="assets/home-dark.png" width="220" alt="Fern home (dark)"/>
+</p>
 
-[![Build](https://github.com/wized2/Fern/actions/workflows/build.yml/badge.svg)](https://github.com/wized2/Fern/actions/workflows/build.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/Android-8%2B-blue.svg)](https://github.com/wized2/Fern/releases)
+**Live system pulse for Android** — Material 3 resource monitor. Offline. No ads. Optional Shizuku / root for deeper metrics.
 
-**Site:** https://get-fern.vercel.app · **Mirror:** https://wized2.github.io/Fern/ · **Releases:** https://github.com/wized2/Fern/releases
+[![Build & Release](https://github.com/wized2/Fern/actions/workflows/build-release.yml/badge.svg)](https://github.com/wized2/Fern/actions/workflows/build-release.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+**Site:** https://get-fern.vercel.app · **Releases:** https://github.com/wized2/Fern/releases
+
+## Screenshots
+
+| Home (dark) | Home (light) | Details | Active apps | More |
+|:---:|:---:|:---:|:---:|:---:|
+| ![Home dark](assets/home-dark.png) | ![Home light](assets/home-light.png) | ![Details](assets/details.png) | ![Apps](assets/apps.png) | ![More](assets/more.png) |
 
 ## Features
 
-- Live **CPU**, **RAM**, **battery**, **storage**, **network** with history charts  
-- **Thermal** bar (standard APIs + Advanced thermal zones)  
-- **Active Apps** (Usage Access) with sort by recent / CPU / RAM  
-- **Dynamic Island**-style overlay (display over other apps)  
-- Home-screen **widgets**  
-- **Material You** seed color palette (full-circle presets + custom HSV)  
-- **Advanced mode** (Shizuku or root):
-  - Accurate system CPU  
-  - **Per-app RAM (RSS)** and **per-app CPU**  
-  - Thermal zones from sysfs  
-  - Force-stop apps  
-  - Process count  
+- **Live dashboard** — CPU, RAM, battery, storage, network with smooth history charts
+- **Material You** — dynamic seed colors, light / dark / system, AMOLED-friendly dark
+- **Details & peaks** — clearer breakdowns and shareable metric snapshots
+- **Active apps** — process-oriented view; per-app CPU / RAM when elevated access is on
+- **Sensors, tests, about** — extras under More without cluttering Home
+- **Dynamic Island–style overlay** (optional) — compact temp · RAM near the camera area
+- **Advanced mode** — Shizuku (preferred) or root for higher-fidelity sampling
+- **Fully offline** — no account, no trackers, no ads
 
-## Advanced mode (Shizuku)
+## Elevated access
 
-1. Install and **start** [Shizuku](https://shizuku.rikka.app/)  
-2. In Shizuku, **authorize Fern** (`com.endroid.fern`)  
-3. Fern → More → Settings → **Advanced mode ON** → **Grant**  
-4. Pick **Lite / Balanced / Full** and shell interval (default **Balanced**, 5s) if the device feels busy  
-5. Open **Active Apps** → **Refresh** for an immediate full sample  
+Enable **Advanced mode** in Settings. Grant Fern in Shizuku (or use root). When connected you get richer CPU sampling and per-app memory / CPU detail on the Active apps tab.
 
-Elevated work is **staggered** (not every dumpsys every tick) so the phone stays smooth. Root works as a fallback when available.
+## Privacy
 
-**Site:** https://get-fern.vercel.app
+No analytics SDK. Metrics stay on your device. Optional elevated access only runs what you enable.
 
 ## Install
 
-- [Latest APK](https://github.com/wized2/Fern/releases/latest)  
-- Website: https://get-fern.vercel.app
-- GitHub Pages: https://wized2.github.io/Fern/  
-
-Min SDK 26 · Target 35 · arm64-v8a / armeabi-v7a  
+- [Latest release APK](https://github.com/wized2/Fern/releases/latest)
+- Or build: `./gradlew assembleRelease`
 
 ## Build
 
 ```bash
-./gradlew :app:assembleRelease
+./gradlew assembleDebug
+./gradlew assembleRelease
 ```
 
-CI publishes signed release APK on `main` when secrets are configured.
+## Related
 
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+- **[Latch](https://github.com/wized2/Latch)** — privacy-first Tasker-style automation (local rules, optional Shizuku)
 
 ## License
 
-MIT © wized2
-
-## Related projects
-
-- **[Latch](https://github.com/wized2/Latch)** — privacy-first Tasker-style automation (local rules, optional Shizuku)
+MIT · Project Endroid
 
 ## Support
 
