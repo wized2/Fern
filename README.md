@@ -75,7 +75,6 @@ Or build:
 | Project | What |
 |---------|------|
 | **[Latch](https://github.com/wized2/Latch)** | Privacy-first Tasker-style automation (local rules, optional Shizuku) |
-| **[Subcord](https://github.com/wized2/Subcord)** | Discord mobile web translator |
 
 ## Why Fern?
 
