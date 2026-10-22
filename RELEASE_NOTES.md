@@ -1,9 +1,9 @@
-# Fern 1.11.1
+# Fern 1.11.3
 
-Maintenance polish on the live system pulse.
+Docs & discoverability polish.
 
-- Docs & site aligned with Advanced mode (Lite / Balanced / Full)
-- Thermal strip + Dynamic Island behavior unchanged from 1.11
-- R8 + resource-shrunk release APK
+- README badges fixed (workflow path + shields for release / stars)
+- Issue templates + funding metadata
+- Cross-links to Latch / Subcord
 
-**Site:** https://get-fern.vercel.app
+App logic unchanged from 1.11.2; re-release for store/listing consistency.

@@ -1,45 +1,67 @@
-# Fern
-
 <p align="center">
-  <img src="assets/home-dark.png" width="220" alt="Fern home (dark)"/>
+  <img src="assets/home-dark.png" width="240" alt="Fern home (dark)"/>
 </p>
 
-**Live system pulse for Android** — Material 3 resource monitor. Offline. No ads. Optional Shizuku / root for deeper metrics.
+<h1 align="center">Fern</h1>
 
-[![Build & Release](https://github.com/wized2/Fern/actions/workflows/build-release.yml/badge.svg)](https://github.com/wized2/Fern/actions/workflows/build-release.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+<p align="center">
+  <b>Live system pulse for Android</b><br/>
+  Material You monitor — CPU, RAM, battery, thermals, network.<br/>
+  Offline · No ads · No trackers · Optional Shizuku / root
+</p>
 
-**Site:** https://get-fern.vercel.app · **Releases:** https://github.com/wized2/Fern/releases
+<p align="center">
+  <a href="https://github.com/wized2/Fern/actions/workflows/build.yml"><img src="https://github.com/wized2/Fern/actions/workflows/build.yml/badge.svg" alt="Build &amp; Release"/></a>
+  <a href="https://github.com/wized2/Fern/releases/latest"><img src="https://img.shields.io/github/v/release/wized2/Fern?label=release" alt="Release"/></a>
+  <a href="https://github.com/wized2/Fern/stargazers"><img src="https://img.shields.io/github/stars/wized2/Fern?style=social" alt="Stars"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT"/></a>
+  <img src="https://img.shields.io/badge/Android-8%2B-green.svg" alt="Android 8+"/>
+  <img src="https://img.shields.io/badge/Material%20You-3-purple.svg" alt="Material You"/>
+</p>
+
+<p align="center">
+  <a href="https://get-fern.vercel.app"><b>Website</b></a> ·
+  <a href="https://github.com/wized2/Fern/releases/latest"><b>Download APK</b></a> ·
+  <a href="#features"><b>Features</b></a>
+</p>
 
 ## Screenshots
 
 | Home (dark) | Home (light) | Details | Active apps | More |
 |:---:|:---:|:---:|:---:|:---:|
-| ![Home dark](assets/home-dark.png) | ![Home light](assets/home-light.png) | ![Details](assets/details.png) | ![Apps](assets/apps.png) | ![More](assets/more.png) |
+| <img src="assets/home-dark.png" width="160" alt="Home dark"/> | <img src="assets/home-light.png" width="160" alt="Home light"/> | <img src="assets/details.png" width="160" alt="Details"/> | <img src="assets/apps.png" width="160" alt="Apps"/> | <img src="assets/more.png" width="160" alt="More"/> |
 
 ## Features
 
-- **Live dashboard** — CPU, RAM, battery, storage, network with smooth history charts
-- **Material You** — dynamic seed colors, light / dark / system, AMOLED-friendly dark
-- **Details & peaks** — clearer breakdowns and shareable metric snapshots
-- **Active apps** — process-oriented view; per-app CPU / RAM when elevated access is on
-- **Sensors, tests, about** — extras under More without cluttering Home
-- **Dynamic Island–style overlay** (optional) — compact temp · RAM near the camera area
-- **Advanced mode** — Shizuku (preferred) or root for higher-fidelity sampling
-- **Fully offline** — no account, no trackers, no ads
+- **Live dashboard** — CPU, RAM, battery, storage, network with smooth history charts  
+- **Material You** — seed colors, light / dark / system, AMOLED-friendly dark  
+- **Details & peaks** — breakdowns and shareable metric snapshots  
+- **Active apps** — process view; per-app CPU / RAM with elevated access  
+- **Sensors, tests, about** — under More without cluttering Home  
+- **Dynamic Island–style overlay** (optional) — compact temp · RAM  
+- **Advanced mode** — Shizuku (preferred) or root for higher-fidelity sampling  
+- **Fully offline** — no account, no trackers, no ads  
 
 ## Elevated access
 
-Enable **Advanced mode** in Settings. Grant Fern in Shizuku (or use root). When connected you get richer CPU sampling and per-app memory / CPU detail on the Active apps tab.
+Enable **Advanced mode** in Settings → grant Fern in [Shizuku](https://shizuku.rikka.app/) (or use root).  
+When connected: richer CPU sampling and per-app memory / CPU on Active apps.
 
 ## Privacy
 
-No analytics SDK. Metrics stay on your device. Optional elevated access only runs what you enable.
+No analytics SDK. Metrics stay on your device. Elevated access only runs what you enable.
 
 ## Install
 
-- [Latest release APK](https://github.com/wized2/Fern/releases/latest)
-- Or build: `./gradlew assembleRelease`
+```text
+https://github.com/wized2/Fern/releases/latest
+```
+
+Or build:
+
+```bash
+./gradlew assembleRelease
+```
 
 ## Build
 
@@ -50,12 +72,23 @@ No analytics SDK. Metrics stay on your device. Optional elevated access only run
 
 ## Related
 
-- **[Latch](https://github.com/wized2/Latch)** — privacy-first Tasker-style automation (local rules, optional Shizuku)
+| Project | What |
+|---------|------|
+| **[Latch](https://github.com/wized2/Latch)** | Privacy-first Tasker-style automation (local rules, optional Shizuku) |
+| **[Subcord](https://github.com/wized2/Subcord)** | Discord mobile web translator |
+
+## Why Fern?
+
+Most monitors are either bloated with ads or need root for basics. Fern aims for a **clean Material You** experience that works offline, with deeper metrics only when you opt into Shizuku.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Issues and PRs welcome — especially accessibility, OEM quirks, and chart polish.
 
 ## License
 
-MIT · Project Endroid
+[MIT](LICENSE) · Project Endroid
 
-## Support
+---
 
-If Fern is useful, a GitHub star helps others find it. Issues and PRs welcome.
+<p align="center">If Fern is useful, a <b>star</b> helps others find it ⭐</p>
