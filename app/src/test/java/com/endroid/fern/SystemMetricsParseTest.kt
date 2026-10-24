@@ -56,6 +56,31 @@ class SystemMetricsParseTest {
     }
 
     @Test
+    fun parseStatCpuIgnoresTrailingFields() {
+        // Mirrors parseProcStatLine: idle = user-facing idle + iowait (parts[3] + parts[4]);
+        // total sums every numeric field. Extra columns (steal, guest, guest_nice, …) must not throw.
+        fun parse(line: String): Pair<Long, Long>? {
+            val trimmed = line.trim()
+            if (!trimmed.startsWith("cpu")) return null
+            if (trimmed.length > 3 && trimmed[3].isDigit()) return null
+            val parts = trimmed.split(Regex("\\s+")).drop(1).mapNotNull { it.toLongOrNull() }
+            if (parts.size < 4) return null
+            val idle = parts[3] + parts.getOrElse(4) { 0L }
+            val total = parts.sum()
+            if (total <= 0L) return null
+            return idle to total
+        }
+        val seven = parse("cpu  100 10 50 1000 20 0 0")
+        val eightPlus = parse("cpu  100 10 50 1000 20 0 0 5 3")
+        assertEquals(seven, eightPlus)
+        val withSteal = parse("cpu  100 10 50 1000 20 0 0 40")
+        assertEquals(seven!!.first, withSteal!!.first)
+        assertTrue(withSteal.second > seven.second)
+        assertEquals(null, parse("cpu0 1 2 3 4"))
+        assertEquals(null, parse("cpu  1 2"))
+    }
+
+    @Test
     fun thermalLabelThresholds() {
         fun label(c: Float): String = when {
             c >= 50f -> "extreme"
