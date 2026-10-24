@@ -57,11 +57,14 @@ class SystemMetricsParseTest {
 
     @Test
     fun parseStatCpuIgnoresTrailingFields() {
-        val seven = MetricsParse.parseProcStatLine("cpu  100 10 50 1000 20 0 0")
-        val eightPlus = MetricsParse.parseProcStatLine("cpu  100 10 50 1000 20 0 0 5 3")
-        assertEquals(seven, eightPlus)
-        val withSteal = MetricsParse.parseProcStatLine("cpu  100 10 50 1000 20 0 0 40")
-        assertEquals(seven!!.first, withSteal!!.first)
+        // Extra columns (steal/guest/…) must not throw; idle stays idle+iowait;
+        // total includes every numeric field so longer lines can have a larger total.
+        val seven = MetricsParse.parseProcStatLine("cpu  100 10 50 1000 20 0 0")!!
+        val eightPlus = MetricsParse.parseProcStatLine("cpu  100 10 50 1000 20 0 0 5 3")!!
+        assertEquals(seven.first, eightPlus.first)
+        assertTrue(eightPlus.second >= seven.second)
+        val withSteal = MetricsParse.parseProcStatLine("cpu  100 10 50 1000 20 0 0 40")!!
+        assertEquals(seven.first, withSteal.first)
         assertTrue(withSteal.second > seven.second)
         assertNull(MetricsParse.parseProcStatLine("cpu0 1 2 3 4"))
         assertNull(MetricsParse.parseProcStatLine("cpu  1 2"))

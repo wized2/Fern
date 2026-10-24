@@ -1,14 +1,14 @@
 ---
 name: Feature request
-about: Idea to improve Fern
-labels: enhancement
+about: Idea that fits offline monitoring
+title: 'feat: '
+labels: ''
 ---
 
 **Idea**
 
 
-**Why it helps**
+**Why it fits Fern** (offline, no trackers)
 
 
-**Optional: how it might work**
-
+<!-- Implementers: branch from **beta** and open the PR against **beta**. Stable (`main`) is release-only. -->

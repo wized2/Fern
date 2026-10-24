@@ -1,5 +1,9 @@
 ## Summary
 
+## Target branch
+- [ ] **`beta`** (default — new work)
+- [ ] `main` (stable hotfix only — explain why)
+
 ## Type
 - [ ] Bug fix
 - [ ] Feature
@@ -7,6 +11,7 @@
 - [ ] Tests
 
 ## Checklist
-- [ ] `./gradlew test` / `assembleDebug` considered
-- [ ] No trackers or INTERNET added unless documented
-- [ ] User-facing strings in `strings.xml` when practical
+- [ ] Branched from / PR targets **`beta`** unless this is a stable hotfix
+- [ ] `./gradlew testStableDebugUnitTest` considered
+- [ ] No trackers / unnecessary INTERNET
+- [ ] User-facing strings externalized when practical

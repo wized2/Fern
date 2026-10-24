@@ -1,23 +1,25 @@
 ---
 name: Bug report
-about: Something broken or incorrect in Fern
-labels: bug
+about: Something broken in Fern
+title: 'bug: '
+labels: ''
 ---
 
-**Device / Android version**
+**Branch / build**
+- [ ] Stable (`main` / Play or GitHub release)
+- [ ] Beta (`beta` branch / `com.endroid.fern.beta`)
 
+**Device**
+- Model:
+- Android version:
 
-**Fern version** (Settings → About or release tag)
-
-
-**What happened**
+**Steps to reproduce**
 
 
 **Expected**
 
 
-**Steps**
+**Actual**
 
 
-**Advanced mode** (off / Shizuku / root)
-
+<!-- Code fixes: open the PR against the **beta** branch, not main. -->
