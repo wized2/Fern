@@ -218,18 +218,8 @@ object SystemMetrics {
         return BatteryInfo(pct, charging, temp, health, voltage, currentUa, tech, powerMw)
     }
 
-    private fun parseProcStatLine(line: String?): Pair<Long, Long>? {
-        if (line.isNullOrBlank()) return null
-        val trimmed = line.trim()
-        if (!trimmed.startsWith("cpu")) return null
-        if (trimmed.length > 3 && trimmed[3].isDigit()) return null
-        val parts = trimmed.split(Regex("\\s+")).drop(1).mapNotNull { it.toLongOrNull() }
-        if (parts.size < 4) return null
-        val idle = parts[3] + parts.getOrElse(4) { 0L }
-        val total = parts.sum()
-        if (total <= 0L) return null
-        return idle to total
-    }
+    private fun parseProcStatLine(line: String?): Pair<Long, Long>? =
+        MetricsParse.parseProcStatLine(line)
 
     private fun readProcStat(): Pair<Long, Long>? {
         try {

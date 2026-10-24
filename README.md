@@ -51,6 +51,16 @@ When connected: richer CPU sampling and per-app memory / CPU on Active apps.
 
 No analytics SDK. Metrics stay on your device. Elevated access only runs what you enable.
 
+
+## Stable vs beta
+
+| Channel | Branch | Application id |
+|---------|--------|----------------|
+| Stable | `main` | `com.endroid.fern` |
+| Beta / nightly | `beta` | `com.endroid.fern.beta` |
+
+PRs should target **`beta`**. Stable releases are promoted from `beta` to `main`. Both builds can be installed at once.
+
 ## Install
 
 ```text

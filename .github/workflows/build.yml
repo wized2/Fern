@@ -79,7 +79,7 @@ jobs:
             unset RELEASE_STORE_FILE || true
             echo "No release keystore — Gradle falls back to debug signing"
           fi
-          ./gradlew assembleDebug assembleRelease --no-daemon --stacktrace
+          ./gradlew assembleStableDebug assembleBetaDebug testStableDebugUnitTest assembleRelease --no-daemon --stacktrace
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4

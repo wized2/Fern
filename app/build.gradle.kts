@@ -14,13 +14,29 @@ android {
         targetSdk = 35
         versionCode = 75
         versionName = "1.11.3"
-        resourceConfigurations += listOf("en")
+        resourceConfigurations += listOf("en", "es", "de")
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")
         }
-        buildConfigField("String", "VERSION_NAME", "\"1.11.1\"")
+        buildConfigField("String", "VERSION_NAME", "\"${defaultConfig.versionName}\"")
     }
 
+
+
+    flavorDimensions += "channel"
+    productFlavors {
+        create("stable") {
+            dimension = "channel"
+            // Production id: com.endroid.fern
+            resValue("string", "app_channel_label", "stable")
+        }
+        create("beta") {
+            dimension = "channel"
+            applicationIdSuffix = ".beta"
+            versionNameSuffix = "-beta"
+            resValue("string", "app_channel_label", "beta")
+        }
+    }
 
     val releaseStoreFile = System.getenv("RELEASE_STORE_FILE")
     val releaseStorePassword = System.getenv("RELEASE_STORE_PASSWORD")
