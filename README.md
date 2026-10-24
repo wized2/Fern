@@ -76,6 +76,27 @@ Or build:
 |---------|------|
 | **[Latch](https://github.com/wized2/Latch)** | Privacy-first Tasker-style automation (local rules, optional Shizuku) |
 
+
+## Why Fern vs others?
+
+| | Fern | CPU-Z | Simple System Monitor |
+|--|------|-------|------------------------|
+| Open source | MIT | No | Varies |
+| Material You | Yes | No | Limited |
+| No ads / trackers | Yes | Ads in free | Often |
+| Shizuku per-app stats | Yes | No | Rare |
+| Fully offline | Yes | Partial | Often |
+
+## Install options
+
+- [Latest APK](https://github.com/wized2/Fern/releases/latest)
+- **Obtainium:** add `https://github.com/wized2/Fern`
+- F-Droid-style metadata lives in `fastlane/metadata` (listing pending)
+
+## Related
+
+Also try **[Latch](https://github.com/wized2/Latch)** — privacy-first automation on the same stack.
+
 ## Why Fern?
 
 Most monitors are either bloated with ads or need root for basics. Fern aims for a **clean Material You** experience that works offline, with deeper metrics only when you opt into Shizuku.

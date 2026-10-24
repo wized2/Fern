@@ -1,0 +1,1 @@
+Metric parse tests, F-Droid metadata, docs polish.

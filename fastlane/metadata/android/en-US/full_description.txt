@@ -1,0 +1,9 @@
+Fern is a private system monitor for Android.
+
+• Live CPU, RAM, battery, storage, network
+• Material You colors, light/dark
+• Optional Dynamic Island–style overlay
+• Advanced mode via Shizuku or root
+• No ads, no analytics, works offline
+
+FOSS (MIT).
