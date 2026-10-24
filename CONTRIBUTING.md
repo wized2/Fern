@@ -1,71 +1,55 @@
 # Contributing to Fern
 
-Thanks for helping improve Fern — a free, offline Material 3 system monitor for Android.
+Thanks for helping — Fern is a free, **offline** Material 3 system monitor for Android.
 
-## Branch model
+**Read first:** [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) (setup, map of the code, PR flow).
 
-| Branch | Role | Package id | Who merges |
-|--------|------|------------|------------|
-| **`main`** | **Stable** releases only | `com.endroid.fern` | Maintainers, from `beta` when ready |
-| **`beta`** | Day-to-day development / nightly | `com.endroid.fern.beta` | Default target for PRs |
-
-```text
-feature/*  →  PR → beta  →  (soak)  →  main (stable release)
-```
-
-- **Open PRs against `beta`**, not `main`, unless the change is a critical stable hotfix.
-- `main` should not move on every merged PR; it moves when we cut a stable release.
-- Beta and stable **install side-by-side** (different application ids).
-
-### Local builds
+## TL;DR
 
 ```bash
-./gradlew :app:assembleStableDebug    # stable channel, debuggable
-./gradlew :app:assembleBetaDebug      # beta channel → com.endroid.fern.beta
-./gradlew :app:assembleStableRelease
-./gradlew :app:assembleBetaRelease
-./gradlew :app:testStableDebugUnitTest
+git clone https://github.com/wized2/Fern.git
+cd Fern && git checkout beta
+# … make changes …
+./gradlew testStableDebugUnitTest
+# open a Pull Request against **beta**
 ```
 
-## Ways to contribute
+| Do | Don’t |
+|----|--------|
+| PR → **`beta`** | PR → `main` (unless urgent stable hotfix) |
+| Keep features offline-first | Add ads, analytics, or silent network SDKs |
+| Add unit tests for parsers | Commit keystores / secrets |
+| Use `strings.xml` for UI text | Emoji-only labels without content descriptions |
 
-- Bug reports with device model, Android version, and steps
-- Features that stay **offline-first** (no accounts, ads, or trackers)
-- Metrics accuracy, Shizuku/root paths, widgets, accessibility
-- Unit tests under `app/src/test` (prefer pure functions in `monitor/MetricsParse.kt`)
+## Good places to start
+
+Open issues labeled **`good first issue`** or **`help wanted`**:
+
+- https://github.com/wized2/Fern/labels/good%20first%20issue
+
+Ideas that are usually welcome:
+
+- Accessibility `contentDescription`s
+- Wiring `HistoryExport` to a share sheet
 - Translations (`values-xx/strings.xml`)
-- Docs and honest reviews
+- Extra unit tests around `MetricsParse`
 
-## Development setup
+Comment on the issue when you start so others don’t duplicate work.
 
-1. Clone and open in Android Studio (JDK 17+).
-2. Checkout **`beta`** for feature work:
-   ```bash
-   git clone https://github.com/wized2/Fern.git
-   cd Fern && git checkout beta
-   ```
-3. Optional: [Shizuku](https://shizuku.rikka.app/) for Advanced mode testing.
+## Project docs
 
-## PR checklist
-
-1. Branch from **`beta`** (`feat/…`, `fix/…`, `test/…`).
-2. One concern per PR when possible.
-3. **No** new network SDKs, ads, analytics, or trackers.
-4. Do not commit secrets, keystores, or huge binaries.
-5. Match existing Kotlin style (clear names, few comments).
-6. UI: Material 3, accessible labels (not emoji-only).
-7. Add or extend **unit tests** for parsing / pure logic.
-8. Wait for CI green before requesting review.
-9. User-visible changes: note them in the PR body (maintainers update release notes).
-
-### Good first issues
-
-Look for labels `good first issue` and `help wanted`. Comment if you start work so we avoid duplicate effort.
+| Doc | Purpose |
+|-----|---------|
+| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Setup, commands, file map |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How pieces fit |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community norms |
+| [SECURITY.md](SECURITY.md) | Vulnerability reporting |
+| [README.md](README.md) | Product overview |
 
 ## Code of conduct
 
-See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Be respectful; maintainers may close hostile or off-topic threads.
+Be respectful. See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 ## License
 
-Contributions are licensed under the MIT License (see [LICENSE](LICENSE)).
+By contributing, you agree your work is under the MIT License ([LICENSE](LICENSE)).

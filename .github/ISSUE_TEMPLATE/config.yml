@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Development setup
+    url: https://github.com/wized2/Fern/blob/beta/docs/DEVELOPMENT.md
+    about: Build, branches (beta vs main), and where to edit code
+  - name: Discussions (ideas)
+    url: https://github.com/wized2/Fern/issues
+    about: Prefer a Feature request issue for concrete ideas

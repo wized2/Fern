@@ -111,7 +111,19 @@ Also try **[Latch](https://github.com/wized2/Latch)** — privacy-first automati
 
 Most monitors are either bloated with ads or need root for basics. Fern aims for a **clean Material You** experience that works offline, with deeper metrics only when you opt into Shizuku.
 
+
+
 ## Contributing
+
+We want first-time contributors to succeed quickly.
+
+1. Read **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)** (5‑minute setup).
+2. Branch from **`beta`** and open PRs against **`beta`** (not `main`).
+3. Pick a [`good first issue`](https://github.com/wized2/Fern/labels/good%20first%20issue) and comment that you’re on it.
+
+Stable releases are promoted from `beta` → `main`. Beta builds use package id `com.endroid.fern.beta` so both apps can install together.
+
+
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Issues and PRs welcome — especially accessibility, OEM quirks, and chart polish.
 
