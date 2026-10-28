@@ -53,3 +53,9 @@ Be respectful. See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 ## License
 
 By contributing, you agree your work is under the MIT License ([LICENSE](LICENSE)).
+
+## Finding work
+
+- [Good first issues](https://github.com/wized2/Fern/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
+- [Help wanted](https://github.com/wized2/Fern/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22)
+- Prefer PRs against **beta** for features; **main** for docs/ci fixes only when agreed.
