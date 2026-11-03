@@ -1,4 +1,3 @@
 User-agent: *
 Allow: /
-
-Sitemap: https://wized2.github.io/Fern/sitemap.xml
+Sitemap: https://get-fern.vercel.app/sitemap.xml

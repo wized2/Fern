@@ -54,6 +54,7 @@
           "https://get-fern.vercel.app/assets/home-dark.png",
           "https://get-fern.vercel.app/assets/details.png"
         ],
+        "privacyPolicy": "https://get-fern.vercel.app/privacy.html",
         "featureList": "CPU gauge, RAM monitor, thermal status, battery temp, storage bar, active apps with per-app CPU and RAM via Shizuku, sort by CPU/RAM, Dynamic Island overlay, Material 3 color seeds, widgets"
       },
       {
@@ -301,10 +302,11 @@
     </section>
 
     <div class="cta" id="download">
+
       <div class="cta-box">
         <h2>Download Fern APK</h2>
         <p>Stays on this page — fetches the latest GitHub Release and saves the APK to your device. Android 8.0+.</p>
-        <div class="cta-actions">
+        <div class="cta-actions" id="ctaActions">
           <button type="button" class="btn btn-primary" id="btnDownload2">
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 17V3"/><path d="m6 11 6 6 6-6"/><path d="M19 21H5"/></svg>
             Download latest APK
@@ -352,6 +354,9 @@
       </article>
 
       <article id="privacy">
+        <h2>Privacy &amp; Google Play</h2>
+        <p>Fern is designed for <strong>on-device</strong> monitoring — no ads and no analytics SDK in the app. Full policy: <a href="/privacy.html">Privacy Policy</a>. Play Data safety notes: <a href="/data-safety.html">Data safety</a>.</p>
+
         <h2>Privacy-first system monitor (no ads, offline)</h2>
         <p>Fern does not require an internet permission for core monitoring. There are no accounts and no ad SDKs in the described product positioning. Optional Usage Access is only for the Active Apps list and stays on-device.</p>
       </article>
@@ -367,12 +372,19 @@
         <p>Source code and release history: <a href="https://github.com/wized2/Fern">github.com/wized2/Fern</a>.</p>
       </article>
 
+      <article id="get-on-play">
+        <h2>Google Play</h2>
+        <p>Fern is being published on <strong>Google Play</strong> as <code>com.endroid.fern</code>. Until the listing is live, download the signed release APK from this site or GitHub Releases (same signing key).</p>
+        <p>Package: <code>com.endroid.fern</code> · Support: <a href="mailto:wa0026343@gmail.com">wa0026343@gmail.com</a> · <a href="/privacy.html">Privacy policy</a> (required for Play).</p>
+      </article>
+
       <article id="faq">
         <h2>FAQ — Android system monitor</h2>
         <p><strong>Is Fern free?</strong> Yes — free and open source under MIT.</p>
         <p><strong>Min Android version?</strong> Android 8.0 (API 26)+.</p>
         <p><strong>Does it clean RAM automatically?</strong> No. Fern monitors; it does not force-kill apps in basic mode.</p>
-        <p><strong>Where is the official APK?</strong> GitHub Releases, linked from this site’s download button.</p>
+        <p><strong>Where is the official APK?</strong> GitHub Releases, linked from this site’s download button. Google Play listing uses the same package <code>com.endroid.fern</code>.</p>
+        <p><strong>Privacy policy URL for Play?</strong> <a href="/privacy.html">https://get-fern.vercel.app/privacy.html</a></p>
       </article>
 
       <div class="visually-hidden" aria-hidden="true">
@@ -383,7 +395,13 @@
 
   <footer>
     <p>Fern is open source under MIT · <a href="https://github.com/wized2/Fern" target="_blank" rel="noopener">wized2/Fern</a></p>
-    <p style="margin-top:6px;font-size:0.8rem">Official site · Android system monitor APK</p>
+    <p style="margin-top:6px;font-size:0.8rem">
+      <a href="/privacy.html">Privacy</a> ·
+      <a href="/data-safety.html">Data safety</a> ·
+      <a href="mailto:wa0026343@gmail.com">Support</a> ·
+      Android system monitor
+    </p>
+    <p style="margin-top:8px;font-size:0.8rem;opacity:.85">Also available as APK from GitHub Releases · Google Play listing coming soon</p>
   </footer>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>

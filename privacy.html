@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Privacy Policy — Fern</title>
+  <meta name="description" content="Privacy policy for Fern Android system monitor. No ads, no analytics, on-device only." />
+  <link rel="canonical" href="https://get-fern.vercel.app/privacy.html" />
+  <style>
+    :root { --bg:#fafafa; --text:#1c1917; --muted:#57534e; --accent:#0f766e; --card:#fff; --border:#e7e5e4; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#1c1917; --text:#fafaf9; --muted:#a8a29e; --accent:#5eead4; --card:#292524; --border:#44403c; }
+    }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin:0; background:var(--bg); color:var(--text); line-height:1.55; }
+    main { max-width:720px; margin:0 auto; padding:32px 20px 64px; }
+    h1 { font-size:1.75rem; margin:0 0 8px; }
+    h2 { font-size:1.15rem; margin:28px 0 10px; }
+    p, li { color:var(--muted); }
+    a { color:var(--accent); }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:20px 22px; margin-top:16px; }
+  </style>
+</head>
+<body>
+  <main>
+    <p><a href="/">← Fern</a></p>
+    <h1>Privacy Policy</h1>
+    <p>Last updated: 3 November 2026 · App: <strong>Fern</strong> (com.endroid.fern)</p>
+
+    <div class="card">
+      <h2>Summary</h2>
+      <p>Fern is a local system monitor. It does <strong>not</strong> include ads, analytics SDKs, or account login. Metrics are computed on your device and are not uploaded by Fern to our servers.</p>
+    </div>
+
+    <h2>Data Fern accesses on the device</h2>
+    <ul>
+      <li>System metrics (CPU, memory, storage, battery, network counters, thermal where available)</li>
+      <li>Optional: list of running apps and approximate resource use when you enable advanced features</li>
+      <li>Optional: display-over-other-apps for the floating island overlay</li>
+      <li>Optional: Shizuku or root only if you explicitly enable advanced mode</li>
+    </ul>
+
+    <h2>Data collection &amp; sharing</h2>
+    <p>Fern does not collect personal information for advertising or analytics. Fern does not sell data. If you download the app from Google Play or GitHub, those platforms process download/update traffic under their own policies.</p>
+
+    <h2>Internet</h2>
+    <p>Core monitoring works offline. Optional update checks may contact GitHub Releases or Play to see if a new version exists. No telemetry batch is sent by Fern itself.</p>
+
+    <h2>Children</h2>
+    <p>Fern is a general utility, not directed at children under 13.</p>
+
+    <h2>Your choices</h2>
+    <p>You can deny optional permissions, disable advanced mode, or uninstall Fern at any time. Uninstalling removes app-local preferences stored on the device.</p>
+
+    <h2>Contact</h2>
+    <p>Questions about this policy: open an issue at <a href="https://github.com/wized2/Fern/issues">github.com/wized2/Fern/issues</a> or email <a href="mailto:wa0026343@gmail.com">wa0026343@gmail.com</a>.</p>
+  </main>
+</body>
+</html>

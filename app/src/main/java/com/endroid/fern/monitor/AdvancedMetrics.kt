@@ -203,11 +203,14 @@ class AdvancedMetrics(private val access: AdvancedAccess) {
     private fun parseDumpsysCpuinfo(raw: String?): List<Pair<String, Float>> {
         if (raw.isNullOrBlank()) return emptyList()
         val acc = LinkedHashMap<String, Float>()
-        val re = Regex("""^\s*([\d.]+)%\s+\d+/\S*?([a-zA-Z][a-zA-Z0-9_]*(?:\.[a-zA-Z0-9_]+){1,})""")
+        // dumpsys cpuinfo lines vary by API; accept "12% 1234/com.pkg:svc" and "12% com.pkg"
+        val re = Regex(
+            """^\s*([\d.]+)%\s+(?:\d+/)?([a-zA-Z][a-zA-Z0-9_]*(?:\.[a-zA-Z0-9_]+){1,})"""
+        )
         for (line in raw.lineSequence()) {
-            val m = re.find(line) ?: continue
+            val m = re.find(line.trim()) ?: continue
             val pct = m.groupValues[1].toFloatOrNull() ?: continue
-            var name = m.groupValues[2].substringBefore(':')
+            val name = m.groupValues[2].substringBefore(':')
             if (!name.contains('.')) continue
             acc[name] = (acc[name] ?: 0f) + pct
         }

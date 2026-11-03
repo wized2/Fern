@@ -420,32 +420,61 @@ class AdvancedAccess(private val context: Context) {
         return emptyMap() // filled by AdvancedMetrics via shell
     }
 
+    /**
+     * Accurate system CPU via dual /proc/stat sample in one shell (inspired by TaskManager).
+     * Single elevated process avoids scheduling gaps between two separate execs.
+     */
     suspend fun readCpuPercent(): Pair<Float, Boolean>? = withContext(Dispatchers.IO) {
-        val a = parseProcStat(exec("cat /proc/stat", 1_500)) ?: return@withContext null
-        delay(180)
-        val b = parseProcStat(exec("cat /proc/stat", 1_500)) ?: return@withContext null
-        val dTotal = b.first - a.first
-        val dIdle = b.second - a.second
-        if (dTotal <= 0L) return@withContext null
-        val busy = ((dTotal - dIdle).toFloat() / dTotal * 100f).coerceIn(0f, 100f)
-        busy to true
+        sampleCpuFromProcStat(dwellMs = 150)
     }
 
     /** Faster CPU sample for elevated loop (shorter dwell). */
     suspend fun readCpuPercentFast(): Pair<Float, Boolean>? = withContext(Dispatchers.IO) {
-        val a = parseProcStat(exec("cat /proc/stat", 1_200)) ?: return@withContext null
-        delay(90)
-        val b = parseProcStat(exec("cat /proc/stat", 1_200)) ?: return@withContext null
+        sampleCpuFromProcStat(dwellMs = 100)
+    }
+
+    private suspend fun sampleCpuFromProcStat(dwellMs: Int): Pair<Float, Boolean>? {
+        val sec = String.format(java.util.Locale.US, "%.2f", dwellMs / 1000.0)
+        // One shell: sample → sleep → sample (native monitors do the same)
+        val cmd = buildString {
+            append("a=$(grep '^cpu ' /proc/stat); sleep ")
+            append(sec)
+            append("; b=$(grep '^cpu ' /proc/stat); printf '%s\\n%s\\n' \"")
+            append('$')
+            append("a\" \"")
+            append('$')
+            append("b\"")
+        }
+        val raw = exec(cmd, timeoutMs = (dwellMs + 2500).toLong())
+        if (!raw.isNullOrBlank()) {
+            val cpuLines = raw.lineSequence().map { it.trim() }.filter { it.startsWith("cpu ") }.toList()
+            if (cpuLines.size >= 2) {
+                val sa = parseProcStat(cpuLines[0])
+                val sb = parseProcStat(cpuLines[1])
+                if (sa != null && sb != null) {
+                    pctFromStats(sa, sb)?.let { return it }
+                }
+            }
+        }
+        val a = parseProcStat(exec("grep '^cpu ' /proc/stat", 1_200)) ?: return null
+        delay(dwellMs.toLong())
+        val b = parseProcStat(exec("grep '^cpu ' /proc/stat", 1_200)) ?: return null
+        return pctFromStats(a, b)
+    }
+
+    private fun pctFromStats(a: Pair<Long, Long>, b: Pair<Long, Long>): Pair<Float, Boolean>? {
         val dTotal = b.first - a.first
         val dIdle = b.second - a.second
-        if (dTotal <= 0L) return@withContext null
+        if (dTotal <= 0L) return null
         val busy = ((dTotal - dIdle).toFloat() / dTotal * 100f).coerceIn(0f, 100f)
-        busy to true
+        return busy to true
     }
 
     private fun parseProcStat(raw: String?): Pair<Long, Long>? {
         if (raw.isNullOrBlank()) return null
-        val line = raw.lineSequence().firstOrNull { it.startsWith("cpu ") } ?: return null
+        val line = raw.lineSequence().firstOrNull { it.startsWith("cpu ") }
+            ?: raw.trim().takeIf { it.startsWith("cpu ") }
+            ?: return null
         val parts = line.trim().split(Regex("\\s+"))
         if (parts.size < 5) return null
         val nums = parts.drop(1).mapNotNull { it.toLongOrNull() }
