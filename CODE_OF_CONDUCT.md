@@ -8,6 +8,6 @@ Be respectful and constructive. Harassment, trolling, or doxxing is unacceptable
 
 ## Enforcement
 
-Report to **acartoon766@gmail.com**. Maintainers may remove content or ban violators.
+Report to **acartoon7668@gmail.com**. Maintainers may remove content or ban violators.
 
 Adapted from Contributor Covenant 2.1.
