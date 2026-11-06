@@ -143,6 +143,8 @@ class MainActivity : ComponentActivity() {
                     onPauseInBackground = viewModel::setPauseInBackground,
                     onClearHistory = viewModel::clearHistory,
                     onShareMetrics = viewModel::metricsShareText,
+                    onShareMarkdown = viewModel::metricsMarkdownText,
+                    onShareHistoryCsv = viewModel::historyCsvText,
                     onRefreshNow = viewModel::refreshNow,
                     advancedMode = advancedMode,
                     elevatedStatus = elevatedStatus,

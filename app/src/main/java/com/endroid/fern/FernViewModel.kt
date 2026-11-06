@@ -1,5 +1,7 @@
 package com.endroid.fern
 
+import com.endroid.fern.monitor.HistoryExport
+
 import android.app.Application
 import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
@@ -362,7 +364,47 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
             }
             if (s.lowMemory) appendLine("Memory pressure: low")
             appendLine("Net: ${s.networkLabel} · ${"%.1f".format(s.networkKBps)} KB/s (peak ${"%.1f".format(_peakNet.value)})")
-            appendLine("Refresh: ${_refreshMs.value} ms · Advanced: ${_advancedMode.value} · ${_elevatedStatus.value.label}")
+            appendLine("Refresh: ${_refreshMs.value} ms · Advanced: ${_advancedMode.value} · ${
+    /** Markdown table snapshot for chat / docs. */
+    fun metricsMarkdownText(): String {
+        val s = _snapshot.value ?: return "# Fern\n\n_No sample yet._"
+        return HistoryExport.snapshotMarkdown(
+            deviceModel = s.deviceModel,
+            androidVersion = s.androidVersion,
+            sdkInt = s.sdkInt,
+            cpuPercent = s.cpuPercent,
+            cpuCores = s.cpuCores,
+            cpuHardware = s.cpuHardware,
+            ramUsedMb = s.ramUsedMb,
+            ramTotalMb = s.ramTotalMb,
+            ramPercent = s.ramPercent,
+            batteryPercent = s.batteryPercent,
+            batteryCharging = s.batteryCharging,
+            batteryHealth = s.batteryHealth,
+            batteryTempC = s.batteryTempC,
+            thermalLabel = s.thermalLabel,
+            networkLabel = s.networkLabel,
+            networkKBps = s.networkKBps,
+            uptimeHours = s.uptimeHours,
+            peakCpu = _peakCpu.value,
+            peakRam = _peakRam.value,
+            avgCpu = _avgCpu.value,
+            avgRam = _avgRam.value,
+        )
+    }
+
+    /** Session CPU/RAM/battery history as CSV for the share sheet. */
+    fun historyCsvText(): String {
+        val interval = _refreshMs.value.coerceAtLeast(250)
+        return HistoryExport.sessionCsv(
+            cpu = _historyCpu.value,
+            ram = _historyRam.value,
+            battery = _historyBattery.value,
+            intervalMs = interval,
+        )
+    }
+
+_elevatedStatus.value.label}")
         }
     }
 

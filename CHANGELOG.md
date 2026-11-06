@@ -14,6 +14,12 @@
 
 # Changelog
 
+## Unreleased
+- Details: share plain text, **Markdown snapshot**, and **session history CSV**
+- Richer bottom navigation content descriptions (accessibility)
+- HistoryExport helpers + unit tests for CSV/Markdown
+
+
 ## 1.10.0
 
 * **Per-app CPU & RAM (Shizuku/root):** multi-strategy parsers (`dumpsys cpuinfo`, `top`, `ps`, `dumpsys meminfo`) so elevated metrics actually populate

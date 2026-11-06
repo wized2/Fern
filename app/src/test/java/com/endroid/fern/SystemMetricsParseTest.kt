@@ -102,3 +102,47 @@ class SystemMetricsParseTest {
         assertTrue(csv.contains("0,0,80.0") || csv.contains("0,0,80"))
     }
 }
+
+    @Test
+    fun historyExportSessionCsvHasHeaderAndRows() {
+        val csv = HistoryExport.sessionCsv(
+            cpu = listOf(10f, 20f),
+            ram = listOf(30f, 40f),
+            battery = listOf(90f, 89f),
+            intervalMs = 1000,
+            startEpochMs = 0L,
+        )
+        assertTrue(csv.startsWith("index,epoch_ms,cpu_percent"))
+        assertTrue(csv.contains("0,0,10.00,30.00,90.00"))
+        assertTrue(csv.contains("1,1000,20.00,40.00,89.00"))
+    }
+
+    @Test
+    fun historyExportMarkdownHasTable() {
+        val md = HistoryExport.snapshotMarkdown(
+            deviceModel = "Pixel",
+            androidVersion = "14",
+            sdkInt = 34,
+            cpuPercent = 12.5f,
+            cpuCores = 8,
+            cpuHardware = "tensor",
+            ramUsedMb = 4000,
+            ramTotalMb = 8000,
+            ramPercent = 50f,
+            batteryPercent = 80,
+            batteryCharging = false,
+            batteryHealth = "Good",
+            batteryTempC = 31.2f,
+            thermalLabel = "None",
+            networkLabel = "Wi‑Fi",
+            networkKBps = 12f,
+            uptimeHours = 3.5f,
+            peakCpu = 40f,
+            peakRam = 60f,
+            avgCpu = 15f,
+            avgRam = 45f,
+        )
+        assertTrue(md.contains("# Fern snapshot"))
+        assertTrue(md.contains("| Device | Pixel |"))
+        assertTrue(md.contains("CPU"))
+    }

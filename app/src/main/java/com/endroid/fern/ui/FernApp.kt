@@ -217,6 +217,8 @@ fun FernApp(
     onPauseInBackground: (Boolean) -> Unit,
     onClearHistory: () -> Unit,
     onShareMetrics: () -> String,
+    onShareMarkdown: () -> String = { "" },
+    onShareHistoryCsv: () -> String = { "" },
     onRefreshNow: () -> Unit,
     advancedMode: Boolean = false,
     elevatedStatus: ElevatedStatus = ElevatedStatus(
@@ -337,28 +339,28 @@ fun FernApp(
                 NavigationBarItem(
                     selected = tab == Tab.Home,
                     onClick = { selectTab(Tab.Home) },
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
+                    icon = { Icon(Icons.Default.Home, contentDescription = "Home dashboard") },
                     label = { Text("Home", style = MaterialTheme.typography.labelMedium) },
                     alwaysShowLabel = true
                 )
                 NavigationBarItem(
                     selected = tab == Tab.Details,
                     onClick = { selectTab(Tab.Details) },
-                    icon = { Icon(Icons.Default.Memory, contentDescription = "Details") },
+                    icon = { Icon(Icons.Default.Memory, contentDescription = "Hardware details") },
                     label = { Text("Details", style = MaterialTheme.typography.labelMedium) },
                     alwaysShowLabel = true
                 )
                 NavigationBarItem(
                     selected = tab == Tab.ActiveApps,
                     onClick = { selectTab(Tab.ActiveApps) },
-                    icon = { Icon(Icons.Default.Apps, contentDescription = "Active Apps") },
+                    icon = { Icon(Icons.Default.Apps, contentDescription = "Active apps list") },
                     label = { Text("Apps", style = MaterialTheme.typography.labelMedium) },
                     alwaysShowLabel = true
                 )
                 NavigationBarItem(
                     selected = tab == Tab.More,
                     onClick = { selectTab(Tab.More) },
-                    icon = { Icon(Icons.Default.MoreHoriz, contentDescription = "More") },
+                    icon = { Icon(Icons.Default.MoreHoriz, contentDescription = "More options") },
                     label = { Text("More", style = MaterialTheme.typography.labelMedium) },
                     alwaysShowLabel = true
                 )
@@ -380,7 +382,7 @@ fun FernApp(
                     lastUpdatedMs, haptics, onRefreshNow, advancedSnapshot, advancedMode, elevatedStatus,
                     avgCpu, avgRam
                 )
-                key == Tab.Details.name -> DetailsContent(snapshot, peakCpu, peakRam, peakNet, onShareMetrics)
+                key == Tab.Details.name -> DetailsContent(snapshot, peakCpu, peakRam, peakNet, onShareMetrics, onShareMarkdown, onShareHistoryCsv)
                 key == Tab.ActiveApps.name -> ActiveAppsContent(
                     haptics = haptics,
                     advancedMode = advancedMode,
@@ -672,7 +674,7 @@ private fun HomeContent(
 }
 
 @Composable
-private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, peakNet: Float, onShareMetrics: () -> String) {
+private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, peakNet: Float, onShareMetrics: () -> String, onShareMarkdown: () -> String = { "" }, onShareHistoryCsv: () -> String = { "" }) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -807,9 +809,40 @@ private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, p
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Icon(Icons.Default.Share, contentDescription = "Share", modifier = Modifier.size(18.dp))
+            Icon(Icons.Default.Share, contentDescription = "Share plain text snapshot", modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.size(8.dp))
             Text("Share snapshot")
+        }
+        OutlinedButton(
+            onClick = {
+                val send = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, onShareMarkdown())
+                    putExtra(Intent.EXTRA_SUBJECT, "Fern snapshot.md")
+                }
+                context.startActivity(Intent.createChooser(send, "Share markdown"))
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Default.Share, contentDescription = "Share markdown snapshot", modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.size(8.dp))
+            Text("Share as Markdown")
+        }
+        OutlinedButton(
+            onClick = {
+                val csv = onShareHistoryCsv()
+                val send = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/csv"
+                    putExtra(Intent.EXTRA_TEXT, csv)
+                    putExtra(Intent.EXTRA_SUBJECT, "fern-history.csv")
+                }
+                context.startActivity(Intent.createChooser(send, "Share history CSV"))
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Default.Share, contentDescription = "Share session history CSV", modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.size(8.dp))
+            Text("Export history CSV")
         }
         Spacer(modifier = Modifier.height(8.dp))
     }
