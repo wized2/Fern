@@ -101,9 +101,8 @@ class SystemMetricsParseTest {
         assertTrue(csv.startsWith("index,epoch_ms,battery_percent"))
         assertTrue(csv.contains("0,0,80.0") || csv.contains("0,0,80"))
     }
-}
 
-    @Test
+@Test
     fun historyExportSessionCsvHasHeaderAndRows() {
         val csv = HistoryExport.sessionCsv(
             cpu = listOf(10f, 20f),
@@ -146,3 +145,4 @@ class SystemMetricsParseTest {
         assertTrue(md.contains("| Device | Pixel |"))
         assertTrue(md.contains("CPU"))
     }
+}
