@@ -134,3 +134,17 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Issues and PRs welcome — especially ac
 ---
 
 <p align="center">If Fern is useful, a <b>star</b> helps others find it ⭐</p>
+
+## Contribute / contributor hunt
+
+We actively welcome first-time PRs:
+
+| Start here | Link |
+| --- | --- |
+| Good first issues | https://github.com/wized2/Fern/labels/good%20first%20issue |
+| Contributor hunt | https://github.com/wized2/Fern/labels/contributor-hunt |
+| Help wanted | https://github.com/wized2/Fern/labels/help%20wanted |
+| Guide | [CONTRIBUTING.md](CONTRIBUTING.md) |
+
+Typical first PRs: accessibility labels, empty states, unit tests, README translations.
+

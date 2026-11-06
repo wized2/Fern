@@ -1,61 +1,42 @@
 # Contributing to Fern
 
-Thanks for helping — Fern is a free, **offline** Material 3 system monitor for Android.
+Thanks for helping. Fern stays **offline, FOSS, and tracker-free** — please keep it that way.
 
-**Read first:** [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) (setup, map of the code, PR flow).
+## Fast path (first PR)
 
-## TL;DR
+1. Browse **[good first issues](https://github.com/wized2/Fern/labels/good%20first%20issue)** or **[contributor-hunt](https://github.com/wized2/Fern/labels/contributor-hunt)**
+2. Comment *“I’d like to take this”* on the issue
+3. Fork → branch from **`beta`** (preferred) or `main` for tiny docs
+4. Open a PR early (draft is fine)
 
 ```bash
-git clone https://github.com/wized2/Fern.git
-cd Fern && git checkout beta
-# … make changes …
-./gradlew testStableDebugUnitTest
-# open a Pull Request against **beta**
+git clone https://github.com/<you>/Fern.git
+cd Fern
+./gradlew assembleDebug   # or open in Android Studio
+./gradlew test            # unit tests, no device required
 ```
 
-| Do | Don’t |
-|----|--------|
-| PR → **`beta`** | PR → `main` (unless urgent stable hotfix) |
-| Keep features offline-first | Add ads, analytics, or silent network SDKs |
-| Add unit tests for parsers | Commit keystores / secrets |
-| Use `strings.xml` for UI text | Emoji-only labels without content descriptions |
+## What we merge quickly
 
-## Good places to start
+| Kind | Examples | Label |
+| --- | --- | --- |
+| XS docs | README fix, captions, translation | `documentation` `size/XS` |
+| XS code | contentDescription, unit test | `good first issue` `size/XS` |
+| S UI | empty states, small Compose polish | `size/S` |
 
-Open issues labeled **`good first issue`** or **`help wanted`**:
+## Rules
 
-- https://github.com/wized2/Fern/labels/good%20first%20issue
+- **No** analytics, ads, or `INTERNET` unless discussed
+- Match existing Material 3 / Compose style
+- Add or extend unit tests for pure logic (`monitor/`, parsers, export)
+- PR description: what / why / how tested
 
-Ideas that are usually welcome:
+## Project layout
 
-- Accessibility `contentDescription`s
-- Wiring `HistoryExport` to a share sheet
-- Translations (`values-xx/strings.xml`)
-- Extra unit tests around `MetricsParse`
+- UI: `app/src/main/java/com/endroid/fern/ui/`
+- Metrics: `app/src/main/java/com/endroid/fern/monitor/`
+- Tests: `app/src/test/`
 
-Comment on the issue when you start so others don’t duplicate work.
+## Mentoring
 
-## Project docs
-
-| Doc | Purpose |
-|-----|---------|
-| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Setup, commands, file map |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How pieces fit |
-| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community norms |
-| [SECURITY.md](SECURITY.md) | Vulnerability reporting |
-| [README.md](README.md) | Product overview |
-
-## Code of conduct
-
-Be respectful. See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
-
-## License
-
-By contributing, you agree your work is under the MIT License ([LICENSE](LICENSE)).
-
-## Finding work
-
-- [Good first issues](https://github.com/wized2/Fern/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
-- [Help wanted](https://github.com/wized2/Fern/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22)
-- Prefer PRs against **beta** for features; **main** for docs/ci fixes only when agreed.
+Stuck for >15 minutes? Comment on the issue with the error. We prioritize `good first issue` reviews.
