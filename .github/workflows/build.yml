@@ -2,7 +2,7 @@ name: Build & Release
 
 on:
   push:
-    branches: [main]
+    branches: [main, beta]
     tags: ['v*']
     paths-ignore:
       - '**.md'
@@ -13,6 +13,7 @@ on:
       - 'LICENSE'
       - '.gitignore'
   pull_request:
+    branches: [main, beta]
     paths-ignore:
       - '**.md'
       - 'index.html'

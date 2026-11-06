@@ -364,10 +364,15 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
             }
             if (s.lowMemory) appendLine("Memory pressure: low")
             appendLine("Net: ${s.networkLabel} · ${"%.1f".format(s.networkKBps)} KB/s (peak ${"%.1f".format(_peakNet.value)})")
-            appendLine("Refresh: ${_refreshMs.value} ms · Advanced: ${_advancedMode.value} · ${
+            appendLine(
+                "Refresh: ${_refreshMs.value} ms · Advanced: ${_advancedMode.value} · ${_elevatedStatus.value.label}"
+            )
+        }
+    }
+
     /** Markdown table snapshot for chat / docs. */
     fun metricsMarkdownText(): String {
-        val s = _snapshot.value ?: return "# Fern\n\n_No sample yet._"
+        val s = _snapshot.value ?: return "# Fern\n\n_No sample yet."
         return HistoryExport.snapshotMarkdown(
             deviceModel = s.deviceModel,
             androidVersion = s.androidVersion,
@@ -404,11 +409,7 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
         )
     }
 
-_elevatedStatus.value.label}")
-        }
-    }
-
-    /** Fast loop — only lightweight SystemMetrics, respects refreshMs. */
+        /** Fast loop — only lightweight SystemMetrics, respects refreshMs. */
     private fun restartLoop() {
         loop?.cancel()
         loop = viewModelScope.launch {
