@@ -135,6 +135,17 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Issues and PRs welcome — especially ac
 
 <p align="center">If Fern is useful, a <b>star</b> helps others find it ⭐</p>
 
+
+## First contribution in 15 minutes
+
+1. Fork and clone this repo
+2. Open in Android Studio (Giraffe+) or run `./gradlew assembleDebug`
+3. Run unit tests: `./gradlew testStableDebugUnitTest`
+4. Pick a [good first issue](https://github.com/wized2/Fern/labels/good%20first%20issue)
+5. Open a PR against **`beta`** (tiny docs PRs may target `main`)
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Contribute / contributor hunt
 
 We actively welcome first-time PRs:

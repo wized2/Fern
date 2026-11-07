@@ -844,6 +844,20 @@ private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, p
             Spacer(modifier = Modifier.size(8.dp))
             Text("Export history CSV")
         }
+
+        OutlinedButton(
+            onClick = {
+                val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                cm.setPrimaryClip(android.content.ClipData.newPlainText("Fern snapshot", onShareMetrics()))
+                android.widget.Toast.makeText(context, "Snapshot copied", android.widget.Toast.LENGTH_SHORT).show()
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Default.Share, contentDescription = "Copy snapshot to clipboard", modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.size(8.dp))
+            Text("Copy snapshot")
+        }
+
         Spacer(modifier = Modifier.height(8.dp))
     }
 }
@@ -1185,7 +1199,7 @@ private fun SettingsContent(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Switch(checked = keepScreenOn, onCheckedChange = onKeepScreenOn)
+                Switch(checked = keepScreenOn, onCheckedChange = onKeepScreenOn, modifier = Modifier.semantics { contentDescription = "Keep screen on" })
             }
         }
 
@@ -1287,7 +1301,7 @@ private fun SettingsContent(
                         Text("Haptic feedback", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                         Text("Vibrate on manual refresh", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    Switch(checked = haptics, onCheckedChange = onHaptics)
+                    Switch(checked = haptics, onCheckedChange = onHaptics, modifier = Modifier.semantics { contentDescription = "Haptic feedback" })
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1298,7 +1312,7 @@ private fun SettingsContent(
                         Text("Pause in background", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                         Text("Stop sampling when app is not visible", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    Switch(checked = pauseInBackground, onCheckedChange = onPauseInBackground)
+                    Switch(checked = pauseInBackground, onCheckedChange = onPauseInBackground, modifier = Modifier.semantics { contentDescription = "Pause sampling in background" })
                 }
                 androidx.compose.material3.OutlinedButton(onClick = onClearHistory, modifier = Modifier.fillMaxWidth()) {
                     Text("Clear sparkline history")
@@ -1374,7 +1388,7 @@ private fun SettingsContent(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Switch(checked = advancedMode, onCheckedChange = onAdvancedMode)
+                    Switch(checked = advancedMode, onCheckedChange = onAdvancedMode, modifier = Modifier.semantics { contentDescription = "Advanced mode with Shizuku or root" })
                 }
                 if (advancedMode) {
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
@@ -2003,12 +2017,34 @@ private fun ActiveAppsContent(
         Spacer(modifier = Modifier.height(8.dp))
 
         if (apps.isEmpty() && !loading) {
-            Text(
-                "No recent activity in this window",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(vertical = 24.dp)
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 32.dp, horizontal = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    Icons.Default.Apps,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(40.dp),
+                )
+                Text(
+                    "No apps to show yet",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    if (advancedMode) {
+                        "No recent activity in this window. Pull refresh or open apps, then return here."
+                    } else {
+                        "Usage access shows recent apps. Enable Advanced mode (Shizuku/root) for per-app CPU and RAM."
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         } else {
             val displayApps = remember(apps, sort, rssByPackage, cpuByPackage, query) {
                 val q = query.trim().lowercase()

@@ -145,4 +145,26 @@ class SystemMetricsParseTest {
         assertTrue(md.contains("| Device | Pixel |"))
         assertTrue(md.contains("CPU"))
     }
+
+    @Test
+    fun parseProcStatNullAndJunk() {
+        assertNull(MetricsParse.parseProcStatLine(null))
+        assertNull(MetricsParse.parseProcStatLine(""))
+        assertNull(MetricsParse.parseProcStatLine("not-a-cpu-line"))
+        assertNull(MetricsParse.parseProcStatLine("cpu"))
+    }
+
+    @Test
+    fun sessionCsvPadsMissingSeries() {
+        val csv = HistoryExport.sessionCsv(
+            cpu = listOf(1f),
+            ram = emptyList(),
+            battery = listOf(50f, 49f),
+            intervalMs = 500,
+            startEpochMs = 1000L,
+        )
+        assertTrue(csv.contains("index,epoch_ms"))
+        assertTrue(csv.contains("0,1000,"))
+        assertTrue(csv.contains("1,1500,"))
+    }
 }

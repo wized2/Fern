@@ -15,6 +15,14 @@
 # Changelog
 
 ## Unreleased
+- Active apps: clearer empty state with Advanced mode guidance
+- Settings: TalkBack labels on key switches
+- Details: copy snapshot to clipboard
+- Tests: more MetricsParse / HistoryExport edge cases
+- Docs: first contribution in 15 minutes
+
+
+## Unreleased
 - Details: share plain text, **Markdown snapshot**, and **session history CSV**
 - Richer bottom navigation content descriptions (accessibility)
 - HistoryExport helpers + unit tests for CSV/Markdown
