@@ -1,5 +1,8 @@
 name: Build & Release
 
+# Pull requests: unit tests + debug build + R8 release build of the stable flavor (debug-signed).
+# Pushes to main (and v* tags): the same checks, both flavors, signed with the release key, published.
+
 on:
   push:
     branches: [main, beta]
@@ -23,12 +26,18 @@ on:
       - 'LICENSE'
   workflow_dispatch:
 
-permissions:
-  contents: write
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: write
+    env:
+      IS_RELEASE: ${{ github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main') }}
     steps:
       - uses: actions/checkout@v4
 
@@ -37,59 +46,82 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
           packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
 
-      - name: Accept licenses
-        run: yes | sdkmanager --licenses || true
+      - name: Make gradlew executable
+        run: chmod +x gradlew
 
-
-      - name: Decode release keystore (optional)
-        id: keystore
+      - name: Decode release keystore
+        if: env.IS_RELEASE == 'true'
         env:
           RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
           RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
         run: |
-          if [ -n "${RELEASE_KEYSTORE_BASE64:-}" ] && [ -n "${RELEASE_STORE_PASSWORD:-}" ] \
-             && [ -n "${RELEASE_KEY_PASSWORD:-}" ] && [ -n "${RELEASE_KEY_ALIAS:-}" ]; then
-            echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > "$GITHUB_WORKSPACE/release.jks"
-            echo "path=$GITHUB_WORKSPACE/release.jks" >> "$GITHUB_OUTPUT"
-            echo "present=true" >> "$GITHUB_OUTPUT"
-            echo "Release keystore decoded."
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "Release key secrets not set — release APK will use debug signing (skip)."
+          if [ -z "${RELEASE_KEYSTORE_BASE64:-}" ] || [ -z "${RELEASE_STORE_PASSWORD:-}" ] \
+             || [ -z "${RELEASE_KEY_PASSWORD:-}" ] || [ -z "${RELEASE_KEY_ALIAS:-}" ]; then
+            echo "::error::Release signing secrets are missing. Refusing to publish a debug-signed APK."
+            exit 1
           fi
+          echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "Keystore OK: $(wc -c < "$RUNNER_TEMP/release.jks") bytes"
 
-      - name: Build debug + release APKs
+      - name: Unit tests and debug build
+        run: ./gradlew testStableDebugUnitTest assembleStableDebug --stacktrace
+
+      - name: Build release (pull request, stable only)
+        if: env.IS_RELEASE != 'true'
+        run: ./gradlew assembleStableRelease --stacktrace
+
+      - name: Build release (stable and beta, signed)
+        if: env.IS_RELEASE == 'true'
         env:
-          RELEASE_STORE_FILE: ${{ steps.keystore.outputs.present == 'true' && format('{0}/release.jks', github.workspace) || '' }}
+          # Only set on releases: Gradle treats any non-blank value as "sign with this key".
+          RELEASE_STORE_FILE: ${{ runner.temp }}/release.jks
           RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: ./gradlew assembleStableRelease assembleBetaRelease --stacktrace
+
+      - name: Verify release signature
+        if: env.IS_RELEASE == 'true'
         run: |
-          chmod +x gradlew
-          if [ "${{ steps.keystore.outputs.present }}" = "true" ]; then
-            export RELEASE_STORE_FILE="$GITHUB_WORKSPACE/release.jks"
-            echo "Signing release with uploaded keystore"
-          else
-            unset RELEASE_STORE_FILE || true
-            echo "No release keystore — Gradle falls back to debug signing"
-          fi
-          ./gradlew assembleStableDebug assembleBetaDebug testStableDebugUnitTest assembleStableRelease assembleBetaRelease --no-daemon --stacktrace
+          set -euo pipefail
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          for apk in app/build/outputs/apk/stable/release/*.apk app/build/outputs/apk/beta/release/*.apk; do
+            "$BT/apksigner" verify --verbose --print-certs "$apk" | tee /tmp/verify.txt
+            grep -q 'Verified using v2 scheme.*true' /tmp/verify.txt
+            if grep -qi 'CN=Android Debug' /tmp/verify.txt; then
+              echo "::error::$apk is signed with the Android debug key"
+              exit 1
+            fi
+          done
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: app/build/reports/tests
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: Fern-debug
-          path: |
-            app/build/outputs/apk/stable/debug/*.apk
-            app/build/outputs/apk/beta/debug/*.apk
+          path: app/build/outputs/apk/stable/debug/*.apk
           if-no-files-found: error
+          retention-days: 14
 
       - name: Upload release APK
         uses: actions/upload-artifact@v4
@@ -100,8 +132,16 @@ jobs:
             app/build/outputs/apk/beta/release/*.apk
           if-no-files-found: error
 
+      - name: Keep R8 mapping files
+        if: env.IS_RELEASE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: r8-mapping
+          path: app/build/outputs/mapping/*Release/mapping.txt
+          if-no-files-found: warn
+
       - name: Read versionName
-        if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main')
+        if: env.IS_RELEASE == 'true'
         id: ver
         run: |
           VN=$(grep -E 'versionName\s*=' app/build.gradle.kts | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
@@ -110,33 +150,12 @@ jobs:
           echo "Version $VN"
 
       - name: Prepare release assets
-        if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main')
+        if: env.IS_RELEASE == 'true'
         run: |
           mkdir -p release-assets
           cp app/build/outputs/apk/stable/release/*.apk release-assets/Fern-release.apk
-          cp app/build/outputs/apk/beta/release/*.apk release-assets/Fern-beta.apk || true
-          # debug APK stays as workflow artifact only (smaller GitHub Releases; avoids large upload timeouts)
+          cp app/build/outputs/apk/beta/release/*.apk release-assets/Fern-beta.apk
           ls -la release-assets/
-
-      - name: Load release notes
-        if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main')
-        id: notes
-        run: |
-          if [ -f RELEASE_NOTES.md ]; then
-            {
-              echo "body<<FERN_NOTES_EOF"
-              cat RELEASE_NOTES.md
-              echo "FERN_NOTES_EOF"
-            } >> "$GITHUB_OUTPUT"
-          else
-            {
-              echo "body<<FERN_NOTES_EOF"
-              echo "## Fern ${{ steps.ver.outputs.name }}"
-              echo ""
-              echo "See CHANGELOG.md"
-              echo "FERN_NOTES_EOF"
-            } >> "$GITHUB_OUTPUT"
-          fi
 
       - name: Create GitHub Release (tag push)
         if: startsWith(github.ref, 'refs/tags/v')
