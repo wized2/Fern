@@ -1,9 +1,17 @@
-# Fern 1.11.3
+# Fern 1.12.0
 
-Docs & discoverability polish.
+Faster, lighter and safer. No new screens; everything you already use got cheaper to run.
 
-- README badges fixed (workflow path + shields for release / stars)
-- Issue templates + funding metadata
-- Cross-links to Latch / Subcord
+**Security**
+- App names are now strictly validated before Force stop / Clear cache reach the Shizuku or root shell (closes a command-injection path).
 
-App logic unchanged from 1.11.2; re-release for store/listing consistency.
+**Speed and battery**
+- Settings save in the background instead of blocking the screen.
+- Nothing redraws while Fern is not visible.
+- Far fewer system file reads per refresh; device info that cannot change is read once.
+- The floating pill reads only what it shows and sleeps while the screen is off.
+
+**Fixes**
+- Status bar and navigation bar icons are readable in dark theme.
+
+Fern still asks for no internet permission and sends nothing anywhere.
