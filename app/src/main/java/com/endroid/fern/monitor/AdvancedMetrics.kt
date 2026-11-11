@@ -290,16 +290,18 @@ class AdvancedMetrics(private val access: AdvancedAccess) {
 
     suspend fun forceStop(packageName: String, advancedEnabled: Boolean): Boolean {
         if (!access.isElevatedLive(advancedEnabled)) return false
-        if (packageName.isBlank() || packageName.contains(' ')) return false
-        if (access.forceStopPackage(packageName)) return true
-        val out = access.exec("am force-stop ${packageName.trim()}; echo FERN_STOPPED", 3_000)
+        val pkg = packageName.trim()
+        if (!MetricsParse.isValidPackageName(pkg)) return false
+        if (access.forceStopPackage(pkg)) return true
+        val out = access.exec("am force-stop $pkg; echo FERN_STOPPED", 3_000)
         return out != null && out.contains("FERN_STOPPED")
     }
 
     suspend fun clearAppCache(packageName: String, advancedEnabled: Boolean): Boolean {
         if (!access.isElevatedLive(advancedEnabled)) return false
-        if (packageName.isBlank() || packageName.contains(' ')) return false
-        val out = access.exec("pm clear --cache-only ${packageName.trim()} 2>/dev/null; echo FERN_CACHE", 4_000)
+        val pkg = packageName.trim()
+        if (!MetricsParse.isValidPackageName(pkg)) return false
+        val out = access.exec("pm clear --cache-only $pkg 2>/dev/null; echo FERN_CACHE", 4_000)
         return out != null && (out.contains("FERN_CACHE") || out.contains("Success"))
     }
 

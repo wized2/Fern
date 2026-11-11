@@ -167,4 +167,21 @@ class SystemMetricsParseTest {
         assertTrue(csv.contains("0,1000,"))
         assertTrue(csv.contains("1,1500,"))
     }
+
+    @Test
+    fun packageNameValidationAcceptsRealNames() {
+        assertTrue(MetricsParse.isValidPackageName("com.android.chrome"))
+        assertTrue(MetricsParse.isValidPackageName("com.endroid.fern.debug"))
+        assertTrue(MetricsParse.isValidPackageName("org.example.app_2"))
+    }
+
+    @Test
+    fun packageNameValidationRejectsShellMetacharacters() {
+        val bad = listOf(
+            null, "", "chrome", "com.a;reboot", "com.a && id", "com.a|id", "com.a\nid",
+            "\$(id).app", "com.a`id`", "com.a b", "com.a>x", "-f.com.a", ".com.a", "com.a.",
+            "com..a", "1com.a", "a".repeat(300) + ".b"
+        )
+        for (b in bad) assertTrue("accepted: $b", !MetricsParse.isValidPackageName(b))
+    }
 }
