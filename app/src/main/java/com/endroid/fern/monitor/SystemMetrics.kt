@@ -82,8 +82,27 @@ object SystemMetrics {
     @Volatile private var prevTotal: Long = -1
     @Volatile private var prevNetBytes: Long = -1
     @Volatile private var prevNetAt: Long = 0
-    @Volatile private var coreMhzCacheAt: Long = 0
-    @Volatile private var coreMhzCache: List<Int> = emptyList()
+
+    private val CPU_DIR = Regex("cpu\\d+")
+    private val WHITESPACE = Regex("\\s+")
+
+    /** After this many consecutive failed reads a /proc file is treated as blocked. */
+    private const val BLOCK_AFTER_FAILS = 3
+    /** How long a blocked /proc file is skipped before it is probed again. */
+    private const val BLOCK_RETRY_MS = 60_000L
+
+    @Volatile private var statFails = 0
+    @Volatile private var statBlockedUntil = 0L
+    @Volatile private var loadFails = 0
+    @Volatile private var loadBlockedUntil = 0L
+
+    // Values that cannot change while the process lives are read once.
+    @Volatile private var cpuDirsCache: List<File>? = null
+    private val cpuMaxKhz = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private val securityPatchCache: String by lazy { readSecurityPatch() }
+    private val kernelVersionCache: String by lazy { readKernelVersion() }
+    private val maxMhzCache: Int? by lazy { readMaxCpuMhz() }
+    @Volatile private var sensorCountCache = -1
 
     fun capture(context: Context): SystemSnapshot {
         val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
@@ -104,8 +123,9 @@ object SystemMetrics {
         val battery = readBattery(context)
         val load = readLoadAvg()
         val cores = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
-        val (cpuPct, cpuOk) = readCpuPercentAccurate(cores, load)
-        val maxMhz = readMaxCpuMhz()
+        val freqs = readCurFreqsKhz()
+        val (cpuPct, cpuOk) = readCpuPercentAccurate(cores, load, freqs)
+        val maxMhz = maxMhzCache
         val net = readNetwork(context)
         val netKBps = readNetworkKBps()
         val uptime = SystemClock.elapsedRealtime() / 3_600_000f
@@ -149,15 +169,16 @@ object SystemMetrics {
             batteryVoltageMv = battery.voltageMv,
             batteryCurrentUa = battery.currentUa,
             batteryTechnology = battery.technology,
-            securityPatch = readSecurityPatch(),
-            kernelVersion = readKernelVersion(),
+            securityPatch = securityPatchCache,
+            kernelVersion = kernelVersionCache,
             buildFingerprint = Build.FINGERPRINT ?: "?",
             displayWidthPx = display.widthPx,
             displayHeightPx = display.heightPx,
             displayDensityDpi = display.densityDpi,
             displayRefreshHz = display.refreshHz,
-            cpuCurMhz = readCpuCurMhz(),
-            cpuCoreMhz = readCpuCoreMhz(),
+            cpuCurMhz = if (freqs.isEmpty()) null
+                else (freqs.sumOf { it.second } / freqs.size / 1000L).toInt().coerceAtLeast(0),
+            cpuCoreMhz = freqs.map { (it.second / 1000L).toInt() },
             cpuGovernor = readCpuGovernor(),
             freeRamMb = availRam / (1024 * 1024),
             localeTag = java.util.Locale.getDefault().toLanguageTag(),
@@ -221,29 +242,29 @@ object SystemMetrics {
     private fun parseProcStatLine(line: String?): Pair<Long, Long>? =
         MetricsParse.parseProcStatLine(line)
 
-    private fun readProcStat(): Pair<Long, Long>? {
+    /** First line of [path], or null. Tries two read paths; both fail the same way when SELinux blocks us. */
+    private fun readFirstLine(path: String): String? {
         try {
-            parseProcStatLine(File("/proc/stat").bufferedReader().use { it.readLine() })?.let { return it }
+            File(path).bufferedReader().use { it.readLine() }?.let { return it }
         } catch (_: Exception) { }
         try {
-            RandomAccessFile("/proc/stat", "r").use { raf ->
-                parseProcStatLine(raf.readLine())?.let { return it }
-            }
-        } catch (_: Exception) { }
-        try {
-            File("/proc/stat").inputStream().bufferedReader().use { br ->
-                parseProcStatLine(br.readLine())?.let { return it }
-            }
-        } catch (_: Exception) { }
-        try {
-            val proc = Runtime.getRuntime().exec(arrayOf("cat", "/proc/stat"))
-            try {
-                parseProcStatLine(proc.inputStream.bufferedReader().use { it.readLine() })?.let { return it }
-            } finally {
-                proc.destroy()
-            }
+            RandomAccessFile(path, "r").use { it.readLine() }?.let { return it }
         } catch (_: Exception) { }
         return null
+    }
+
+    private fun readProcStat(): Pair<Long, Long>? {
+        val now = SystemClock.elapsedRealtime()
+        if (now < statBlockedUntil) return null
+        val parsed = parseProcStatLine(readFirstLine("/proc/stat"))
+        if (parsed != null) {
+            statFails = 0
+        } else if (++statFails >= BLOCK_AFTER_FAILS) {
+            // Blocked on this device/OS: stop hitting the filesystem every refresh.
+            statBlockedUntil = now + BLOCK_RETRY_MS
+            statFails = 0
+        }
+        return parsed
     }
 
     private fun cpuFromLoad(cores: Int, load: FloatArray?): Pair<Float, Boolean> {
@@ -254,7 +275,11 @@ object SystemMetrics {
         return pct to false
     }
 
-    private fun readCpuPercentAccurate(cores: Int, load: FloatArray?): Pair<Float, Boolean> {
+    private fun readCpuPercentAccurate(
+        cores: Int,
+        load: FloatArray?,
+        freqs: List<Pair<File, Long>>
+    ): Pair<Float, Boolean> {
         // Prefer cross-tick /proc/stat delta (ViewModel samples every refresh interval).
         val nowStat = readProcStat()
         if (nowStat != null) {
@@ -294,31 +319,60 @@ object SystemMetrics {
         // dumpsys cpuinfo (may need DUMP permission; still try)
         readCpuFromDumpsys()?.let { return it to true }
         // Clock scaling as activity proxy when tick counters are blocked (CPU-Z style fallback)
-        readCpuFromFreq()?.let { return it to false }
+        readCpuFromFreq(freqs)?.let { return it to false }
         return cpuFromLoad(cores, load)
     }
 
-    /** Rough activity from avg(cur/max) across cores — not true utilization but better than a stuck 0. */
-    private fun readCpuFromFreq(): Float? {
-        return try {
-            val base = File("/sys/devices/system/cpu")
-            val dirs = base.listFiles()?.filter { it.name.matches(Regex("cpu\\d+")) }.orEmpty()
-            var sum = 0f
-            var n = 0
-            for (dir in dirs) {
-                val curF = File(dir, "cpufreq/scaling_cur_freq")
-                val maxF = File(dir, "cpufreq/cpuinfo_max_freq")
-                if (!curF.canRead() || !maxF.canRead()) continue
-                val cur = curF.readText().trim().toFloatOrNull() ?: continue
-                val max = maxF.readText().trim().toFloatOrNull() ?: continue
-                if (max <= 0f) continue
-                sum += (cur / max * 100f).coerceIn(0f, 100f)
-                n++
-            }
-            if (n == 0) null else (sum / n).coerceIn(0f, 100f)
-        } catch (_: Exception) {
-            null
+    /** Rough activity from avg(cur/max) across cores: not true utilization but better than a stuck 0. */
+    private fun readCpuFromFreq(freqs: List<Pair<File, Long>>): Float? {
+        var sum = 0f
+        var n = 0
+        for ((dir, cur) in freqs) {
+            val max = maxKhzFor(dir)
+            if (max <= 0L) continue
+            sum += (cur.toFloat() / max * 100f).coerceIn(0f, 100f)
+            n++
         }
+        return if (n == 0) null else (sum / n).coerceIn(0f, 100f)
+    }
+
+    private fun readLongFile(f: File): Long? = try {
+        f.readText().trim().toLongOrNull()
+    } catch (_: Exception) {
+        null
+    }
+
+    /** cpuN directories, sorted by core index. The topology is static, so it is listed once. */
+    private fun cpuDirs(): List<File> {
+        cpuDirsCache?.let { return it }
+        val dirs = try {
+            File("/sys/devices/system/cpu").listFiles()
+                ?.filter { CPU_DIR.matches(it.name) }
+                ?.sortedBy { it.name.removePrefix("cpu").toIntOrNull() ?: 0 }
+                .orEmpty()
+        } catch (_: Exception) {
+            emptyList()
+        }
+        if (dirs.isNotEmpty()) {
+            cpuDirsCache = dirs
+            return dirs
+        }
+        return listOf(File("/sys/devices/system/cpu/cpu0"))
+    }
+
+    private fun maxKhzFor(dir: File): Long =
+        cpuMaxKhz[dir.name] ?: (readLongFile(File(dir, "cpufreq/cpuinfo_max_freq")) ?: 0L).also {
+            if (it > 0L) cpuMaxKhz[dir.name] = it
+        }
+
+    /** Current frequency (kHz) of every readable core, in core order. One sysfs pass per capture. */
+    private fun readCurFreqsKhz(): List<Pair<File, Long>> {
+        val out = ArrayList<Pair<File, Long>>(8)
+        for (dir in cpuDirs()) {
+            val khz = readLongFile(File(dir, "cpufreq/scaling_cur_freq")) ?: continue
+            if (khz > 0L) out.add(dir to khz)
+        }
+        return out
     }
 
     fun readCpuFromDumpsys(): Float? {
@@ -328,97 +382,27 @@ object SystemMetrics {
     }
 
     private fun readLoadAvg(): FloatArray? {
-        fun parse(line: String?): FloatArray? {
-            if (line.isNullOrBlank()) return null
-            val p = line.trim().split(Regex("\\s+"))
-            if (p.size < 3) return null
-            val a = p[0].toFloatOrNull() ?: return null
-            val b = p[1].toFloatOrNull() ?: return null
-            val c = p[2].toFloatOrNull() ?: return null
-            return floatArrayOf(a, b, c)
+        val now = SystemClock.elapsedRealtime()
+        if (now < loadBlockedUntil) return null
+        val p = readFirstLine("/proc/loadavg")?.trim()?.split(WHITESPACE)
+        val parsed = if (p != null && p.size >= 3) {
+            val a = p[0].toFloatOrNull()
+            val b = p[1].toFloatOrNull()
+            val c = p[2].toFloatOrNull()
+            if (a != null && b != null && c != null) floatArrayOf(a, b, c) else null
+        } else null
+        if (parsed != null) {
+            loadFails = 0
+        } else if (++loadFails >= BLOCK_AFTER_FAILS) {
+            loadBlockedUntil = now + BLOCK_RETRY_MS
+            loadFails = 0
         }
-        try {
-            parse(File("/proc/loadavg").bufferedReader().use { it.readLine() })?.let { return it }
-        } catch (_: Exception) { }
-        try {
-            RandomAccessFile("/proc/loadavg", "r").use { raf ->
-                parse(raf.readLine())?.let { return it }
-            }
-        } catch (_: Exception) { }
-        try {
-            val proc = Runtime.getRuntime().exec(arrayOf("cat", "/proc/loadavg"))
-            try {
-                parse(proc.inputStream.bufferedReader().use { it.readLine() })?.let { return it }
-            } finally {
-                proc.destroy()
-            }
-        } catch (_: Exception) { }
-        return null
+        return parsed
     }
 
     private fun readMaxCpuMhz(): Int? {
-        val freqs = mutableListOf<Long>()
-        try {
-            val base = File("/sys/devices/system/cpu")
-            val dirs = base.listFiles()?.filter { it.name.matches(Regex("cpu\\d+")) }.orEmpty()
-            for (dir in dirs) {
-                val f = File(dir, "cpufreq/cpuinfo_max_freq")
-                if (!f.canRead()) continue
-                val khz = f.readText().trim().toLongOrNull() ?: continue
-                if (khz > 0L) freqs.add(khz)
-            }
-        } catch (_: Exception) { }
-        if (freqs.isNotEmpty()) return (freqs.maxOrNull()!! / 1000L).toInt()
-        return try {
-            val path = "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq"
-            val khz = File(path).readText().trim().toLongOrNull() ?: return null
-            (khz / 1000).toInt()
-        } catch (_: Exception) {
-            null
-        }
-    }
-
-    private fun readCpuCurMhz(): Int? {
-        // Average scaling_cur_freq across online cores (sysfs often works when /proc/stat does not).
-        val freqs = mutableListOf<Long>()
-        try {
-            val base = File("/sys/devices/system/cpu")
-            val dirs = base.listFiles()?.filter { it.name.matches(Regex("cpu\\d+")) }.orEmpty()
-            for (dir in dirs) {
-                val f = File(dir, "cpufreq/scaling_cur_freq")
-                if (!f.canRead()) continue
-                val khz = f.readText().trim().toLongOrNull() ?: continue
-                if (khz > 0L) freqs.add(khz)
-            }
-        } catch (_: Exception) { }
-        if (freqs.isNotEmpty()) {
-            return (freqs.average() / 1000.0).toInt().coerceAtLeast(0)
-        }
-        return try {
-            val path = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq"
-            val khz = File(path).readText().trim().toLongOrNull() ?: return null
-            (khz / 1000).toInt()
-        } catch (_: Exception) {
-            null
-        }
-    }
-
-
-    private fun readCpuCoreMhz(): List<Int> {
-        val out = mutableListOf<Int>()
-        try {
-            val base = File("/sys/devices/system/cpu")
-            val dirs = base.listFiles()?.filter { it.name.matches(Regex("cpu\\d+")) }?.sortedBy {
-                it.name.removePrefix("cpu").toIntOrNull() ?: 0
-            }.orEmpty()
-            for (dir in dirs) {
-                val f = File(dir, "cpufreq/scaling_cur_freq")
-                if (!f.canRead()) continue
-                val khz = f.readText().trim().toLongOrNull() ?: continue
-                if (khz > 0L) out.add((khz / 1000L).toInt())
-            }
-        } catch (_: Exception) { }
-        return out
+        val max = cpuDirs().maxOfOrNull { maxKhzFor(it) } ?: 0L
+        return if (max > 0L) (max / 1000L).toInt() else null
     }
 
     private fun readCpuGovernor(): String {
@@ -513,9 +497,10 @@ object SystemMetrics {
 
 
     private fun readSensorCount(context: Context): Int {
+        if (sensorCountCache >= 0) return sensorCountCache
         return try {
             val sm = context.getSystemService(Context.SENSOR_SERVICE) as? android.hardware.SensorManager
-            sm?.getSensorList(android.hardware.Sensor.TYPE_ALL)?.size ?: 0
+            (sm?.getSensorList(android.hardware.Sensor.TYPE_ALL)?.size ?: 0).also { sensorCountCache = it }
         } catch (_: Exception) {
             0
         }
