@@ -4,7 +4,12 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.app.ActivityManager
 import android.app.Service
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
+import android.os.BatteryManager
+import android.content.res.Configuration
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
@@ -26,7 +31,6 @@ import androidx.core.app.NotificationCompat
 import com.endroid.fern.MainActivity
 import com.endroid.fern.R
 import com.endroid.fern.data.Prefs
-import com.endroid.fern.monitor.SystemMetrics
 import kotlin.math.roundToInt
 
 /**
@@ -43,12 +47,44 @@ class OverlayService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var params: WindowManager.LayoutParams? = null
 
+    private var ticking = false
+    private var screenReceiver: BroadcastReceiver? = null
+    private val memInfo = ActivityManager.MemoryInfo()
+
     private val tick = object : Runnable {
         override fun run() {
             refreshStats()
             val ms = prefs.refreshMs.toLong().coerceIn(500L, 10_000L)
             handler.postDelayed(this, ms)
         }
+    }
+
+    private fun startTicking() {
+        if (ticking) return
+        ticking = true
+        handler.post(tick)
+    }
+
+    private fun stopTicking() {
+        ticking = false
+        handler.removeCallbacks(tick)
+    }
+
+    /** No point refreshing a pill nobody can see: pause while the screen is off. */
+    private fun registerScreenReceiver() {
+        val r = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                when (intent?.action) {
+                    Intent.ACTION_SCREEN_OFF -> stopTicking()
+                    Intent.ACTION_SCREEN_ON -> startTicking()
+                }
+            }
+        }
+        screenReceiver = r
+        registerReceiver(r, IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_SCREEN_ON)
+        })
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -59,7 +95,14 @@ class OverlayService : Service() {
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         startAsForegroundQuiet()
         attachIsland()
-        handler.post(tick)
+        registerScreenReceiver()
+        startTicking()
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        // Rotation / fold changes the screen width the X position is computed from.
+        applyLayoutFromPrefs()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -74,7 +117,10 @@ class OverlayService : Service() {
     }
 
     override fun onDestroy() {
+        stopTicking()
         handler.removeCallbacksAndMessages(null)
+        screenReceiver?.let { runCatching { unregisterReceiver(it) } }
+        screenReceiver = null
         detachIsland()
         prefs.overlayEnabled = false
         super.onDestroy()
@@ -278,13 +324,10 @@ class OverlayService : Service() {
     }
 
     private fun refreshStats() {
-        val snap = try {
-            SystemMetrics.capture(this)
-        } catch (_: Exception) {
-            null
-        }
-        val temp = snap?.batteryTempC
-        val ram = snap?.ramPercent
+        // Only two numbers are shown, so read only those (a full SystemMetrics.capture
+        // touches ~50 files and ran on the main thread every tick).
+        val temp = readBatteryTempC()
+        val ram = readRamPercent()
         val labels = prefs.overlayShowLabels
         val tempStr = when {
             temp == null -> if (labels) "Temp —" else "—"
@@ -301,6 +344,24 @@ class OverlayService : Service() {
         tempTv?.gravity = Gravity.CENTER_VERTICAL or Gravity.END
         ramTv?.gravity = Gravity.CENTER_VERTICAL or Gravity.START
         island?.contentDescription = "$tempStr, $ramStr"
+    }
+
+    private fun readBatteryTempC(): Float? = try {
+        val t = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+            ?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, Int.MIN_VALUE)
+        if (t == null || t == Int.MIN_VALUE) null else t / 10f
+    } catch (_: Exception) {
+        null
+    }
+
+    private fun readRamPercent(): Float? = try {
+        val am = getSystemService(ACTIVITY_SERVICE) as ActivityManager
+        am.getMemoryInfo(memInfo)
+        if (memInfo.totalMem > 0L) {
+            ((memInfo.totalMem - memInfo.availMem).coerceAtLeast(0L).toFloat() / memInfo.totalMem * 100f)
+        } else null
+    } catch (_: Exception) {
+        null
     }
 
     companion object {
