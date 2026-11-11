@@ -31,6 +31,6 @@ What Fern is designed to guarantee, and where the boundaries are.
 | Permissions | Usage access (Active Apps) and Display over other apps (overlay) are optional and user-granted. Nothing is requested at install time. |
 | Elevated mode | Off by default. Needs Shizuku or root that the user has already set up and explicitly granted to Fern. |
 | Shell input | The only commands built from variable data are `am force-stop` and `pm clear --cache-only`. The package name must match `^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+$` (max 255 chars) before it is used; anything else is refused. |
-| Release integrity | CI refuses to publish an APK signed with the Android debug key and verifies the signature with `apksigner` before upload. |
+| Release integrity | On the official repository CI refuses to publish an APK without the release key and verifies the signature with `apksigner` before upload. Forks have no secrets and build debug-signed APKs. |
 
 Out of scope: a device that is already rooted by malware, or a compromised Shizuku service.

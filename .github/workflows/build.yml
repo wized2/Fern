@@ -59,7 +59,10 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
+      # Official repo: signing secrets are mandatory (never publish a debug-signed APK).
+      # Forks and contributors have no secrets: they get a debug-signed build, as before.
       - name: Decode release keystore
+        id: keys
         if: env.IS_RELEASE == 'true'
         env:
           RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
@@ -69,11 +72,17 @@ jobs:
         run: |
           if [ -z "${RELEASE_KEYSTORE_BASE64:-}" ] || [ -z "${RELEASE_STORE_PASSWORD:-}" ] \
              || [ -z "${RELEASE_KEY_PASSWORD:-}" ] || [ -z "${RELEASE_KEY_ALIAS:-}" ]; then
-            echo "::error::Release signing secrets are missing. Refusing to publish a debug-signed APK."
-            exit 1
+            if [ "$GITHUB_REPOSITORY" = "wized2/Fern" ]; then
+              echo "::error::Release signing secrets are missing. Refusing to publish a debug-signed APK."
+              exit 1
+            fi
+            echo "::warning::No signing secrets in this fork: building with the debug key."
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
           echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
           echo "Keystore OK: $(wc -c < "$RUNNER_TEMP/release.jks") bytes"
+          echo "signed=true" >> "$GITHUB_OUTPUT"
 
       - name: Unit tests and debug build
         run: ./gradlew testStableDebugUnitTest assembleStableDebug --stacktrace
@@ -85,15 +94,15 @@ jobs:
       - name: Build release (stable and beta, signed)
         if: env.IS_RELEASE == 'true'
         env:
-          # Only set on releases: Gradle treats any non-blank value as "sign with this key".
-          RELEASE_STORE_FILE: ${{ runner.temp }}/release.jks
+          # Blank when there is no key (forks): Gradle then falls back to the debug key.
+          RELEASE_STORE_FILE: ${{ steps.keys.outputs.signed == 'true' && format('{0}/release.jks', runner.temp) || '' }}
           RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: ./gradlew assembleStableRelease assembleBetaRelease --stacktrace
 
       - name: Verify release signature
-        if: env.IS_RELEASE == 'true'
+        if: env.IS_RELEASE == 'true' && steps.keys.outputs.signed == 'true'
         run: |
           set -euo pipefail
           BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)

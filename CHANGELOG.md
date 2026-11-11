@@ -19,7 +19,7 @@ All notable changes to Fern are listed here. Versions follow the Android `versio
 
 **Build and release**
 * Pull requests build the stable flavor only; beta and signed builds run on `main` and tags
-* A release now fails if the signing secrets are missing, and the APK signature is verified (not the debug key) before publishing
+* On the official repository a release fails if the signing secrets are missing, and the APK signature is verified (not the debug key) before publishing. Forks without secrets still build debug-signed APKs
 * Gradle build cache directory is no longer tracked; R8 mapping files are kept as a CI artifact
 
 ## 1.11.3
