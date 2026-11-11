@@ -12,8 +12,8 @@ android {
         applicationId = "com.endroid.fern"
         minSdk = 26
         targetSdk = 35
-        versionCode = 75
-        versionName = "1.11.3"
+        versionCode = 76
+        versionName = "1.12.0"
         resourceConfigurations += listOf("en", "es", "de")
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")

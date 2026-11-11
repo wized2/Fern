@@ -9,7 +9,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.core.view.WindowCompat
 import androidx.activity.viewModels
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.SideEffect
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.endroid.fern.data.ThemeMode
 import androidx.compose.runtime.getValue
 import com.endroid.fern.ui.FernApp
 import rikka.shizuku.Shizuku
@@ -81,13 +84,17 @@ class MainActivity : ComponentActivity() {
         } catch (e: Exception) {
             Log.e(TAG, "Shizuku listener register failed", e)
         }
-        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = true
-        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightNavigationBars = true
         setContent {
-            val theme by viewModel.themeMode.collectAsState()
-            val seedArgb by viewModel.seedColorArgb.collectAsState()
-            val amoled by viewModel.amoledDark.collectAsState()
-            val keepOn by viewModel.keepScreenOn.collectAsState()
+            val theme by viewModel.themeMode.collectAsStateWithLifecycle()
+            val seedArgb by viewModel.seedColorArgb.collectAsStateWithLifecycle()
+            val amoled by viewModel.amoledDark.collectAsStateWithLifecycle()
+            val keepOn by viewModel.keepScreenOn.collectAsStateWithLifecycle()
+            val darkBars = theme == ThemeMode.DARK || (theme == ThemeMode.AUTO && isSystemInDarkTheme())
+            SideEffect {
+                val c = WindowCompat.getInsetsController(window, window.decorView)
+                c.isAppearanceLightStatusBars = !darkBars
+                c.isAppearanceLightNavigationBars = !darkBars
+            }
             LaunchedEffect(keepOn) {
                 if (keepOn) {
                     window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -96,26 +103,26 @@ class MainActivity : ComponentActivity() {
                 }
             }
             FernTheme(mode = theme, seedColor = androidx.compose.ui.graphics.Color(seedArgb), amoledDark = amoled) {
-                val snap by viewModel.snapshot.collectAsState()
-                val cpu by viewModel.historyCpu.collectAsState()
-                val ram by viewModel.historyRam.collectAsState()
-                val bat by viewModel.historyBattery.collectAsState()
-                val net by viewModel.historyNet.collectAsState()
-                val storage by viewModel.historyStorage.collectAsState()
-                val refresh by viewModel.refreshMs.collectAsState()
-                val lastUpdated by viewModel.lastUpdatedMs.collectAsState()
-                val haptics by viewModel.haptics.collectAsState()
-                val pauseBg by viewModel.pauseInBackground.collectAsState()
-                val peakCpu by viewModel.peakCpu.collectAsState()
-                val peakRam by viewModel.peakRam.collectAsState()
-                val peakNet by viewModel.peakNet.collectAsState()
-                val advancedMode by viewModel.advancedMode.collectAsState()
-                val elevatedStatus by viewModel.elevatedStatus.collectAsState()
-                val advancedSnap by viewModel.advancedSnapshot.collectAsState()
-                val avgCpu by viewModel.avgCpu.collectAsState()
-                val avgRam by viewModel.avgRam.collectAsState()
-                val elevatedProfile by viewModel.elevatedProfile.collectAsState()
-                val elevatedIntervalSec by viewModel.elevatedIntervalSecFlow.collectAsState()
+                val snap by viewModel.snapshot.collectAsStateWithLifecycle()
+                val cpu by viewModel.historyCpu.collectAsStateWithLifecycle()
+                val ram by viewModel.historyRam.collectAsStateWithLifecycle()
+                val bat by viewModel.historyBattery.collectAsStateWithLifecycle()
+                val net by viewModel.historyNet.collectAsStateWithLifecycle()
+                val storage by viewModel.historyStorage.collectAsStateWithLifecycle()
+                val refresh by viewModel.refreshMs.collectAsStateWithLifecycle()
+                val lastUpdated by viewModel.lastUpdatedMs.collectAsStateWithLifecycle()
+                val haptics by viewModel.haptics.collectAsStateWithLifecycle()
+                val pauseBg by viewModel.pauseInBackground.collectAsStateWithLifecycle()
+                val peakCpu by viewModel.peakCpu.collectAsStateWithLifecycle()
+                val peakRam by viewModel.peakRam.collectAsStateWithLifecycle()
+                val peakNet by viewModel.peakNet.collectAsStateWithLifecycle()
+                val advancedMode by viewModel.advancedMode.collectAsStateWithLifecycle()
+                val elevatedStatus by viewModel.elevatedStatus.collectAsStateWithLifecycle()
+                val advancedSnap by viewModel.advancedSnapshot.collectAsStateWithLifecycle()
+                val avgCpu by viewModel.avgCpu.collectAsStateWithLifecycle()
+                val avgRam by viewModel.avgRam.collectAsStateWithLifecycle()
+                val elevatedProfile by viewModel.elevatedProfile.collectAsStateWithLifecycle()
+                val elevatedIntervalSec by viewModel.elevatedIntervalSecFlow.collectAsStateWithLifecycle()
                 FernApp(
                     snapshot = snap,
                     cpuHistory = cpu,

@@ -1,3 +1,37 @@
+# Changelog
+
+All notable changes to Fern are listed here. Versions follow the Android `versionName`.
+
+## 1.12.0
+
+**Security**
+* Force-stop and clear-cache now validate the package name against a strict Android package-name pattern before it reaches the Shizuku/root shell. Previously a name containing `;`, `|`, `$()` or a newline could have injected commands.
+
+**Performance and battery**
+* Preferences are written with `apply()` instead of a synchronous `commit()` on the UI thread
+* UI state is collected with `collectAsStateWithLifecycle`, so nothing recomposes while the app is in the background
+* One sysfs pass per refresh for CPU frequencies (was three); static device info (kernel, security patch, CPU topology, max MHz, sensor count) is read once
+* `/proc/stat` and `/proc/loadavg` are skipped for 60 s after repeated failures, and the `cat` subprocess fallback (blocked by the same SELinux policy) is removed
+* Overlay pill reads only battery temperature and RAM instead of a full capture on the main thread, pauses while the screen is off, and repositions on rotation
+
+**UI**
+* Status and navigation bar icons follow the selected theme (dark-on-dark in dark mode before)
+
+**Build and release**
+* Pull requests build the stable flavor only; beta and signed builds run on `main` and tags
+* On the official repository a release fails if the signing secrets are missing, and the APK signature is verified (not the debug key) before publishing. Forks without secrets still build debug-signed APKs
+* Gradle build cache directory is no longer tracked; R8 mapping files are kept as a CI artifact
+
+## 1.11.3
+- Active apps: clearer empty state with Advanced mode guidance
+- Settings: TalkBack labels on key switches
+- Details: copy snapshot to clipboard
+- Tests: more MetricsParse / HistoryExport edge cases
+- Docs: first contribution in 15 minutes
+- Details: share plain text, **Markdown snapshot**, and **session history CSV**
+- Richer bottom navigation content descriptions (accessibility)
+- HistoryExport helpers + unit tests for CSV/Markdown
+
 ## 1.11.0
 
 * **Advanced mode performance**: phased shell work (Lite/Balanced/Full), 3–15s interval, probe cache, mutex — stops lag from stacking dumpsys
@@ -11,22 +45,6 @@
 
 * Fix CI: AppSort enum must not carry @Composable; ActiveApps is @Composable again
 * Primary website: https://get-fern.vercel.app
-
-# Changelog
-
-## Unreleased
-- Active apps: clearer empty state with Advanced mode guidance
-- Settings: TalkBack labels on key switches
-- Details: copy snapshot to clipboard
-- Tests: more MetricsParse / HistoryExport edge cases
-- Docs: first contribution in 15 minutes
-
-
-## Unreleased
-- Details: share plain text, **Markdown snapshot**, and **session history CSV**
-- Richer bottom navigation content descriptions (accessibility)
-- HistoryExport helpers + unit tests for CSV/Markdown
-
 
 ## 1.10.0
 
@@ -128,9 +146,6 @@
 - UI: refined top bar + status bar contrast, roomier metric spacing
 - Theme: OLED-friendlier dark surfaces, consistent corner radii
 
-# Changelog
-
-All notable changes to Fern are listed here.
 
 ## 1.5.22 — 2026-09-17
 

@@ -12,133 +12,133 @@ class Prefs(context: Context) {
             ThemeMode.valueOf(p.getString("theme", ThemeMode.AUTO.name)!!)
         }.getOrDefault(ThemeMode.AUTO)
         set(v) {
-            p.edit().putString("theme", v.name).commit()
+            p.edit().putString("theme", v.name).apply()
         }
 
     /** ARGB seed for Material palette generation (default Fern green). */
     var seedColorArgb: Int
         get() = p.getInt("seed_color", 0xFF1B7A3D.toInt())
         set(v) {
-            p.edit().putInt("seed_color", v).commit()
+            p.edit().putInt("seed_color", v).apply()
         }
 
     var refreshMs: Int
         get() = p.getInt("refresh_ms", 1500).coerceIn(500, 10_000)
         set(v) {
-            p.edit().putInt("refresh_ms", v.coerceIn(500, 10_000)).commit()
+            p.edit().putInt("refresh_ms", v.coerceIn(500, 10_000)).apply()
         }
 
     var keepScreenOn: Boolean
         get() = p.getBoolean("keep_screen_on", false)
         set(v) {
-            p.edit().putBoolean("keep_screen_on", v).commit()
+            p.edit().putBoolean("keep_screen_on", v).apply()
         }
 
     var haptics: Boolean
         get() = p.getBoolean("haptics", true)
         set(v) {
-            p.edit().putBoolean("haptics", v).commit()
+            p.edit().putBoolean("haptics", v).apply()
         }
 
     var pauseInBackground: Boolean
         get() = p.getBoolean("pause_bg", true)
         set(v) {
-            p.edit().putBoolean("pause_bg", v).commit()
+            p.edit().putBoolean("pause_bg", v).apply()
         }
 
     var advancedMode: Boolean
         get() = p.getBoolean("advanced_mode", false)
         set(v) {
-            p.edit().putBoolean("advanced_mode", v).commit()
+            p.edit().putBoolean("advanced_mode", v).apply()
         }
 
     /** 0=Lite 1=Balanced 2=Full — elevated shell work intensity. */
     var elevatedProfile: Int
         get() = p.getInt("elevated_profile", 1).coerceIn(0, 2)
         set(v) {
-            p.edit().putInt("elevated_profile", v.coerceIn(0, 2)).commit()
+            p.edit().putInt("elevated_profile", v.coerceIn(0, 2)).apply()
         }
 
     var alertRamPercent: Int
         get() = p.getInt("alert_ram", 0).coerceIn(0, 100)
         set(v) {
-            p.edit().putInt("alert_ram", v.coerceIn(0, 100)).commit()
+            p.edit().putInt("alert_ram", v.coerceIn(0, 100)).apply()
         }
 
     var elevatedIntervalSec: Int
         get() = p.getInt("elevated_iv_sec", 5).coerceIn(3, 20)
         set(v) {
-            p.edit().putInt("elevated_iv_sec", v.coerceIn(3, 20)).commit()
+            p.edit().putInt("elevated_iv_sec", v.coerceIn(3, 20)).apply()
         }
 
     var overlayEnabled: Boolean
         get() = p.getBoolean("overlay_enabled", false)
         set(v) {
-            p.edit().putBoolean("overlay_enabled", v).commit()
+            p.edit().putBoolean("overlay_enabled", v).apply()
         }
 
     var overlayWidthDp: Int
         get() = p.getInt("overlay_w_dp", 168).coerceIn(120, 320)
         set(v) {
-            p.edit().putInt("overlay_w_dp", v.coerceIn(120, 320)).commit()
+            p.edit().putInt("overlay_w_dp", v.coerceIn(120, 320)).apply()
         }
 
     var overlayHeightDp: Int
         get() = p.getInt("overlay_h_dp", 34).coerceIn(28, 56)
         set(v) {
-            p.edit().putInt("overlay_h_dp", v.coerceIn(28, 56)).commit()
+            p.edit().putInt("overlay_h_dp", v.coerceIn(28, 56)).apply()
         }
 
     var overlayOpacity: Float
         get() = p.getFloat("overlay_opacity", 0.92f).coerceIn(0.35f, 1f)
         set(v) {
-            p.edit().putFloat("overlay_opacity", v.coerceIn(0.35f, 1f)).commit()
+            p.edit().putFloat("overlay_opacity", v.coerceIn(0.35f, 1f)).apply()
         }
 
     /** Horizontal position 0–100 (% of screen width; 50 = center). */
     var overlayXPercent: Int
         get() = p.getInt("overlay_x_pct", 50).coerceIn(0, 100)
         set(v) {
-            p.edit().putInt("overlay_x_pct", v.coerceIn(0, 100)).commit()
+            p.edit().putInt("overlay_x_pct", v.coerceIn(0, 100)).apply()
         }
 
     /** Vertical offset from top of screen in dp (0–120). */
     var overlayYDp: Int
         get() = p.getInt("overlay_y_dp", 6).coerceIn(0, 120)
         set(v) {
-            p.edit().putInt("overlay_y_dp", v.coerceIn(0, 120)).commit()
+            p.edit().putInt("overlay_y_dp", v.coerceIn(0, 120)).apply()
         }
 
     /** Extra space between temp and RAM (dp), 0–48. */
     var overlayGapDp: Int
         get() = p.getInt("overlay_gap_dp", 12).coerceIn(0, 48)
         set(v) {
-            p.edit().putInt("overlay_gap_dp", v.coerceIn(0, 48)).commit()
+            p.edit().putInt("overlay_gap_dp", v.coerceIn(0, 48)).apply()
         }
 
     /** When true: "Temp 37° · RAM 81%" instead of "37° · 81%". */
     var overlayShowLabels: Boolean
         get() = p.getBoolean("overlay_labels", false)
         set(v) {
-            p.edit().putBoolean("overlay_labels", v).commit()
+            p.edit().putBoolean("overlay_labels", v).apply()
         }
 
     var overlayShowGpu: Boolean
         get() = p.getBoolean("overlay_show_gpu", true)
         set(v) {
-            p.edit().putBoolean("overlay_show_gpu", v).commit()
+            p.edit().putBoolean("overlay_show_gpu", v).apply()
         }
 
     var overlayShowRam: Boolean
         get() = p.getBoolean("overlay_show_ram", true)
         set(v) {
-            p.edit().putBoolean("overlay_show_ram", v).commit()
+            p.edit().putBoolean("overlay_show_ram", v).apply()
         }
 
     var overlayShowCpu: Boolean
         get() = p.getBoolean("overlay_show_cpu", true)
         set(v) {
-            p.edit().putBoolean("overlay_show_cpu", v).commit()
+            p.edit().putBoolean("overlay_show_cpu", v).apply()
         }
 
     /** 0 = off. Alert when CPU is at/above this %. */
@@ -152,21 +152,21 @@ class Prefs(context: Context) {
     var amoledDark: Boolean
         get() = p.getBoolean("amoled_dark", false)
         set(v) {
-            p.edit().putBoolean("amoled_dark", v).commit()
+            p.edit().putBoolean("amoled_dark", v).apply()
         }
 
     /** Tighter spacing on Home metric cards. */
     var compactUi: Boolean
         get() = p.getBoolean("compact_ui", false)
         set(v) {
-            p.edit().putBoolean("compact_ui", v).commit()
+            p.edit().putBoolean("compact_ui", v).apply()
         }
 
     /** Accent chart glow on timeline. */
     var chartGlow: Boolean
         get() = p.getBoolean("chart_glow", true)
         set(v) {
-            p.edit().putBoolean("chart_glow", v).commit()
+            p.edit().putBoolean("chart_glow", v).apply()
         }
 
 

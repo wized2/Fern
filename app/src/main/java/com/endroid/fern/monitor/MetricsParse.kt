@@ -5,6 +5,15 @@ package com.endroid.fern.monitor
  */
 object MetricsParse {
 
+    private val PACKAGE_NAME = Regex("^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z0-9_]+)+$")
+
+    /**
+     * True only for a well-formed Android package name (letters, digits, underscore, at least
+     * one dot, max 255 chars). Anything else must never reach a shell command line.
+     */
+    fun isValidPackageName(name: String?): Boolean =
+        name != null && name.length <= 255 && PACKAGE_NAME.matches(name)
+
     /**
      * Parse the aggregate `cpu ` line from /proc/stat.
      * @return idle (idle+iowait) to total jiffies, or null if not usable
