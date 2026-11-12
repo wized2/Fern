@@ -2,6 +2,17 @@ package com.endroid.fern.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -372,7 +383,18 @@ fun FernApp(
                 tab == Tab.More && moreSub != MoreSub.None -> "more/${moreSub.name}"
                 else -> tab.name
             },
-            transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
+            transitionSpec = {
+                // Slide in the direction of travel: deeper / further-right tabs come from the right.
+                val forward = navOrder(targetState) >= navOrder(initialState)
+                (fadeIn(tween(240, delayMillis = 60)) +
+                    slideInHorizontally(tween(280, easing = FastOutSlowInEasing)) { w ->
+                        if (forward) w / 12 else -w / 12
+                    }) togetherWith
+                    (fadeOut(tween(110)) +
+                        slideOutHorizontally(tween(220, easing = FastOutSlowInEasing)) { w ->
+                            if (forward) -w / 12 else w / 12
+                        })
+            },
             modifier = Modifier.padding(padding).fillMaxSize(),
             label = "tab"
         ) { key ->
@@ -427,6 +449,94 @@ fun FernApp(
                 key == "more/Additional" -> AdditionalContent()
                 else -> MoreContent(onOpen = { openMore(it) })
             }
+        }
+    }
+}
+
+private fun navOrder(key: String): Int = when {
+    key.startsWith("more/") && key != "more/None" -> 31
+    key == "Home" -> 0
+    key == "Details" -> 10
+    key == "ActiveApps" -> 20
+    else -> 30
+}
+
+/** Fades and lifts its content in, staggered by [index], each time the screen opens. */
+@Composable
+private fun Reveal(index: Int, content: @Composable () -> Unit) {
+    var shown by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(index * 55L)
+        shown = true
+    }
+    val p by animateFloatAsState(
+        if (shown) 1f else 0f,
+        animationSpec = tween(420, easing = FastOutSlowInEasing),
+        label = "reveal"
+    )
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                alpha = p
+                translationY = (1f - p) * 28.dp.toPx()
+            }
+    ) { content() }
+}
+
+@Composable
+private fun PulseDot(color: Color) {
+    val t = rememberInfiniteTransition(label = "pulse")
+    val a by t.animateFloat(
+        0.35f, 1f,
+        infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "pulseAlpha"
+    )
+    Box(
+        modifier = Modifier
+            .size(7.dp)
+            .graphicsLayer {
+                alpha = a
+                scaleX = 0.8f + 0.2f * a
+                scaleY = 0.8f + 0.2f * a
+            }
+            .background(color, CircleShape)
+    )
+}
+
+/** Placeholder cards shown while the first reading is in flight. */
+@Composable
+private fun LoadingSkeleton() {
+    val t = rememberInfiniteTransition(label = "skeleton")
+    val a by t.animateFloat(
+        0.35f, 0.8f,
+        infiniteRepeatable(tween(850, easing = LinearEasing), RepeatMode.Reverse),
+        label = "skeletonAlpha"
+    )
+    val c = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = a)
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            repeat(2) {
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .height(190.dp)
+                        .clip(RoundedCornerShape(28.dp))
+                        .background(c)
+                )
+            }
+        }
+        repeat(3) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(86.dp)
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(c)
+            )
         }
     }
 }
@@ -501,12 +611,16 @@ private fun HomeContent(
                                 )
                                 .padding(horizontal = 10.dp, vertical = 3.dp)
                         ) {
-                            Text(
-                                "Live",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                PulseDot(MaterialTheme.colorScheme.primary)
+                                Spacer(modifier = Modifier.size(6.dp))
+                                Text(
+                                    "Live",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
                         }
                         if (thermal != null) {
                             Text(
@@ -530,19 +644,27 @@ private fun HomeContent(
                 }
             }
             val haptic = LocalHapticFeedback.current
+            var spin by remember { mutableIntStateOf(0) }
+            val spinDeg by animateFloatAsState(
+                spin * 360f,
+                animationSpec = tween(600, easing = FastOutSlowInEasing),
+                label = "refreshSpin"
+            )
             IconButton(onClick = {
                 if (haptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                spin++
                 onRefreshNow()
             }) {
                 Icon(
                     Icons.Default.Refresh,
                     contentDescription = "Refresh now",
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.rotate(spinDeg)
                 )
             }
         }
         if (s == null) {
-            Text("Reading sensors…")
+            LoadingSkeleton()
             return
         }
         if (s.lowMemory) {
@@ -559,6 +681,7 @@ private fun HomeContent(
                 )
             }
         }
+        Reveal(0) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -572,6 +695,7 @@ private fun HomeContent(
                 Modifier.weight(1f)
             )
         }
+        }
         s.batteryPowerMw?.let { mw ->
             val watts = kotlin.math.abs(mw) / 1000f
             Text(
@@ -584,6 +708,7 @@ private fun HomeContent(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+        Reveal(1) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -602,18 +727,25 @@ private fun HomeContent(
                 Modifier.weight(1f)
             )
         }
+        }
+        Reveal(2) {
         ThermalBar(
             tempC = s.batteryTempC,
             thermalLabel = s.thermalLabel,
             advancedTempC = advancedSnapshot.maxTempC,
             advancedEnabled = advancedMode && elevatedStatus.backend != ElevatedBackend.None
         )
+        }
+        Reveal(3) {
         Bar(
             Icons.Default.Folder,
             "Storage",
             s.storagePercent,
-            String.format("%.1f / %.1f GB", s.storageUsedGb, s.storageTotalGb)
+            String.format("%.1f / %.1f GB", s.storageUsedGb, s.storageTotalGb),
+            warn = 1
         )
+        }
+        Reveal(4) {
         Bar(
             if (s.batteryCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
             "Battery",
@@ -622,8 +754,11 @@ private fun HomeContent(
                 append("${s.batteryPercent}%")
                 if (s.batteryCharging) append(" · charging")
                 s.batteryTempC?.let { append(String.format(" · %.1f°C", it)) }
-            }
+            },
+            warn = if (s.batteryCharging) 0 else 2
         )
+        }
+        Reveal(5) {
         Card(
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow
@@ -669,6 +804,7 @@ private fun HomeContent(
                     fixedMax = null
                 )
             }
+        }
         }
     }
 }
@@ -2522,7 +2658,13 @@ private fun Gauge(
         label = "g"
     )
     val track = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
-    val arc = MaterialTheme.colorScheme.primary
+    val cs = MaterialTheme.colorScheme
+    val arcTarget = when {
+        percent >= 90f -> cs.error
+        percent >= 75f -> Color(0xFFE6A817)
+        else -> cs.primary
+    }
+    val arc by animateColorAsState(arcTarget, animationSpec = tween(500), label = "gaugeColor")
     Card(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
@@ -2561,7 +2703,7 @@ private fun Gauge(
                     )
                 }
                 Text(
-                    String.format("%.0f%%", percent.coerceIn(0f, 100f)),
+                    String.format("%.0f%%", a * 100f),
                     style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -2699,7 +2841,16 @@ private fun ThermalBar(
 }
 
 @Composable
-private fun Bar(icon: ImageVector, title: String, percent: Float, detail: String) {
+private fun Bar(icon: ImageVector, title: String, percent: Float, detail: String, warn: Int = 0) {
+    // warn: 0 = neutral, 1 = high values are bad (storage), 2 = low values are bad (battery)
+    val cs = MaterialTheme.colorScheme
+    val amber = Color(0xFFE6A817)
+    val tintTarget = when (warn) {
+        1 -> when { percent >= 95f -> cs.error; percent >= 85f -> amber; else -> cs.primary }
+        2 -> when { percent <= 10f -> cs.error; percent <= 20f -> amber; else -> cs.primary }
+        else -> cs.primary
+    }
+    val tint by animateColorAsState(tintTarget, animationSpec = tween(500), label = "barColor")
     val a by animateFloatAsState(
         (percent / 100f).coerceIn(0f, 1f),
         animationSpec = tween(900, easing = androidx.compose.animation.core.FastOutSlowInEasing),
@@ -2720,7 +2871,7 @@ private fun Bar(icon: ImageVector, title: String, percent: Float, detail: String
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, contentDescription = "Decorative", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                Icon(icon, contentDescription = "Decorative", tint = tint, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.size(8.dp))
                 Text(title, style = MaterialTheme.typography.titleSmall)
             }
@@ -2730,7 +2881,7 @@ private fun Bar(icon: ImageVector, title: String, percent: Float, detail: String
                     .fillMaxWidth()
                     .height(7.dp)
                     .clip(RoundedCornerShape(4.dp)),
-                color = MaterialTheme.colorScheme.primary,
+                color = tint,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
                 strokeCap = StrokeCap.Round
             )
