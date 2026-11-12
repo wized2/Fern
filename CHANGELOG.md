@@ -2,6 +2,15 @@
 
 All notable changes to Fern are listed here. Versions follow the Android `versionName`.
 
+## Unreleased
+
+**UI**
+* Tabs and sub-screens slide in the direction of travel; Home, Details and More cards fade and lift in one after another
+* Live chip has a pulsing dot, the refresh icon spins on tap, and the first load shows placeholder cards instead of plain text
+* CPU/RAM gauges count up with the arc and turn amber at 75% and red at 90%; storage and battery bars warn the same way (battery stays neutral while charging)
+* Active apps rows animate when the list changes; the selected nav icon bounces slightly; the low-memory banner fades in
+* Dark mode no longer flashes white at launch, and the Android 12+ splash screen uses the app background
+
 ## 1.12.0
 
 **Security**
