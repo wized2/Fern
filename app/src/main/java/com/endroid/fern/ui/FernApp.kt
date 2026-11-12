@@ -350,28 +350,28 @@ fun FernApp(
                 NavigationBarItem(
                     selected = tab == Tab.Home,
                     onClick = { selectTab(Tab.Home) },
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Home dashboard") },
+                    icon = { NavIcon(tab == Tab.Home, Icons.Default.Home, "Home dashboard") },
                     label = { Text("Home", style = MaterialTheme.typography.labelMedium) },
                     alwaysShowLabel = true
                 )
                 NavigationBarItem(
                     selected = tab == Tab.Details,
                     onClick = { selectTab(Tab.Details) },
-                    icon = { Icon(Icons.Default.Memory, contentDescription = "Hardware details") },
+                    icon = { NavIcon(tab == Tab.Details, Icons.Default.Memory, "Hardware details") },
                     label = { Text("Details", style = MaterialTheme.typography.labelMedium) },
                     alwaysShowLabel = true
                 )
                 NavigationBarItem(
                     selected = tab == Tab.ActiveApps,
                     onClick = { selectTab(Tab.ActiveApps) },
-                    icon = { Icon(Icons.Default.Apps, contentDescription = "Active apps list") },
+                    icon = { NavIcon(tab == Tab.ActiveApps, Icons.Default.Apps, "Active apps list") },
                     label = { Text("Apps", style = MaterialTheme.typography.labelMedium) },
                     alwaysShowLabel = true
                 )
                 NavigationBarItem(
                     selected = tab == Tab.More,
                     onClick = { selectTab(Tab.More) },
-                    icon = { Icon(Icons.Default.MoreHoriz, contentDescription = "More options") },
+                    icon = { NavIcon(tab == Tab.More, Icons.Default.MoreHoriz, "More options") },
                     label = { Text("More", style = MaterialTheme.typography.labelMedium) },
                     alwaysShowLabel = true
                 )
@@ -451,6 +451,23 @@ fun FernApp(
             }
         }
     }
+}
+
+@Composable
+private fun NavIcon(selected: Boolean, icon: ImageVector, description: String) {
+    val sc by animateFloatAsState(
+        if (selected) 1.14f else 1f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
+        ),
+        label = "navIcon"
+    )
+    Icon(
+        icon,
+        contentDescription = description,
+        modifier = Modifier.graphicsLayer { scaleX = sc; scaleY = sc }
+    )
 }
 
 private fun navOrder(key: String): Int = when {
@@ -667,7 +684,7 @@ private fun HomeContent(
             LoadingSkeleton()
             return
         }
-        if (s.lowMemory) {
+        if (s.lowMemory) Reveal(0) {
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
                 shape = MaterialTheme.shapes.large,
@@ -848,7 +865,7 @@ private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, p
             PeakChip("Peak net", peakNetLabel, Modifier.weight(1f))
         }
 
-        DetailSection(icon = Icons.Default.Memory, title = "Processor") {
+        DetailSection(icon = Icons.Default.Memory, title = "Processor", index = 1) {
             SpecRow("Cores", "${s.cpuCores}")
             SpecRow("Chip", s.cpuHardware)
             SpecRow("Board", s.cpuBoard)
@@ -883,7 +900,7 @@ private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, p
             }
         }
 
-        DetailSection(icon = Icons.Default.Folder, title = "Memory & storage") {
+        DetailSection(icon = Icons.Default.Folder, title = "Memory & storage", index = 2) {
             SpecRow("RAM used", formatMb(s.ramUsedMb))
             SpecRow("RAM free", formatMb(s.freeRamMb))
             SpecRow("RAM total", formatMb(s.ramTotalMb))
@@ -896,7 +913,7 @@ private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, p
             }
         }
 
-        DetailSection(icon = Icons.Default.BatteryFull, title = "Power") {
+        DetailSection(icon = Icons.Default.BatteryFull, title = "Power", index = 3) {
             SpecRow("Level", "${s.batteryPercent}%")
             SpecRow("Status", if (s.batteryCharging) "Charging" else "Discharging")
             SpecRow("Health", s.batteryHealth.ifBlank { "—" })
@@ -908,7 +925,7 @@ private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, p
             }
         }
 
-        DetailSection(icon = Icons.Default.PhoneAndroid, title = "Display & device") {
+        DetailSection(icon = Icons.Default.PhoneAndroid, title = "Display & device", index = 4) {
             SpecRow("Resolution", "${s.displayWidthPx} × ${s.displayHeightPx}")
             SpecRow("Density", "${s.displayDensityDpi} dpi · ${String.format("%.1f", s.displayDensityDpi / 160f)}×")
             SpecRow("Refresh", String.format("%.0f Hz", s.displayRefreshHz))
@@ -1035,8 +1052,10 @@ private fun PeakChip(label: String, value: String, modifier: Modifier = Modifier
 private fun DetailSection(
     icon: ImageVector,
     title: String,
+    index: Int = 0,
     content: @Composable () -> Unit
 ) {
+    Reveal(index) {
     Card(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
@@ -1067,6 +1086,7 @@ private fun DetailSection(
             Spacer(modifier = Modifier.height(2.dp))
             content()
         }
+    }
     }
 }
 
@@ -1745,6 +1765,7 @@ private fun MoreContent(onOpen: (MoreSub) -> Unit) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        Reveal(0) {
         Card(
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow
@@ -1805,6 +1826,7 @@ private fun MoreContent(onOpen: (MoreSub) -> Unit) {
                     }
                 }
             }
+        }
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
@@ -2201,6 +2223,7 @@ private fun ActiveAppsContent(
                 items(displayApps, key = { it.packageName }) { app ->
                     val rss = lookupLong(rssByPackage, app.packageName)
                     val cpuPct = lookupFloat(cpuByPackage, app.packageName)
+                    Box(Modifier.animateItem()) {
                     ActiveAppRow(
                         app = app,
                         rssKb = if (advancedMode && elevated) rss else null,
@@ -2221,6 +2244,7 @@ private fun ActiveAppsContent(
                             }
                         }
                     )
+                    }
                 }
                 item {
                     Text(
