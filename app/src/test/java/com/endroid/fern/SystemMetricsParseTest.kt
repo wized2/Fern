@@ -3,6 +3,7 @@ package com.endroid.fern
 import com.endroid.fern.monitor.HistoryExport
 import com.endroid.fern.monitor.MetricsParse
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -44,6 +45,71 @@ class SystemMetricsParseTest {
     fun parseLoadavgShortLine() {
         assertNull(MetricsParse.parseLoadavg("0.1 0.2"))
         assertNull(MetricsParse.parseLoadavg(null))
+    }
+
+    @Test
+    fun parseMeminfoMissingAvailable() {
+        val sample = """
+            MemTotal:        8000000 kB
+            MemFree:         1000000 kB
+        """.trimIndent()
+        assertNull(MetricsParse.parseMeminfoKb(sample))
+    }
+
+    @Test
+    fun parseMeminfoZeroTotal() {
+        val sample = """
+            MemTotal:        0 kB
+            MemAvailable:    3000000 kB
+        """.trimIndent()
+        assertNull(MetricsParse.parseMeminfoKb(sample))
+    }
+
+    @Test
+    fun parseMeminfoExtraWhitespace() {
+        val sample = "MemTotal: \t  8000000   kB\nMemAvailable:\t3000000 kB"
+        val (totalKb, availKb) = MetricsParse.parseMeminfoKb(sample)!!
+        assertEquals(8000000L, totalKb)
+        assertEquals(3000000L, availKb)
+    }
+
+    @Test
+    fun parseLoadavgFewerThanThreeFields() {
+        assertNull(MetricsParse.parseLoadavg("0.1"))
+        assertNull(MetricsParse.parseLoadavg("0.1 0.2"))
+    }
+
+    @Test
+    fun parseLoadavgNonNumericFields() {
+        assertNull(MetricsParse.parseLoadavg("abc 0.2 0.3"))
+        assertNull(MetricsParse.parseLoadavg("0.1 xx 0.3"))
+        assertNull(MetricsParse.parseLoadavg("0.1 0.2 0.3x"))
+    }
+
+    @Test
+    fun parseLoadavgBlankInput() {
+        assertNull(MetricsParse.parseLoadavg(""))
+        assertNull(MetricsParse.parseLoadavg("   "))
+    }
+
+    @Test
+    fun isValidPackageNameAccepts() {
+        assertTrue(MetricsParse.isValidPackageName("com.example.app"))
+        assertTrue(MetricsParse.isValidPackageName("com.endroid.fern.beta"))
+        assertTrue(MetricsParse.isValidPackageName("com.example.app_2"))
+    }
+
+    @Test
+    fun isValidPackageNameRejects() {
+        assertFalse(MetricsParse.isValidPackageName("foo"))
+        assertFalse(MetricsParse.isValidPackageName("a b"))
+        assertFalse(MetricsParse.isValidPackageName("a;b.c"))
+        assertFalse(MetricsParse.isValidPackageName("x.y\$(id)"))
+        assertFalse(MetricsParse.isValidPackageName(""))
+        assertFalse(MetricsParse.isValidPackageName(null))
+        assertFalse(MetricsParse.isValidPackageName("com.example." + "a".repeat(244)))
+        assertFalse(MetricsParse.isValidPackageName("1com.example"))
+        assertFalse(MetricsParse.isValidPackageName("com..example"))
     }
 
     @Test

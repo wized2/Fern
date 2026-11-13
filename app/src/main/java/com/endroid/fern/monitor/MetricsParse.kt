@@ -53,4 +53,19 @@ object MetricsParse {
         val busy = (dTotal - dIdle).coerceAtLeast(0L)
         return (busy.toDouble() / dTotal.toDouble() * 100.0).toFloat().coerceIn(0f, 100f)
     }
+
+    /** A single package name segment: starts with a letter, then letters, digits or underscores. */
+    private val packageSegment = Regex("[a-zA-Z][a-zA-Z0-9_]*")
+
+    /**
+     * Check an Android package name: dot-separated segments, each starting
+     * with a letter and holding only letters, digits or underscores, at
+     * least one dot, and at most 255 characters in total.
+     */
+    fun isValidPackageName(name: String?): Boolean {
+        if (name.isNullOrEmpty() || name.length > 255) return false
+        val segments = name.split(".")
+        if (segments.size < 2) return false
+        return segments.all { packageSegment.matches(it) }
+    }
 }
