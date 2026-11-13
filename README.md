@@ -51,6 +51,20 @@ When connected: richer CPU sampling and per-app memory / CPU on Active apps.
 
 No analytics SDK. Metrics stay on your device. Elevated access only runs what you enable.
 
+### Permissions
+
+Every permission in `app/src/main/AndroidManifest.xml`, in plain words:
+
+| Permission | What it is used for | Optional? |
+|---|---|---|
+| `ACCESS_NETWORK_STATE` | Shows the network type (Wi-Fi, mobile, Ethernet) on the dashboard | No |
+| `VIBRATE` | Short buzz when you refresh by hand, and the vibration test | Yes, switch off Haptic feedback in Settings |
+| `SYSTEM_ALERT_WINDOW` | Draws the floating overlay bubble over other apps | Yes, only if you turn on the overlay |
+| `FOREGROUND_SERVICE` | Keeps the overlay running while it is on screen | Yes, only while the overlay runs |
+| `FOREGROUND_SERVICE_SPECIAL_USE` | Same as above, for the overlay service | Yes, only while the overlay runs |
+| `POST_NOTIFICATIONS` | Shows the small "overlay is running" notice | Yes, only while the overlay runs |
+| `PACKAGE_USAGE_STATS` | Lists your active apps with their CPU and RAM use | Yes, only if you turn on Usage access for Active apps |
+
 
 ## Stable vs beta
 
