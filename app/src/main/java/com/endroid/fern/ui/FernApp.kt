@@ -1023,7 +1023,9 @@ private fun PeakChip(label: String, value: String, modifier: Modifier = Modifier
         ),
         shape = MaterialTheme.shapes.large,
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        modifier = modifier
+        modifier = modifier.semantics(mergeDescendants = true) {
+            contentDescription = "$label $value"
+        }
     ) {
         Column(
             modifier = Modifier
@@ -1095,6 +1097,7 @@ private fun SpecRow(label: String, value: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .semantics(mergeDescendants = true) {}
             .padding(vertical = 3.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.Top
@@ -2695,7 +2698,9 @@ private fun Gauge(
         ),
         shape = MaterialTheme.shapes.extraLarge,
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        modifier = modifier
+        modifier = modifier.semantics(mergeDescendants = true) {
+            contentDescription = "$title ${percent.coerceIn(0f, 100f).toInt()} percent, $subtitle"
+        }
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
