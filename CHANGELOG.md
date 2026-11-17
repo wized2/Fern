@@ -4,6 +4,10 @@ All notable changes to Fern are listed here. Versions follow the Android `versio
 
 ## Unreleased
 
+**Accessibility**
+* Gauges, peak chips and spec rows are announced as one item by TalkBack (e.g. "CPU 42 percent, 8 cores") instead of separate fragments
+* Decorative icons no longer read out "Decorative"
+
 **UI**
 * Tabs and sub-screens slide in the direction of travel; Home, Details and More cards fade and lift in one after another
 * Live chip has a pulsing dot, the refresh icon spins on tap, and the first load shows placeholder cards instead of plain text
