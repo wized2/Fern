@@ -206,6 +206,13 @@
     .shot img { width: 100%; height: auto; max-height: 340px; object-fit: contain; object-position: top center; display: block; }
     .shot figcaption { text-align: center; font-size: 0.82rem; color: var(--muted); font-weight: 500; line-height: 1.35; padding: 0 4px; }
     .shot figcaption em { display: block; font-style: normal; color: var(--accent-deep); font-weight: 600; margin-bottom: 2px; }
+    .compare-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 4px 16px rgba(0,0,0,.03); }
+    .compare { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 0.92rem; }
+    .compare th, .compare td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+    .compare tr:last-child th, .compare tr:last-child td { border-bottom: 0; }
+    .compare thead th { background: var(--surface-2); font-weight: 600; }
+    .compare tbody th { color: var(--muted); font-weight: 500; }
+    .compare td:nth-child(2), .compare thead th:nth-child(2) { color: var(--accent-deep); font-weight: 600; }
     .cta { margin: 32px auto 44px; max-width: 1100px; padding: 0 20px; }
     .cta-box { background: linear-gradient(135deg, var(--surface-2), var(--surface)); border: 1px solid var(--border); border-radius: 28px; padding: 28px 24px; text-align: center; box-shadow: var(--shadow); }
     .cta-box h2 { font-size: 1.4rem; margin-bottom: 6px; }
@@ -246,6 +253,7 @@
       <nav class="nav-links" aria-label="Primary">
         <a class="nav-text hide-sm" href="#features">Features</a>
         <a class="nav-text hide-sm" href="#screens">Screens</a>
+        <a class="nav-text hide-sm" href="#compare">Compare</a>
         <a class="nav-text hide-sm" href="#guides">Guides</a>
         <a class="btn btn-ghost btn-sm" href="https://github.com/wized2/Fern" target="_blank" rel="noopener">GitHub</a>
         <button type="button" class="btn btn-primary btn-sm" id="navDownload">Download</button>
@@ -298,6 +306,25 @@
         <figure class="shot"><div class="frame"><img src="assets/details.png" alt="Fern hardware details processor memory" loading="lazy" width="360" height="720"/></div><figcaption><em>Processor, memory and storage specs</em>Details · hardware</figcaption></figure>
         <figure class="shot"><div class="frame"><img src="assets/apps.png" alt="Fern active apps usage list" loading="lazy" width="360" height="720"/></div><figcaption><em>Foreground time per app</em>Apps · usage</figcaption></figure>
         <figure class="shot"><div class="frame"><img src="assets/more.png" alt="Fern more menu settings sensors" loading="lazy" width="360" height="720"/></div><figcaption><em>Tests, sensors, settings, about</em>More · tools</figcaption></figure>
+      </div>
+    </section>
+
+    <section id="compare">
+      <h2 class="section-title">How Fern compares</h2>
+      <p class="section-sub">Same facts as the README: Fern next to two well-known monitors.</p>
+      <div class="compare-wrap">
+        <table class="compare">
+          <thead>
+            <tr><th scope="col"></th><th scope="col">Fern</th><th scope="col">CPU-Z</th><th scope="col">Simple System Monitor</th></tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">Open source</th><td>MIT</td><td>No</td><td>Varies</td></tr>
+            <tr><th scope="row">Material You</th><td>Yes</td><td>No</td><td>Limited</td></tr>
+            <tr><th scope="row">No ads / trackers</th><td>Yes</td><td>Ads in free</td><td>Often</td></tr>
+            <tr><th scope="row">Shizuku per-app stats</th><td>Yes</td><td>No</td><td>Rare</td></tr>
+            <tr><th scope="row">Fully offline</th><td>Yes</td><td>Partial</td><td>Often</td></tr>
+          </tbody>
+        </table>
       </div>
     </section>
 
