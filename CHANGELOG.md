@@ -4,6 +4,14 @@ All notable changes to Fern are listed here. Versions follow the Android `versio
 
 ## Unreleased
 
+**Fixes**
+* CSV and Markdown exports no longer change with the phone language (a decimal comma used to split CSV columns on German/Spanish devices)
+* Device names containing `|` or line breaks no longer break the Markdown snapshot table
+
+**Website & docs**
+* Custom 404 page, security headers and asset caching (`vercel.json`)
+* New `docs/TROUBLESHOOTING.md`
+
 **Accessibility**
 * Gauges, peak chips and spec rows are announced as one item by TalkBack (e.g. "CPU 42 percent, 8 cores") instead of separate fragments
 * Decorative icons no longer read out "Decorative"
