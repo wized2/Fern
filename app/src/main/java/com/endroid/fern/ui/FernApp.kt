@@ -849,7 +849,7 @@ private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, p
             )
         }
         if (s == null) {
-            Text("Waiting…", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            LoadingSkeleton()
             return
         }
 
@@ -1071,7 +1071,7 @@ private fun DetailSection(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     icon,
-                    contentDescription = "Decorative",
+                    contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp)
                 )
@@ -1552,7 +1552,7 @@ private fun SettingsContent(
                         Icon(
                             if (elevatedStatus.backend != ElevatedBackend.None)
                                 Icons.Default.VerifiedUser else Icons.Default.Security,
-                            contentDescription = "Decorative",
+                            contentDescription = null,
                             tint = if (elevatedStatus.backend != ElevatedBackend.None)
                                 MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1794,7 +1794,7 @@ private fun MoreContent(onOpen: (MoreSub) -> Unit) {
                         ) {
                             Icon(
                                 item.icon,
-                                contentDescription = "Decorative",
+                                contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(22.dp)
                             )
@@ -1814,7 +1814,7 @@ private fun MoreContent(onOpen: (MoreSub) -> Unit) {
                         }
                         Icon(
                             Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                            contentDescription = "Decorative",
+                            contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -2329,7 +2329,7 @@ private fun ActiveAppRow(
             if (iconPainter != null) {
                 Image(
                     painter = iconPainter,
-                    contentDescription = "Decorative",
+                    contentDescription = null,
                     modifier = Modifier
                         .size(40.dp)
                         .clip(MaterialTheme.shapes.medium)
@@ -2521,7 +2521,7 @@ private fun TestsContent() {
                     "Blue" to Color.Blue
                 ).forEach { (label, c) ->
                     OutlinedButton(onClick = { colorTest = c }, modifier = Modifier.weight(1f)) {
-                        Text(label, fontSize = 11.sp, maxLines = 1)
+                        Text(label, style = MaterialTheme.typography.labelSmall, maxLines = 1)
                     }
                 }
             }
@@ -2827,7 +2827,7 @@ private fun ThermalBar(
             ) {
                 Icon(
                     Icons.Default.DeviceThermostat,
-                    contentDescription = "Decorative",
+                    contentDescription = null,
                     tint = barColor,
                     modifier = Modifier.size(18.dp)
                 )
@@ -2895,7 +2895,7 @@ private fun Bar(icon: ImageVector, title: String, percent: Float, detail: String
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, contentDescription = "Decorative", tint = tint, modifier = Modifier.size(18.dp))
+                Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.size(8.dp))
                 Text(title, style = MaterialTheme.typography.titleSmall)
             }
