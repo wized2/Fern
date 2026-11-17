@@ -150,6 +150,14 @@
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
+    section[id], article[id], .cta[id] { scroll-margin-top: 76px; }
+    a:focus-visible, button:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; border-radius: 8px; }
+    .skip-link { position: absolute; left: 12px; top: -48px; z-index: 100; padding: 10px 16px; background: #1B5E20; color: #fff; border-radius: 10px; text-decoration: none; font-weight: 600; }
+    .skip-link:focus { top: 12px; }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
     body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.55; min-height: 100vh; }
     a { color: var(--accent); text-decoration: none; }
     a:hover { text-decoration: underline; }
@@ -237,6 +245,7 @@
     </symbol>
   </svg>
 
+  <a class="skip-link" href="#main">Skip to content</a>
   <header class="nav">
     <div class="nav-inner">
       <a class="brand" href="https://get-fern.vercel.app/" aria-label="Fern home">
@@ -253,7 +262,7 @@
     </div>
   </header>
 
-  <main>
+  <main id="main" tabindex="-1">
     <section class="hero">
       <div>
         <div class="eyebrow"><span class="dot" aria-hidden="true"></span> Live · Offline · Material 3</div>
