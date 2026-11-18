@@ -1,10 +1,18 @@
 package com.endroid.fern.monitor
 
+import java.util.Locale
+
 /**
  * Build CSV / markdown for session metric history and live snapshots.
  * Pure functions — safe for unit tests and UI share sheets.
  */
 object HistoryExport {
+    /** Always US-style numbers: a decimal comma would split CSV columns on de/es/fr devices. */
+    private fun f(fmt: String, v: Number): String = String.format(Locale.US, fmt, v)
+
+    /** Keep a value inside one markdown table cell. */
+    private fun cell(v: String): String = v.replace("|", "\\|").replace("\n", " ").replace("\r", " ")
+
     fun batteryCsv(samples: List<Float>, startEpochMs: Long = System.currentTimeMillis()): String {
         val sb = StringBuilder()
         sb.appendLine("index,epoch_ms,battery_percent")
@@ -33,9 +41,9 @@ object HistoryExport {
         for (i in 0 until n) {
             sb.append(i).append(',')
                 .append(startEpochMs + i.toLong() * intervalMs).append(',')
-                .append(cpu.getOrNull(i)?.let { "%.2f".format(it) } ?: "").append(',')
-                .append(ram.getOrNull(i)?.let { "%.2f".format(it) } ?: "").append(',')
-                .append(battery.getOrNull(i)?.let { "%.2f".format(it) } ?: "")
+                .append(cpu.getOrNull(i)?.let { f("%.2f", it) } ?: "").append(',')
+                .append(ram.getOrNull(i)?.let { f("%.2f", it) } ?: "").append(',')
+                .append(battery.getOrNull(i)?.let { f("%.2f", it) } ?: "")
                 .append('\n')
         }
         return sb.toString()
@@ -69,19 +77,19 @@ object HistoryExport {
         appendLine()
         appendLine("| Field | Value |")
         appendLine("| --- | --- |")
-        appendLine("| Device | $deviceModel |")
-        appendLine("| Android | $androidVersion (API $sdkInt) |")
-        appendLine("| CPU | ${"%.1f".format(cpuPercent)}% · $cpuCores cores · $cpuHardware |")
-        appendLine("| RAM | $ramUsedMb / $ramTotalMb MB (${"%.1f".format(ramPercent)}%) |")
+        appendLine("| Device | ${cell(deviceModel)} |")
+        appendLine("| Android | ${cell(androidVersion)} (API $sdkInt) |")
+        appendLine("| CPU | ${f("%.1f", cpuPercent)}% · $cpuCores cores · ${cell(cpuHardware)} |")
+        appendLine("| RAM | $ramUsedMb / $ramTotalMb MB (${f("%.1f", ramPercent)}%) |")
         appendLine(
-            "| Battery | $batteryPercent% · ${if (batteryCharging) "charging" else "discharging"} · $batteryHealth |"
+            "| Battery | $batteryPercent% · ${if (batteryCharging) "charging" else "discharging"} · ${cell(batteryHealth)} |"
         )
-        batteryTempC?.let { appendLine("| Battery temp | ${"%.1f".format(it)}°C |") }
-        appendLine("| Thermal | $thermalLabel |")
-        appendLine("| Network | $networkLabel · ${"%.1f".format(networkKBps)} KB/s |")
-        appendLine("| Uptime | ${"%.1f".format(uptimeHours)} h |")
-        appendLine("| Session peak CPU / RAM | ${"%.1f".format(peakCpu)}% / ${"%.1f".format(peakRam)}% |")
-        appendLine("| Session avg CPU / RAM | ${"%.1f".format(avgCpu)}% / ${"%.1f".format(avgRam)}% |")
+        batteryTempC?.let { appendLine("| Battery temp | ${f("%.1f", it)}°C |") }
+        appendLine("| Thermal | ${cell(thermalLabel)} |")
+        appendLine("| Network | ${cell(networkLabel)} · ${f("%.1f", networkKBps)} KB/s |")
+        appendLine("| Uptime | ${f("%.1f", uptimeHours)} h |")
+        appendLine("| Session peak CPU / RAM | ${f("%.1f", peakCpu)}% / ${f("%.1f", peakRam)}% |")
+        appendLine("| Session avg CPU / RAM | ${f("%.1f", avgCpu)}% / ${f("%.1f", avgRam)}% |")
         appendLine()
         appendLine("_Exported offline from Fern. No account required._")
     }

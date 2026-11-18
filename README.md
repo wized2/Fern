@@ -47,6 +47,10 @@
 Enable **Advanced mode** in Settings → grant Fern in [Shizuku](https://shizuku.rikka.app/) (or use root).  
 When connected: richer CPU sampling and per-app memory / CPU on Active apps.
 
+## Troubleshooting
+
+See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
+
 ## Privacy
 
 No analytics SDK. Metrics stay on your device. Elevated access only runs what you enable.
