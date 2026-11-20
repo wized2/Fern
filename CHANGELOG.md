@@ -2,11 +2,15 @@
 
 All notable changes to Fern are listed here. Versions follow the Android `versionName`.
 
-## Unreleased
+## 1.12.1
 
 **Fixes**
 * CSV and Markdown exports no longer change with the phone language (a decimal comma used to split CSV columns on German/Spanish devices)
 * Device names containing `|` or line breaks no longer break the Markdown snapshot table
+
+**Tests & docs**
+* More MetricsParse unit tests (meminfo, loadavg, package names)
+* Privacy and permissions table in the README; clearer screenshot captions on the website
 
 **Website & docs**
 * Custom 404 page, security headers and asset caching (`vercel.json`)

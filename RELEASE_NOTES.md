@@ -1,17 +1,16 @@
-# Fern 1.12.0
+# Fern 1.12.1
 
-Faster, lighter and safer. No new screens; everything you already use got cheaper to run.
-
-**Security**
-- App names are now strictly validated before Force stop / Clear cache reach the Shizuku or root shell (closes a command-injection path).
-
-**Speed and battery**
-- Settings save in the background instead of blocking the screen.
-- Nothing redraws while Fern is not visible.
-- Far fewer system file reads per refresh; device info that cannot change is read once.
-- The floating pill reads only what it shows and sleeps while the screen is off.
+Polish and fixes. Same permissions as before: no internet, nothing sent anywhere.
 
 **Fixes**
-- Status bar and navigation bar icons are readable in dark theme.
+- Exports (CSV and Markdown) no longer change with the phone language; a decimal comma used to split CSV columns on German/Spanish devices.
+- Device names with `|` or line breaks no longer break the Markdown snapshot.
 
-Fern still asks for no internet permission and sends nothing anywhere.
+**Accessibility**
+- TalkBack reads gauges, peak chips and spec rows as one item; decorative icons stay silent.
+
+**UI**
+- Smoother tab transitions and card animations, live pulse, gauge colors that warn at 75% and 90%, and no white flash in dark mode at launch.
+
+**Docs**
+- New troubleshooting guide, privacy and permissions table, and a custom 404 page.
