@@ -58,6 +58,10 @@ class FernViewModel(app: Application) : AndroidViewModel(app) {
     val refreshMs: StateFlow<Int> = _refreshMs.asStateFlow()
     private val _keepScreenOn = MutableStateFlow(prefs.keepScreenOn)
     val keepScreenOn: StateFlow<Boolean> = _keepScreenOn.asStateFlow()
+    init {
+        com.endroid.fern.ui.TempUnit.fahrenheit = prefs.tempFahrenheit
+    }
+
     private val _haptics = MutableStateFlow(prefs.haptics)
     val haptics: StateFlow<Boolean> = _haptics.asStateFlow()
     private val _pauseInBackground = MutableStateFlow(prefs.pauseInBackground)

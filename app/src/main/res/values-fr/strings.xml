@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Fern</string>
+    <string name="widget_battery_desc">État de la batterie Fern</string>
+    <string name="widget_ram_desc">Utilisation de la RAM Fern</string>
+    <string name="widget_battery_title">Batterie</string>
+    <string name="widget_ram_title">RAM</string>
+    <string name="nav_home">Accueil</string>
+    <string name="nav_details">Détails</string>
+    <string name="nav_active_apps">Applis</string>
+    <string name="nav_more">Plus</string>
+    <string name="back">Retour</string>
+    <string name="more_title">Plus</string>
+    <string name="more_tests">Tests</string>
+    <string name="more_tests_sub">Lancer des tests de l\'appareil</string>
+    <string name="more_settings">Réglages</string>
+    <string name="more_settings_sub">Thème, fréquence, écran</string>
+    <string name="more_sensors">Capteurs</string>
+    <string name="more_sensors_sub">Capteurs disponibles sur cet appareil</string>
+    <string name="active_apps_title">Applis actives</string>
+    <string name="active_apps_permission_title">Accès à l\'utilisation requis</string>
+    <string name="active_apps_permission_body">Fern peut afficher les applis récemment passées au premier plan. Les données restent sur cet appareil et ne le quittent jamais. Accordez l\'accès à l\'utilisation dans les réglages système pour activer cet onglet.</string>
+    <string name="active_apps_open_settings">Ouvrir l\'accès à l\'utilisation</string>
+    <string name="active_apps_window_15m">15 min</string>
+    <string name="active_apps_window_1h">1 heure</string>
+    <string name="active_apps_window_24h">24 heures</string>
+    <string name="active_apps_system">Applis système</string>
+    <string name="active_apps_now">Active maintenant</string>
+    <string name="active_apps_footer">Android ne permet pas aux applis de voir le CPU ou la RAM des autres. Cet écran montre quelles applis ont été actives récemment.</string>
+    <string name="active_apps_empty">Aucune activité récente dans cette période</string>
+    <string name="active_apps_open_info">Infos de l\'appli</string>
+    <string name="active_apps_used_ago">Utilisée il y a %1$s</string>
+    <string name="active_apps_fg_time">Premier plan : %1$s</string>
+    <string name="sensors_title">Capteurs</string>
+    <string name="sensors_count">%1$d capteurs</string>
+    <string name="sensors_empty">Aucun capteur signalé</string>
+    <string name="sensors_vendor">Fabricant</string>
+    <string name="sensors_range">Portée max.</string>
+    <string name="sensors_resolution">Résolution</string>
+    <string name="sensors_power">Consommation</string>
+</resources>

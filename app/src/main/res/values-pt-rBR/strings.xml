@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Fern</string>
+    <string name="widget_battery_desc">Estado da bateria do Fern</string>
+    <string name="widget_ram_desc">Uso de RAM do Fern</string>
+    <string name="widget_battery_title">Bateria</string>
+    <string name="widget_ram_title">RAM</string>
+    <string name="nav_home">Início</string>
+    <string name="nav_details">Detalhes</string>
+    <string name="nav_active_apps">Apps</string>
+    <string name="nav_more">Mais</string>
+    <string name="back">Voltar</string>
+    <string name="more_title">Mais</string>
+    <string name="more_tests">Testes</string>
+    <string name="more_tests_sub">Executar testes do dispositivo</string>
+    <string name="more_settings">Configurações</string>
+    <string name="more_settings_sub">Tema, taxa de atualização, tela</string>
+    <string name="more_sensors">Sensores</string>
+    <string name="more_sensors_sub">Sensores disponíveis neste dispositivo</string>
+    <string name="active_apps_title">Apps ativos</string>
+    <string name="active_apps_permission_title">Acesso de uso necessário</string>
+    <string name="active_apps_permission_body">O Fern pode mostrar quais apps estiveram em primeiro plano recentemente. Os dados ficam neste dispositivo e nunca saem dele. Conceda o acesso de uso nas configurações do sistema para ativar esta aba.</string>
+    <string name="active_apps_open_settings">Abrir acesso de uso</string>
+    <string name="active_apps_window_15m">15 min</string>
+    <string name="active_apps_window_1h">1 hora</string>
+    <string name="active_apps_window_24h">24 horas</string>
+    <string name="active_apps_system">Apps do sistema</string>
+    <string name="active_apps_now">Ativo agora</string>
+    <string name="active_apps_footer">O Android não permite que apps vejam a CPU ou a RAM de outros apps. Esta tela mostra quais apps estiveram ativos recentemente.</string>
+    <string name="active_apps_empty">Nenhuma atividade recente neste período</string>
+    <string name="active_apps_open_info">Informações do app</string>
+    <string name="active_apps_used_ago">Usado há %1$s</string>
+    <string name="active_apps_fg_time">Primeiro plano %1$s</string>
+    <string name="sensors_title">Sensores</string>
+    <string name="sensors_count">%1$d sensores</string>
+    <string name="sensors_empty">Nenhum sensor informado</string>
+    <string name="sensors_vendor">Fabricante</string>
+    <string name="sensors_range">Alcance máx.</string>
+    <string name="sensors_resolution">Resolução</string>
+    <string name="sensors_power">Consumo</string>
+</resources>

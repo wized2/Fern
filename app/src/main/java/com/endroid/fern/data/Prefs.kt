@@ -202,4 +202,11 @@ class Prefs(context: Context) {
         set(v) {
             p.edit().putBoolean("rich_charts", v).apply()
         }
+
+    /** Show temperatures in Fahrenheit instead of Celsius. Alert thresholds stay in Celsius. */
+    var tempFahrenheit: Boolean
+        get() = p.getBoolean("temp_fahrenheit", false)
+        set(v) {
+            p.edit().putBoolean("temp_fahrenheit", v).apply()
+        }
 }
