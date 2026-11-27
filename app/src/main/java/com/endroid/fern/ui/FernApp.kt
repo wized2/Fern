@@ -719,7 +719,7 @@ private fun HomeContent(
                 buildString {
                     append(if (s.batteryCharging) "Charging ~" else "Draw ~")
                     append(String.format("%.2f W", watts))
-                    s.batteryTempC?.let { append(" · "); append(String.format("%.1f°C", it)) }
+                    s.batteryTempC?.let { append(" · "); append(TempUnit.fmt(it)) }
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -770,7 +770,7 @@ private fun HomeContent(
             buildString {
                 append("${s.batteryPercent}%")
                 if (s.batteryCharging) append(" · charging")
-                s.batteryTempC?.let { append(String.format(" · %.1f°C", it)) }
+                s.batteryTempC?.let { append(" · "); append(TempUnit.fmt(it)) }
             },
             warn = if (s.batteryCharging) 0 else 2
         )
@@ -918,7 +918,7 @@ private fun DetailsContent(s: SystemSnapshot?, peakCpu: Float, peakRam: Float, p
             SpecRow("Status", if (s.batteryCharging) "Charging" else "Discharging")
             SpecRow("Health", s.batteryHealth.ifBlank { "—" })
             SpecRow("Technology", s.batteryTechnology.ifBlank { "—" })
-            s.batteryTempC?.let { SpecRow("Temperature", String.format("%.1f °C", it)) }
+            s.batteryTempC?.let { SpecRow("Temperature", TempUnit.fmt(it)) }
             s.batteryVoltageMv?.let { SpecRow("Voltage", String.format("%.2f V", it / 1000f)) }
             s.batteryCurrentUa?.let {
                 SpecRow("Current", String.format("%+.0f mA", it / 1000f))
@@ -1468,6 +1468,21 @@ private fun SettingsContent(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
+                        Text("Temperature in °F", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                        Text("Show temperatures in Fahrenheit. Alerts and exports stay in °C", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(
+                        checked = TempUnit.fahrenheit,
+                        onCheckedChange = { TempUnit.fahrenheit = it; localPrefs.tempFahrenheit = it },
+                        modifier = Modifier.semantics { contentDescription = "Show temperature in Fahrenheit" }
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text("Pause in background", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                         Text("Stop sampling when app is not visible", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -1504,7 +1519,7 @@ private fun SettingsContent(
                         )
                     }
                 }
-                Text("Battery temp ≥ ${if (alertTemp == 0) "off" else "${alertTemp}°C"}", style = MaterialTheme.typography.labelLarge)
+                Text("Battery temp alert (°C) ≥ ${if (alertTemp == 0) "off" else "${alertTemp}°C"}", style = MaterialTheme.typography.labelLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf(0, 40, 45, 50).forEach { v ->
                         androidx.compose.material3.FilterChip(
@@ -2798,7 +2813,7 @@ private fun ThermalBar(
     }
     val detail = buildString {
         if (effectiveTemp != null) {
-            append(String.format("%.1f°C", effectiveTemp))
+            append(TempUnit.fmt(effectiveTemp))
             append(" · ")
             append(statusText)
             if (advancedEnabled && advancedTempC != null) append(" · zone")

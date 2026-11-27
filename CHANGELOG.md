@@ -2,6 +2,15 @@
 
 All notable changes to Fern are listed here. Versions follow the Android `versionName`.
 
+## 1.13.0
+
+**New**
+* Temperature unit setting: show battery and thermal temperatures in °C or °F (Settings → Temperature in °F). Alert thresholds and exports stay in °C
+* French and Brazilian Portuguese translations of the app's string resources
+
+**Tests**
+* Unit tests for the temperature formatter and for CSV export edge cases (no samples, series of different lengths)
+
 ## 1.12.1
 
 **Fixes**

@@ -1,1 +1,1 @@
-Metric parse tests, F-Droid metadata, docs polish.
+Temperature unit setting (C/F), French and Portuguese strings, more tests.
